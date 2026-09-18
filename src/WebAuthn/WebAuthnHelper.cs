@@ -2,6 +2,8 @@ using System;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
+using System.Windows.Forms;
 
 namespace KeePassFIDO2.WebAuthn
 {
@@ -192,8 +194,11 @@ namespace KeePassFIDO2.WebAuthn
 				};
 
 				Log($"MakeCredential: options v{options.dwVersion}, hmac-secret ext=true, bEnablePrf={usePrfFlag}, pPRFGlobalEval={usePrfEval}");
-				int hr = WebAuthnApi.WebAuthNAuthenticatorMakeCredential(
-					windowHandle, ref rpInfo, ref userInfo, ref credParams, ref clientData, ref options, out pAttestation);
+				IntPtr hWnd = PrepareOwnerWindow(windowHandle);
+				IntPtr pResult = IntPtr.Zero;
+				int hr = RunNativeCall(hWnd, () => WebAuthnApi.WebAuthNAuthenticatorMakeCredential(
+					hWnd, ref rpInfo, ref userInfo, ref credParams, ref clientData, ref options, out pResult));
+				pAttestation = pResult;
 
 				if (hr != 0)
 				{
@@ -341,8 +346,11 @@ namespace KeePassFIDO2.WebAuthn
 				};
 
 				Log($"GetAssertion: options v{options.dwVersion}, pHmacSecretSaltValues (global salt {PRF_SALT.Length} байт)");
-				int hr = WebAuthnApi.WebAuthNAuthenticatorGetAssertion(
-					windowHandle, RP_ID, ref clientData, ref options, out pAssertion);
+				IntPtr hWnd = PrepareOwnerWindow(windowHandle);
+				IntPtr pResult = IntPtr.Zero;
+				int hr = RunNativeCall(hWnd, () => WebAuthnApi.WebAuthNAuthenticatorGetAssertion(
+					hWnd, RP_ID, ref clientData, ref options, out pResult));
+				pAssertion = pResult;
 
 				if (hr != 0)
 				{
@@ -400,6 +408,158 @@ namespace KeePassFIDO2.WebAuthn
 				.Replace('/', '_');
 
 			return $"{{\"type\":\"{type}\",\"challenge\":\"{challengeBase64}\",\"origin\":\"https://{RP_ID}\"}}";
+		}
+
+		/// <summary>
+		/// Подбирает окно‑владельца для диалога «Безопасность Windows» и выводит его на передний план.
+		/// Диалог WebAuthn привязывается по z‑order к hWnd: если владелец не активен (или hWnd = 0),
+		/// диалог открывается под окном KeePass.
+		/// </summary>
+		private static IntPtr PrepareOwnerWindow(IntPtr windowHandle)
+		{
+			IntPtr foreground = User32.GetForegroundWindow();
+			uint currentProcess = User32.GetCurrentProcessId();
+
+			// Нет владельца, он свёрнут или скрыт (трей) — берём активное окно нашего процесса, если оно есть
+			if (windowHandle == IntPtr.Zero || User32.IsIconic(windowHandle) || !User32.IsWindowVisible(windowHandle))
+			{
+				if (foreground != IntPtr.Zero && GetWindowProcessId(foreground) == currentProcess)
+				{
+					windowHandle = foreground;
+				}
+			}
+
+			if (windowHandle == IntPtr.Zero)
+			{
+				Log("Окно‑владелец не определено, диалог WebAuthn будет без владельца");
+				return windowHandle;
+			}
+
+			if (foreground != windowHandle)
+			{
+				bool ok = User32.SetForegroundWindow(windowHandle);
+				Log($"SetForegroundWindow(0x{windowHandle.ToInt64():X}) = {ok}");
+			}
+
+			return windowHandle;
+		}
+
+		/// <summary>
+		/// Выполняет блокирующий вызов webauthn.dll в отдельном потоке, пока UI‑поток продолжает
+		/// обрабатывать сообщения. Иначе окно KeePass переходит в состояние «Не отвечает», Windows
+		/// подменяет его ghost‑окном и диалог «Безопасность Windows» оказывается под ним.
+		/// Окно‑владелец на время вызова отключается (как при модальном диалоге).
+		/// </summary>
+		private static int RunNativeCall(IntPtr ownerHandle, Func<int> nativeCall)
+		{
+			if (!Application.MessageLoop)
+				return nativeCall();
+
+			int hr = 0;
+			Exception error = null;
+			var thread = new Thread(() =>
+			{
+				try { hr = nativeCall(); }
+				catch (Exception ex) { error = ex; }
+			})
+			{
+				IsBackground = true,
+				Name = "WebAuthn"
+			};
+
+			bool ownerWasEnabled = ownerHandle != IntPtr.Zero && User32.IsWindowEnabled(ownerHandle);
+			if (ownerWasEnabled) User32.EnableWindow(ownerHandle, false);
+			try
+			{
+				// Диалог «Безопасность Windows» рисует другой процесс (брокер). Пока KeePass — foreground‑процесс,
+				// брокеру запрещено забирать фокус, и его окно оказывается под KeePass. Разрешаем явно.
+				User32.AllowSetForegroundWindow(User32.ASFW_ANY);
+
+				thread.Start();
+				bool dialogRaised = false;
+				while (!thread.Join(50))
+				{
+					Application.DoEvents();
+					if (!dialogRaised)
+						dialogRaised = RaiseSecurityDialog();
+				}
+			}
+			finally
+			{
+				if (ownerWasEnabled) User32.EnableWindow(ownerHandle, true);
+			}
+
+			if (error != null)
+				throw new WebAuthnException("Ошибка вызова WebAuthn API", error);
+			return hr;
+		}
+
+		/// <summary>
+		/// Страховка: находит окно «Безопасность Windows» и выводит его на передний план (один раз).
+		/// </summary>
+		private static bool RaiseSecurityDialog()
+		{
+			IntPtr dialog = User32.FindWindow(SECURITY_DIALOG_CLASS, null);
+			if (dialog == IntPtr.Zero || !User32.IsWindowVisible(dialog))
+				return false;
+
+			if (User32.GetForegroundWindow() != dialog)
+			{
+				bool ok = User32.SetForegroundWindow(dialog);
+				Log($"Диалог «Безопасность Windows» 0x{dialog.ToInt64():X} выведен на передний план: {ok}");
+			}
+			return true;
+		}
+
+		// Класс окна диалога «Безопасность Windows» (Windows Hello / WebAuthn)
+		private const string SECURITY_DIALOG_CLASS = "Credential Dialog Xaml Host";
+
+		private static uint GetWindowProcessId(IntPtr hWnd)
+		{
+			uint pid;
+			User32.GetWindowThreadProcessId(hWnd, out pid);
+			return pid;
+		}
+
+		private static class User32
+		{
+			[DllImport("user32.dll")]
+			public static extern IntPtr GetForegroundWindow();
+
+			[DllImport("user32.dll")]
+			[return: MarshalAs(UnmanagedType.Bool)]
+			public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+			[DllImport("user32.dll")]
+			[return: MarshalAs(UnmanagedType.Bool)]
+			public static extern bool IsIconic(IntPtr hWnd);
+
+			[DllImport("user32.dll")]
+			[return: MarshalAs(UnmanagedType.Bool)]
+			public static extern bool IsWindowVisible(IntPtr hWnd);
+
+			[DllImport("user32.dll")]
+			[return: MarshalAs(UnmanagedType.Bool)]
+			public static extern bool IsWindowEnabled(IntPtr hWnd);
+
+			[DllImport("user32.dll")]
+			[return: MarshalAs(UnmanagedType.Bool)]
+			public static extern bool EnableWindow(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool bEnable);
+
+			public const int ASFW_ANY = -1;
+
+			[DllImport("user32.dll")]
+			[return: MarshalAs(UnmanagedType.Bool)]
+			public static extern bool AllowSetForegroundWindow(int dwProcessId);
+
+			[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+			public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+			[DllImport("user32.dll")]
+			public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+			[DllImport("kernel32.dll")]
+			public static extern uint GetCurrentProcessId();
 		}
 	}
 

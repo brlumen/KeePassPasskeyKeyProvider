@@ -372,9 +372,16 @@ namespace KeePassFIDO2.WebAuthn
 		/// <summary>
 		/// Получает сообщение об ошибке
 		/// </summary>
-		[DllImport(DllName)]
-		[return: MarshalAs(UnmanagedType.LPWStr)]
-		public static extern string WebAuthNGetErrorName(int hr);
+		// Возвращает статическую строку webauthn.dll: освобождать нельзя, поэтому IntPtr, а не string
+		// (маршалинг в string вызывает CoTaskMemFree → порча кучи → аварийное завершение KeePass)
+		[DllImport(DllName, EntryPoint = "WebAuthNGetErrorName")]
+		private static extern IntPtr WebAuthNGetErrorNameRaw(int hr);
+
+		public static string WebAuthNGetErrorName(int hr)
+		{
+			IntPtr p = WebAuthNGetErrorNameRaw(hr);
+			return p == IntPtr.Zero ? "Unknown" : Marshal.PtrToStringUni(p);
+		}
 
 		#endregion
 	}
