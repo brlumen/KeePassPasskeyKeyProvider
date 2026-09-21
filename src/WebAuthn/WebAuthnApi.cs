@@ -28,8 +28,16 @@ namespace KeePassFIDO2.WebAuthn
 		public const uint WEBAUTHN_AUTHENTICATOR_MAKE_CREDENTIAL_OPTIONS_VERSION_8 = 8;
 		public const uint WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_6 = 6;
 		public const uint WEBAUTHN_ASSERTION_VERSION_3 = 3;
+		public const uint WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_3 = 3;
 		public const uint WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_5 = 5;
 		public const uint WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_7 = 7;
+
+		// dwUsedTransport (CREDENTIAL_ATTESTATION v3+, ASSERTION v4+): каким транспортом ответил аутентификатор
+		public const uint WEBAUTHN_CTAP_TRANSPORT_USB = 0x00000001;
+		public const uint WEBAUTHN_CTAP_TRANSPORT_NFC = 0x00000002;
+		public const uint WEBAUTHN_CTAP_TRANSPORT_BLE = 0x00000004;
+		public const uint WEBAUTHN_CTAP_TRANSPORT_INTERNAL = 0x00000010;
+		public const uint WEBAUTHN_CTAP_TRANSPORT_HYBRID = 0x00000020;
 
 		// dwFlags для GET_ASSERTION_OPTIONS: передавать соли в hmac-secret «как есть»,
 		// без PRF-преобразования SHA-256("WebAuthn PRF" || 0x00 || salt)
@@ -316,6 +324,39 @@ namespace KeePassFIDO2.WebAuthn
 			public IntPtr pbUnsignedExtensionOutputs;
 		}
 
+		// ---- Список credential платформенного аутентификатора (Windows Hello), API 4+ ----
+
+		public const uint WEBAUTHN_GET_CREDENTIALS_OPTIONS_VERSION_1 = 1;
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct WEBAUTHN_GET_CREDENTIALS_OPTIONS
+		{
+			public uint dwVersion;
+			[MarshalAs(UnmanagedType.LPWStr)]
+			public string pwszRpId; // null — все RP
+			public bool bBrowserInPrivateMode;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct WEBAUTHN_CREDENTIAL_DETAILS
+		{
+			public uint dwVersion;
+			public uint cbCredentialID;
+			public IntPtr pbCredentialID;
+			public IntPtr pRpInformation;   // PWEBAUTHN_RP_ENTITY_INFORMATION
+			public IntPtr pUserInformation; // PWEBAUTHN_USER_ENTITY_INFORMATION
+			public bool bRemovable;
+			// Версия 2+
+			public bool bBackedUp;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct WEBAUTHN_CREDENTIAL_DETAILS_LIST
+		{
+			public uint cCredentialDetails;
+			public IntPtr ppCredentialDetails; // массив указателей PWEBAUTHN_CREDENTIAL_DETAILS
+		}
+
 		#endregion
 
 		#region Функции API
@@ -368,6 +409,23 @@ namespace KeePassFIDO2.WebAuthn
 		/// </summary>
 		[DllImport(DllName)]
 		public static extern void WebAuthNFreeAssertion(IntPtr pWebAuthNAssertion);
+
+		/// <summary>
+		/// Список discoverable credential Windows Hello (API 4+). NTE_NOT_FOUND, если пусто.
+		/// </summary>
+		[DllImport(DllName)]
+		public static extern int WebAuthNGetPlatformCredentialList(
+			ref WEBAUTHN_GET_CREDENTIALS_OPTIONS pGetCredentialsOptions,
+			out IntPtr ppCredentialDetailsList);
+
+		[DllImport(DllName)]
+		public static extern void WebAuthNFreePlatformCredentialList(IntPtr pCredentialDetailsList);
+
+		/// <summary>
+		/// Удаляет credential Windows Hello по ID (API 4+). Для credential на внешних ключах — ошибка.
+		/// </summary>
+		[DllImport(DllName)]
+		public static extern int WebAuthNDeletePlatformCredential(uint cbCredentialId, byte[] pbCredentialId);
 
 		/// <summary>
 		/// Получает сообщение об ошибке

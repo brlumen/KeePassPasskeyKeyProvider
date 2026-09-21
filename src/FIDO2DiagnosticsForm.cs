@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text;
 using System.Windows.Forms;
 using KeePassFIDO2.WebAuthn;
@@ -166,7 +166,9 @@ namespace KeePassFIDO2
 					"1. Вставить/подключить FIDO2 ключ\n" +
 					"2. Ввести PIN-код ключа\n" +
 					"3. Подтвердить создание (коснуться кнопки на ключе)\n\n" +
-					"Этот тест НЕ повлияет на ваши существующие базы данных.\n\n" +
+					"Этот тест НЕ повлияет на ваши существующие базы данных,\n" +
+					"но тестовый credential останется на ключе (discoverable) — его можно удалить\n" +
+					"в Параметры Windows → Учётные записи → Варианты входа → Ключ безопасности.\n\n" +
 					"Продолжить тест?",
 					"Тест PRF",
 					MessageBoxButtons.YesNo,
@@ -227,7 +229,12 @@ namespace KeePassFIDO2
 				byte[] prfSecret;
 				try
 				{
-					prfSecret = WebAuthnHelper.GetPrfSecret(this.Handle, credentialId);
+					// Discoverable‑режим (как при разблокировке базы): allowList пуст, credential ID — из ответа
+					PrfResult assertion = WebAuthnHelper.GetPrfSecret(this.Handle);
+					prfSecret = assertion.PrfSecret;
+					Log(System.Linq.Enumerable.SequenceEqual(assertion.CredentialId, credentialId)
+						? "  ✓ Аутентификатор предъявил только что созданный credential"
+						: "  ⚠ Предъявлен другой credential (выбран не тот аккаунт?) — секрет сравнивать нельзя");
 					
 					if (prfSecret != null && prfSecret.Length > 0)
 					{

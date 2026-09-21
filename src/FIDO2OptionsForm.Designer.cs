@@ -31,88 +31,129 @@ namespace KeePassFIDO2
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.buttonManageCredential = new System.Windows.Forms.Button();
-			this.buttonDiagnostics = new System.Windows.Forms.Button();
-			this.textBoxBottom = new System.Windows.Forms.TextBox();
 			this.textBoxTop = new System.Windows.Forms.TextBox();
+			this.groupBoxHello = new System.Windows.Forms.GroupBox();
+			this.checkedListCredentials = new System.Windows.Forms.CheckedListBox();
+			this.labelHelloStatus = new System.Windows.Forms.Label();
+			this.buttonDeleteChecked = new System.Windows.Forms.Button();
+			this.buttonRefresh = new System.Windows.Forms.Button();
+			this.progressBar = new System.Windows.Forms.ProgressBar();
+			this.buttonDiagnostics = new System.Windows.Forms.Button();
+			this.groupBoxHello.SuspendLayout();
 			this.SuspendLayout();
-			// 
-			// buttonManageCredential
-			// 
-			this.buttonManageCredential.Location = new System.Drawing.Point(10, 90);
-			this.buttonManageCredential.Margin = new System.Windows.Forms.Padding(0, 20, 0, 0);
-			this.buttonManageCredential.Name = "buttonManageCredential";
-			this.buttonManageCredential.Size = new System.Drawing.Size(311, 25);
-			this.buttonManageCredential.TabIndex = 1;
-			this.buttonManageCredential.Text = "Управление Credential";
-			this.buttonManageCredential.UseVisualStyleBackColor = true;
-			this.buttonManageCredential.Click += new System.EventHandler(this.ManageCredentialButtonClick);
-			// 
-			// buttonDiagnostics
-			// 
-			this.buttonDiagnostics.Location = new System.Drawing.Point(10, 125);
-			this.buttonDiagnostics.Margin = new System.Windows.Forms.Padding(0, 10, 0, 0);
-			this.buttonDiagnostics.Name = "buttonDiagnostics";
-			this.buttonDiagnostics.Size = new System.Drawing.Size(311, 25);
-			this.buttonDiagnostics.TabIndex = 3;
-			this.buttonDiagnostics.Text = "🔍 Диагностика PRF";
-			this.buttonDiagnostics.UseVisualStyleBackColor = true;
-			this.buttonDiagnostics.Click += new System.EventHandler(this.DiagnosticsButtonClick);
-			// 
-			// textBoxBottom
-			// 
-			this.textBoxBottom.BackColor = System.Drawing.SystemColors.Control;
-			this.textBoxBottom.BorderStyle = System.Windows.Forms.BorderStyle.None;
-			this.textBoxBottom.Dock = System.Windows.Forms.DockStyle.Bottom;
-			this.textBoxBottom.Location = new System.Drawing.Point(9, 264);
-			this.textBoxBottom.Multiline = true;
-			this.textBoxBottom.Name = "textBoxBottom";
-			this.textBoxBottom.ReadOnly = true;
-			this.textBoxBottom.Size = new System.Drawing.Size(312, 60);
-			this.textBoxBottom.TabIndex = 0;
-			this.textBoxBottom.TabStop = false;
-			this.textBoxBottom.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-			// 
+			//
 			// textBoxTop
-			// 
+			//
 			this.textBoxTop.BackColor = System.Drawing.SystemColors.Control;
 			this.textBoxTop.BorderStyle = System.Windows.Forms.BorderStyle.None;
-			this.textBoxTop.Location = new System.Drawing.Point(10, 10);
+			this.textBoxTop.Location = new System.Drawing.Point(12, 12);
 			this.textBoxTop.Multiline = true;
 			this.textBoxTop.Name = "textBoxTop";
 			this.textBoxTop.ReadOnly = true;
-			this.textBoxTop.Size = new System.Drawing.Size(310, 60);
-			this.textBoxTop.TabIndex = 2;
+			this.textBoxTop.Size = new System.Drawing.Size(536, 48);
+			this.textBoxTop.TabIndex = 0;
 			this.textBoxTop.TabStop = false;
-			this.textBoxTop.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-			// 
+			//
+			// groupBoxHello
+			//
+			this.groupBoxHello.Controls.Add(this.checkedListCredentials);
+			this.groupBoxHello.Controls.Add(this.labelHelloStatus);
+			this.groupBoxHello.Controls.Add(this.buttonDeleteChecked);
+			this.groupBoxHello.Controls.Add(this.buttonRefresh);
+			this.groupBoxHello.Controls.Add(this.progressBar);
+			this.groupBoxHello.Location = new System.Drawing.Point(12, 68);
+			this.groupBoxHello.Name = "groupBoxHello";
+			this.groupBoxHello.Size = new System.Drawing.Size(536, 262);
+			this.groupBoxHello.TabIndex = 1;
+			this.groupBoxHello.TabStop = false;
+			this.groupBoxHello.Text = "Credential Windows Hello";
+			//
+			// checkedListCredentials
+			//
+			this.checkedListCredentials.CheckOnClick = true;
+			this.checkedListCredentials.HorizontalScrollbar = true;
+			this.checkedListCredentials.IntegralHeight = false;
+			this.checkedListCredentials.Location = new System.Drawing.Point(12, 22);
+			this.checkedListCredentials.Name = "checkedListCredentials";
+			this.checkedListCredentials.Size = new System.Drawing.Size(512, 150);
+			this.checkedListCredentials.TabIndex = 0;
+			this.checkedListCredentials.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.CredentialsItemCheck);
+			//
+			// labelHelloStatus
+			//
+			this.labelHelloStatus.Location = new System.Drawing.Point(12, 178);
+			this.labelHelloStatus.Name = "labelHelloStatus";
+			this.labelHelloStatus.Size = new System.Drawing.Size(512, 40);
+			this.labelHelloStatus.TabIndex = 1;
+			//
+			// buttonDeleteChecked
+			//
+			this.buttonDeleteChecked.Location = new System.Drawing.Point(12, 224);
+			this.buttonDeleteChecked.Name = "buttonDeleteChecked";
+			this.buttonDeleteChecked.Size = new System.Drawing.Size(180, 26);
+			this.buttonDeleteChecked.TabIndex = 2;
+			this.buttonDeleteChecked.Text = "Удалить отмеченные";
+			this.buttonDeleteChecked.UseVisualStyleBackColor = true;
+			this.buttonDeleteChecked.Click += new System.EventHandler(this.DeleteCheckedButtonClick);
+			//
+			// buttonRefresh
+			//
+			this.buttonRefresh.Location = new System.Drawing.Point(198, 224);
+			this.buttonRefresh.Name = "buttonRefresh";
+			this.buttonRefresh.Size = new System.Drawing.Size(100, 26);
+			this.buttonRefresh.TabIndex = 3;
+			this.buttonRefresh.Text = "Обновить";
+			this.buttonRefresh.UseVisualStyleBackColor = true;
+			this.buttonRefresh.Click += new System.EventHandler(this.RefreshButtonClick);
+			//
+			// progressBar
+			//
+			this.progressBar.Location = new System.Drawing.Point(304, 226);
+			this.progressBar.Name = "progressBar";
+			this.progressBar.Size = new System.Drawing.Size(220, 22);
+			this.progressBar.TabIndex = 4;
+			this.progressBar.Visible = false;
+			//
+			// buttonDiagnostics
+			//
+			this.buttonDiagnostics.Location = new System.Drawing.Point(12, 340);
+			this.buttonDiagnostics.Name = "buttonDiagnostics";
+			this.buttonDiagnostics.Size = new System.Drawing.Size(180, 26);
+			this.buttonDiagnostics.TabIndex = 2;
+			this.buttonDiagnostics.Text = "🔍 Диагностика PRF";
+			this.buttonDiagnostics.UseVisualStyleBackColor = true;
+			this.buttonDiagnostics.Click += new System.EventHandler(this.DiagnosticsButtonClick);
+			//
 			// FIDO2OptionsForm
-			// 
+			//
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(330, 333);
+			this.ClientSize = new System.Drawing.Size(560, 378);
 			this.Controls.Add(this.buttonDiagnostics);
-			this.Controls.Add(this.buttonManageCredential);
-			this.Controls.Add(this.textBoxBottom);
+			this.Controls.Add(this.groupBoxHello);
 			this.Controls.Add(this.textBoxTop);
+			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			this.MaximizeBox = false;
 			this.MinimizeBox = false;
 			this.Name = "FIDO2OptionsForm";
-			this.Padding = new System.Windows.Forms.Padding(9);
 			this.ShowIcon = false;
 			this.ShowInTaskbar = false;
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-			this.Text = "KeePassFIDO2 Options";
+			this.Text = "KeePassFIDO2";
+			this.groupBoxHello.ResumeLayout(false);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 		}
 
-		private System.Windows.Forms.Button buttonManageCredential;
-		private System.Windows.Forms.Button buttonDiagnostics;
-		private System.Windows.Forms.TextBox textBoxBottom;
 		private System.Windows.Forms.TextBox textBoxTop;
+		private System.Windows.Forms.GroupBox groupBoxHello;
+		private System.Windows.Forms.CheckedListBox checkedListCredentials;
+		private System.Windows.Forms.Label labelHelloStatus;
+		private System.Windows.Forms.Button buttonDeleteChecked;
+		private System.Windows.Forms.Button buttonRefresh;
+		private System.Windows.Forms.ProgressBar progressBar;
+		private System.Windows.Forms.Button buttonDiagnostics;
 
 		#endregion
 	}
 }
-

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -14,7 +15,10 @@ namespace KeePassFIDO2.WebAuthn
 	public static class WebAuthnHelper
 	{
 		// ВАЖНО: RP_ID и PRF_SALT — часть «формата» ключа. Их изменение сделает существующие базы неоткрываемыми!
-		private const string RP_ID = "localhost";
+		// Уникальный RP ID: с discoverable credentials пустой allowList показывает ВСЕ credential для RP,
+		// и с "localhost" в список попадали бы passkey от локальной веб‑разработки.
+		private const string RP_ID = "keepass-fido2.local";
+		public static string RpId => RP_ID;
 		private const string RP_NAME = "KeePass FIDO2 Plugin";
 		private const uint TIMEOUT_MS = 120000; // 2 минуты — hybrid (телефон) требует времени на QR/BLE
 
@@ -90,10 +94,13 @@ namespace KeePassFIDO2.WebAuthn
 
 		/// <summary>
 		/// Создает новый credential с hmac-secret/PRF extension.
+		/// Credential создаётся discoverable (resident): ключ хранит его сам, и при GetAssertion
+		/// с пустым allowList аутентификатор возвращает credential ID в ответе.
 		/// </summary>
 		/// <param name="userName">Имя пользователя/базы — показывается в диалогах Windows и на телефоне</param>
-		/// <returns>Credential ID (нужно сохранить) и, если API ≥ 8, сразу PRF-секрет (иначе null)</returns>
-		public static CredentialCreationResult CreateCredential(IntPtr windowHandle, byte[] userId, string userName)
+		/// <param name="displayName">Полный путь базы — по нему очистка находит осиротевшие credential</param>
+		/// <returns>Credential ID и, если API ≥ 8, сразу PRF-секрет (иначе null)</returns>
+		public static PrfResult CreateCredential(IntPtr windowHandle, byte[] userId, string userName, string displayName = null)
 		{
 			if (userId == null || userId.Length == 0)
 				throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
@@ -129,7 +136,7 @@ namespace KeePassFIDO2.WebAuthn
 					cbId = (uint)userId.Length,
 					pbId = pUserId,
 					pwszName = userName,
-					pwszDisplayName = userName
+					pwszDisplayName = string.IsNullOrEmpty(displayName) ? userName : displayName
 				};
 
 				byte[] clientDataJson = Encoding.UTF8.GetBytes(CreateClientDataJson("webauthn.create"));
@@ -186,7 +193,7 @@ namespace KeePassFIDO2.WebAuthn
 					dwTimeoutMilliseconds = TIMEOUT_MS,
 					Extensions = new WebAuthnApi.WEBAUTHN_EXTENSIONS { cExtensions = 1, pExtensions = pExtension },
 					dwAuthenticatorAttachment = WebAuthnApi.WEBAUTHN_AUTHENTICATOR_ATTACHMENT_ANY,
-					bRequireResidentKey = false,
+					bRequireResidentKey = true,
 					dwUserVerificationRequirement = WebAuthnApi.WEBAUTHN_USER_VERIFICATION_REQUIREMENT_REQUIRED,
 					dwAttestationConveyancePreference = WebAuthnApi.WEBAUTHN_ATTESTATION_CONVEYANCE_PREFERENCE_NONE,
 					bEnablePrf = usePrfFlag,
@@ -233,10 +240,13 @@ namespace KeePassFIDO2.WebAuthn
 						"или телефон с менеджером паролей, поддерживающим PRF.");
 				}
 
-				return new CredentialCreationResult
+				return new PrfResult
 				{
 					CredentialId = CopyBytes(attestation.pbCredentialId, attestation.cbCredentialId),
-					PrfSecret = prfSecret
+					PrfSecret = prfSecret,
+					Transport = attestation.dwVersion >= WebAuthnApi.WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_3
+						? attestation.dwUsedTransport
+						: 0
 				};
 			}
 			finally
@@ -284,19 +294,21 @@ namespace KeePassFIDO2.WebAuthn
 		}
 
 		/// <summary>
-		/// Получает PRF secret от аутентификатора используя сохраненный credential ID.
-		/// Возвращает детерминированный ключ (32 байта), который используется как мастер-ключ.
+		/// Получает PRF secret (32 байта, детерминированный) от аутентификатора.
 		/// </summary>
-		public static byte[] GetPrfSecret(IntPtr windowHandle, byte[] credentialId)
+		/// <param name="allowList">Credential ID, среди которых аутентификатор выбирает (Windows сразу открывает
+		/// Hello, если один из них на этом ПК). null/пусто — discoverable‑режим: аутентификатор сам предъявляет
+		/// credential для RP, при нескольких Windows покажет выбор</param>
+		/// <returns>PRF‑секрет и credential ID, которым он получен</returns>
+		public static PrfResult GetPrfSecret(IntPtr windowHandle, IList<byte[]> allowList = null)
 		{
-			if (credentialId == null || credentialId.Length == 0)
-				throw new ArgumentException("Credential ID cannot be null or empty", nameof(credentialId));
-
-			Log($"Получение hmac-secret: RP ID=\"{RP_ID}\", API v{GetApiVersion()}, credId {credentialId.Length} байт");
+			bool discoverable = allowList == null || allowList.Count == 0;
+			Log($"Получение hmac-secret: RP ID=\"{RP_ID}\", API v{GetApiVersion()}, " +
+			    (discoverable ? "discoverable (allowList пуст)" : $"allowList из {allowList.Count} credential"));
 
 			IntPtr pClientDataJson = IntPtr.Zero;
-			IntPtr pCredentialId = IntPtr.Zero;
-			IntPtr pCredential = IntPtr.Zero;
+			var pCredentialIds = new List<IntPtr>();
+			IntPtr pCredentials = IntPtr.Zero;
 			IntPtr pSaltBytes = IntPtr.Zero;
 			IntPtr pSalt = IntPtr.Zero;
 			IntPtr pSaltValues = IntPtr.Zero;
@@ -314,14 +326,30 @@ namespace KeePassFIDO2.WebAuthn
 					pwszHashAlgId = "SHA-256"
 				};
 
-				pCredentialId = AllocBytes(credentialId);
-				pCredential = AllocStruct(new WebAuthnApi.WEBAUTHN_CREDENTIAL
+				// allowList — непрерывный массив WEBAUTHN_CREDENTIAL
+				var credentialList = new WebAuthnApi.WEBAUTHN_CREDENTIALS();
+				if (!discoverable)
 				{
-					dwVersion = 1,
-					cbId = (uint)credentialId.Length,
-					pbId = pCredentialId,
-					pwszCredentialType = WebAuthnApi.WEBAUTHN_CREDENTIAL_TYPE_PUBLIC_KEY
-				});
+					int credSize = Marshal.SizeOf(typeof(WebAuthnApi.WEBAUTHN_CREDENTIAL));
+					pCredentials = Marshal.AllocHGlobal(credSize * allowList.Count);
+					for (int i = 0; i < allowList.Count; i++)
+					{
+						IntPtr pId = AllocBytes(allowList[i]);
+						pCredentialIds.Add(pId);
+						Marshal.StructureToPtr(new WebAuthnApi.WEBAUTHN_CREDENTIAL
+						{
+							dwVersion = 1,
+							cbId = (uint)allowList[i].Length,
+							pbId = pId,
+							pwszCredentialType = WebAuthnApi.WEBAUTHN_CREDENTIAL_TYPE_PUBLIC_KEY
+						}, pCredentials + i * credSize, false);
+					}
+					credentialList = new WebAuthnApi.WEBAUTHN_CREDENTIALS
+					{
+						cCredentials = (uint)allowList.Count,
+						pCredentials = pCredentials
+					};
+				}
 
 				// Соль: WEBAUTHN_HMAC_SECRET_SALT_VALUES → pGlobalHmacSalt → WEBAUTHN_HMAC_SECRET_SALT → PRF_SALT
 				pSaltBytes = AllocBytes(PRF_SALT);
@@ -339,7 +367,7 @@ namespace KeePassFIDO2.WebAuthn
 				{
 					dwVersion = WebAuthnApi.WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_6,
 					dwTimeoutMilliseconds = TIMEOUT_MS,
-					CredentialList = new WebAuthnApi.WEBAUTHN_CREDENTIALS { cCredentials = 1, pCredentials = pCredential },
+					CredentialList = credentialList,
 					dwAuthenticatorAttachment = WebAuthnApi.WEBAUTHN_AUTHENTICATOR_ATTACHMENT_ANY,
 					dwUserVerificationRequirement = WebAuthnApi.WEBAUTHN_USER_VERIFICATION_REQUIREMENT_REQUIRED,
 					pHmacSecretSaltValues = pSaltValues
@@ -376,8 +404,15 @@ namespace KeePassFIDO2.WebAuthn
 						"Убедитесь, что credential был создан с hmac-secret/PRF и аутентификатор его поддерживает.");
 				}
 
+				if (assertion.Credential.cbId == 0 || assertion.Credential.pbId == IntPtr.Zero)
+					throw new WebAuthnException("Assertion не содержит credential ID");
+
 				Log($"✓ hmac-secret получен, {prfSecret.Length} байт");
-				return prfSecret;
+				return new PrfResult
+				{
+					CredentialId = CopyBytes(assertion.Credential.pbId, assertion.Credential.cbId),
+					PrfSecret = prfSecret
+				};
 			}
 			finally
 			{
@@ -385,10 +420,88 @@ namespace KeePassFIDO2.WebAuthn
 				if (pSaltValues != IntPtr.Zero) Marshal.FreeHGlobal(pSaltValues);
 				if (pSalt != IntPtr.Zero) Marshal.FreeHGlobal(pSalt);
 				if (pSaltBytes != IntPtr.Zero) Marshal.FreeHGlobal(pSaltBytes);
-				if (pCredential != IntPtr.Zero) Marshal.FreeHGlobal(pCredential);
-				if (pCredentialId != IntPtr.Zero) Marshal.FreeHGlobal(pCredentialId);
+				if (pCredentials != IntPtr.Zero)
+				{
+					int credSize = Marshal.SizeOf(typeof(WebAuthnApi.WEBAUTHN_CREDENTIAL));
+					for (int i = 0; i < pCredentialIds.Count; i++)
+						Marshal.DestroyStructure(pCredentials + i * credSize, typeof(WebAuthnApi.WEBAUTHN_CREDENTIAL));
+					Marshal.FreeHGlobal(pCredentials);
+				}
+				foreach (IntPtr pId in pCredentialIds) Marshal.FreeHGlobal(pId);
 				if (pClientDataJson != IntPtr.Zero) Marshal.FreeHGlobal(pClientDataJson);
 			}
+		}
+
+		/// <summary>
+		/// Название типа устройства по транспорту (WEBAUTHN_CTAP_TRANSPORT_*) — для подписи в списке устройств
+		/// </summary>
+		public static string TransportName(uint transport)
+		{
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_INTERNAL) != 0) return "Windows Hello";
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_HYBRID) != 0) return "Телефон";
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_USB) != 0) return "USB‑ключ";
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_NFC) != 0) return "NFC‑ключ";
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_BLE) != 0) return "Bluetooth‑ключ";
+			return "FIDO2‑устройство";
+		}
+
+		/// <summary>
+		/// Discoverable credential Windows Hello для нашего RP (API 4+). Пустой список, если их нет.
+		/// </summary>
+		public static List<PlatformCredential> ListPlatformCredentials()
+		{
+			var result = new List<PlatformCredential>();
+			var options = new WebAuthnApi.WEBAUTHN_GET_CREDENTIALS_OPTIONS
+			{
+				dwVersion = WebAuthnApi.WEBAUTHN_GET_CREDENTIALS_OPTIONS_VERSION_1,
+				pwszRpId = RP_ID
+			};
+
+			IntPtr pList;
+			int hr = WebAuthnApi.WebAuthNGetPlatformCredentialList(ref options, out pList);
+			if (hr != 0)
+			{
+				Log($"GetPlatformCredentialList: {WebAuthnApi.WebAuthNGetErrorName(hr)} (0x{hr:X8})");
+				return result; // NTE_NOT_FOUND — credential нет
+			}
+
+			try
+			{
+				var list = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_CREDENTIAL_DETAILS_LIST>(pList);
+				for (int i = 0; i < list.cCredentialDetails; i++)
+				{
+					IntPtr pDetails = Marshal.ReadIntPtr(list.ppCredentialDetails, i * IntPtr.Size);
+					var details = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_CREDENTIAL_DETAILS>(pDetails);
+					var user = details.pUserInformation == IntPtr.Zero
+						? new WebAuthnApi.WEBAUTHN_USER_ENTITY_INFORMATION()
+						: Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_USER_ENTITY_INFORMATION>(details.pUserInformation);
+
+					result.Add(new PlatformCredential
+					{
+						CredentialId = CopyBytes(details.pbCredentialID, details.cbCredentialID),
+						UserName = user.pwszName ?? string.Empty,
+						DisplayName = user.pwszDisplayName ?? string.Empty
+					});
+				}
+				Log($"GetPlatformCredentialList: {result.Count} credential для {RP_ID}");
+				return result;
+			}
+			finally
+			{
+				WebAuthnApi.WebAuthNFreePlatformCredentialList(pList);
+			}
+		}
+
+		/// <summary>
+		/// Удаляет credential Windows Hello. false — не найден/не Hello (например, YubiKey или телефон).
+		/// </summary>
+		public static bool DeletePlatformCredential(byte[] credentialId)
+		{
+			if (credentialId == null || credentialId.Length == 0) return false;
+			int hr = WebAuthnApi.WebAuthNDeletePlatformCredential((uint)credentialId.Length, credentialId);
+			Log($"DeletePlatformCredential({credentialId.Length} байт): " +
+			    (hr == 0 ? "OK" : $"{WebAuthnApi.WebAuthNGetErrorName(hr)} (0x{hr:X8})"));
+			return hr == 0;
 		}
 
 		/// <summary>
@@ -564,15 +677,28 @@ namespace KeePassFIDO2.WebAuthn
 	}
 
 	/// <summary>
-	/// Результат создания credential
+	/// Результат MakeCredential / GetAssertion: credential ID и PRF‑секрет
 	/// </summary>
-	public class CredentialCreationResult
+	public class PrfResult
 	{
-		/// <summary>Credential ID — сохранить для последующих GetPrfSecret</summary>
 		public byte[] CredentialId { get; set; }
 
-		/// <summary>PRF-секрет, полученный при создании (API 8+), либо null — тогда нужен GetPrfSecret</summary>
+		/// <summary>PRF-секрет (32 байта). При создании на API &lt; 8 — null, тогда нужен GetPrfSecret</summary>
 		public byte[] PrfSecret { get; set; }
+
+		/// <summary>Транспорт аутентификатора (WEBAUTHN_CTAP_TRANSPORT_*); 0, если неизвестен</summary>
+		public uint Transport { get; set; }
+	}
+
+	/// <summary>
+	/// Credential Windows Hello из WebAuthNGetPlatformCredentialList
+	/// </summary>
+	public class PlatformCredential
+	{
+		public byte[] CredentialId { get; set; }
+		public string UserName { get; set; }
+		/// <summary>Полный путь базы (credential плагина) либо имя пользователя</summary>
+		public string DisplayName { get; set; }
 	}
 
 	/// <summary>

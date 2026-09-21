@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Windows.Forms;
+using KeePass.UI;
 using KeePassFIDO2.WebAuthn;
+using KeePassLib;
 using KeePassLib.Keys;
 using KeePassLib.Utility;
 
@@ -9,10 +12,25 @@ namespace KeePassFIDO2
 {
 	/// <summary>
 	/// Key Provider для KeePass, использующий FIDO2 аутентификацию через Windows WebAuthn API
-	/// с поддержкой PRF extension (WebAuthn Level 3) для детерминированной генерации ключей
+	/// с поддержкой PRF extension (WebAuthn Level 3).
+	/// Ключ базы K — случайные 32 байта; в заголовке KDBX (PublicCustomData) для каждого устройства
+	/// хранится K ⊕ PRF_i (см. <see cref="DeviceKeyStore"/>). Credential — discoverable: файлов рядом с базой нет.
+	/// Удаление устройства = ротация K: новый K перешифровывается для оставшихся устройств.
 	/// </summary>
 	public class FIDO2KeyProvider : KeyProvider
 	{
+		public const string ProviderName = "FIDO2 Key Provider (Windows WebAuthn)";
+
+		/// <summary>
+		/// Устройство, созданное последним вызовом GetKey(CreatingNewKey): credential ID, обёртка K ⊕ PRF,
+		/// подпись и SHA‑256 ключа K. База в этот момент ещё недоступна; запись делает
+		/// <see cref="RegisterPendingDevice"/> при показе параметров базы либо по событиям FileCreated / MasterKeyChanged.
+		/// </summary>
+		private static byte[] pendingCredentialId;
+		private static byte[] pendingWrappedKey;
+		private static byte[] pendingKeyHash;
+		private static string pendingLabel;
+
 		public override byte[] GetKey(KeyProviderQueryContext ctx)
 		{
 			// Проверка доступности WebAuthn API
@@ -27,14 +45,7 @@ namespace KeePassFIDO2
 
 			try
 			{
-				if (ctx.CreatingNewKey)
-				{
-					return CreateNewCredential(ctx);
-				}
-				else
-				{
-					return UnlockWithCredential(ctx);
-				}
+				return ctx.CreatingNewKey ? CreateNewCredential(ctx) : UnlockWithCredential(ctx);
 			}
 			catch (WebAuthnException ex)
 			{
@@ -49,150 +60,248 @@ namespace KeePassFIDO2
 		}
 
 		/// <summary>
-		/// Создает новый credential и сохраняет его
+		/// Создаёт новый credential и случайный ключ базы K; обёртка K ⊕ PRF ждёт записи в базу
 		/// </summary>
 		private byte[] CreateNewCredential(KeyProviderQueryContext ctx)
 		{
-			// Генерируем User ID (32 байта)
-			byte[] userId = new byte[32];
-			using (var rng = new RNGCryptoServiceProvider())
-			{
-				rng.GetBytes(userId);
-			}
-
-			// Показываем информационное сообщение
-			var result = MessageBox.Show(
-				"Сейчас будет создан новый FIDO2 credential для этой базы данных.\n\n" +
-				"Вам потребуется:\n" +
-				"1. Современный FIDO2 ключ с поддержкой PRF (YubiKey 5, Google Titan и др.)\n" +
-				"2. Ввести PIN-код ключа\n" +
-				"3. Подтвердить создание credential (обычно нажатием кнопки на ключе)\n\n" +
-				"Credential ID будет сохранён в файл рядом с базой данных.\n\n" +
-				"Примечание: используется PRF extension (WebAuthn Level 3).\n\n" +
-				"Продолжить?",
-				"Создание FIDO2 Credential",
-				MessageBoxButtons.YesNo,
-				MessageBoxIcon.Information);
-
-			if (result != DialogResult.Yes)
-			{
+			var form = new DeviceNameForm();
+			if (UIUtil.ShowDialogAndDestroy(form) != DialogResult.OK)
 				return null;
-			}
+			string label = form.DeviceName;
 
-			// Получаем дескриптор окна
-			IntPtr windowHandle = GetActiveWindowHandle();
-
-			// Создаем credential; имя базы попадает в user entity и видно в диалогах Windows/телефона
-			string dbName = string.IsNullOrEmpty(ctx.DatabasePath)
-				? "KeePass Database"
-				: System.IO.Path.GetFileName(ctx.DatabasePath);
-			var created = WebAuthnHelper.CreateCredential(windowHandle, userId, $"KeePass: {dbName}");
-			byte[] credentialId = created.CredentialId;
-
-			// Сохраняем credential ID
-			if (!string.IsNullOrEmpty(ctx.DatabasePath))
-			{
-				try
-				{
-					CredentialStorage.SaveCredentialId(ctx.DatabasePath, credentialId, userId);
-					MessageService.ShowInfo(
-						"FIDO2 credential с PRF успешно создан и сохранён!\n\n" +
-						$"Файл: {System.IO.Path.GetFileNameWithoutExtension(ctx.DatabasePath)}.fido2\n\n" +
-						"Сохраните этот файл вместе с базой данных.\n\n" +
-						"Используется PRF extension (WebAuthn Level 3).");
-				}
-				catch (Exception ex)
-				{
-					MessageService.ShowWarning($"Не удалось сохранить credential ID:\n{ex.Message}");
-					return null;
-				}
-			}
-
-			// PRF secret: на API 8+ уже получен при создании, иначе — отдельный GetAssertion
-			byte[] prfSecret = created.PrfSecret;
-			if (prfSecret == null)
-			{
-				System.Threading.Thread.Sleep(500);
-				prfSecret = WebAuthnHelper.GetPrfSecret(windowHandle, credentialId);
-			}
-
-			// Убираем из памяти чувствительные данные
-			MemUtil.ZeroByteArray(userId);
-			MemUtil.ZeroByteArray(credentialId);
-
-			return prfSecret;
-		}
-
-		/// <summary>
-		/// Разблокирует базу данных используя существующий credential
-		/// </summary>
-		private byte[] UnlockWithCredential(KeyProviderQueryContext ctx)
-		{
-			// Проверяем наличие сохраненного credential ID
-			if (string.IsNullOrEmpty(ctx.DatabasePath))
-			{
-				MessageService.ShowWarning("Невозможно определить путь к базе данных.");
-				return null;
-			}
-
-			if (!CredentialStorage.CredentialExists(ctx.DatabasePath))
-			{
-				MessageService.ShowWarning(
-					"Файл с FIDO2 credential не найден.\n\n" +
-					"Убедитесь, что файл .fido2 находится в той же папке, что и база данных.\n\n" +
-					"Если вы впервые используете FIDO2 для этой базы данных, " +
-					"создайте новую базу с использованием FIDO2 в качестве ключа.");
-				return null;
-			}
-
-			// Загружаем credential ID
-			var credentialData = CredentialStorage.LoadCredentialId(ctx.DatabasePath);
-			if (!credentialData.HasValue)
-			{
-				MessageService.ShowWarning("Не удалось загрузить credential ID из файла.");
-				return null;
-			}
-
-			byte[] credentialId = credentialData.Value.credentialId;
-			byte[] userId = credentialData.Value.userId;
-
+			PrfResult created = CreateCredentialForDatabase(GetActiveWindowHandle(), ctx.DatabasePath);
 			try
 			{
-				// Получаем дескриптор окна
-				IntPtr windowHandle = GetActiveWindowHandle();
-
-				// Получаем PRF secret от аутентификатора
-				byte[] prfSecret = WebAuthnHelper.GetPrfSecret(windowHandle, credentialId);
-
-				// Убираем из памяти
-				MemUtil.ZeroByteArray(credentialId);
-				MemUtil.ZeroByteArray(userId);
-
-				return prfSecret;
+				byte[] key = GenerateKey();
+				pendingCredentialId = created.CredentialId;
+				pendingWrappedKey = DeviceKeyStore.Wrap(key, created.PrfSecret);
+				pendingKeyHash = HashKey(key);
+				pendingLabel = label.Length > 0 ? label : DefaultLabel(created.Transport);
+				return key;
 			}
 			finally
 			{
-				// Гарантируем очистку памяти
-				if (credentialId != null) MemUtil.ZeroByteArray(credentialId);
-				if (userId != null) MemUtil.ZeroByteArray(userId);
+				MemUtil.ZeroByteArray(created.PrfSecret);
 			}
+		}
+
+		/// <summary>Подпись устройства по умолчанию: тип по транспорту и момент создания credential</summary>
+		private static string DefaultLabel(uint transport)
+		{
+			return $"{WebAuthnHelper.TransportName(transport)}, {DateTime.Now:dd.MM.yyyy HH:mm}";
+		}
+
+		/// <summary>
+		/// Если мастер‑ключ базы — ключ последнего созданного credential, добавляет его запись
+		/// в PublicCustomData. Возвращает true, если запись добавлена.
+		/// </summary>
+		public static bool RegisterPendingDevice(PwDatabase db)
+		{
+			if (pendingCredentialId == null || db == null) return false;
+
+			byte[] key = GetDatabaseKey(db);
+			if (key == null) return false;
+
+			try
+			{
+				if (!MemUtil.ArraysEqual(HashKey(key), pendingKeyHash))
+					return false;
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(key);
+			}
+
+			List<DeviceRecord> records = DeviceKeyStore.Load(db);
+			records.Insert(0, new DeviceRecord
+			{
+				CredentialId = pendingCredentialId,
+				WrappedKey = pendingWrappedKey,
+				Label = pendingLabel
+			});
+			DeviceKeyStore.Save(db, records);
+
+			pendingCredentialId = null;
+			pendingWrappedKey = null;
+			pendingKeyHash = null;
+			pendingLabel = null;
+			return true;
+		}
+
+		/// <summary>
+		/// Ротация ключа базы: новый случайный K перешифровывается для всех записей и подставляется
+		/// в мастер‑ключ базы (остальные компоненты мастер‑ключа сохраняются). Аутентификаторы не нужны.
+		/// Базу после этого необходимо сохранить.
+		/// </summary>
+		public static void RotateDatabaseKey(PwDatabase db, List<DeviceRecord> records)
+		{
+			byte[] oldKey = GetDatabaseKey(db);
+			if (oldKey == null)
+				throw new InvalidOperationException("Мастер‑ключ базы не использует FIDO2");
+
+			byte[] newKey = GenerateKey();
+			try
+			{
+				DeviceKeyStore.Rewrap(records, oldKey, newKey);
+
+				var masterKey = new CompositeKey();
+				foreach (IUserKey userKey in db.MasterKey.UserKeys)
+					masterKey.AddUserKey(IsOurKey(userKey) ? new KcpCustomKey(ProviderName, newKey, false) : userKey);
+
+				db.MasterKey = masterKey;
+				db.MasterKeyChanged = DateTime.UtcNow;
+				db.MasterKeyChangeForceOnce = false;
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(oldKey);
+				MemUtil.ZeroByteArray(newKey);
+			}
+		}
+
+		/// <summary>
+		/// Ключ базы K из мастер‑ключа (KcpCustomKey нашего провайдера), иначе null
+		/// </summary>
+		public static byte[] GetDatabaseKey(PwDatabase db)
+		{
+			return FindOurKey(db)?.KeyData.ReadData();
+		}
+
+		public static bool UsesFido2Key(PwDatabase db)
+		{
+			return FindOurKey(db) != null;
+		}
+
+		private static KcpCustomKey FindOurKey(PwDatabase db)
+		{
+			if (db?.MasterKey == null) return null;
+			foreach (IUserKey userKey in db.MasterKey.UserKeys)
+			{
+				if (IsOurKey(userKey)) return (KcpCustomKey)userKey;
+			}
+			return null;
+		}
+
+		private static bool IsOurKey(IUserKey userKey)
+		{
+			return userKey is KcpCustomKey custom && custom.Name == ProviderName;
+		}
+
+		private static byte[] GenerateKey()
+		{
+			byte[] key = new byte[DeviceKeyStore.KeyLength];
+			using (var rng = new RNGCryptoServiceProvider())
+				rng.GetBytes(key);
+			return key;
+		}
+
+		private static byte[] HashKey(byte[] key)
+		{
+			using (var sha = SHA256.Create())
+				return sha.ComputeHash(key);
+		}
+
+		/// <summary>
+		/// Создаёт credential с PRF для базы и возвращает credential ID + PRF‑секрет
+		/// (используется и при создании ключа, и при добавлении устройства)
+		/// </summary>
+		public static PrfResult CreateCredentialForDatabase(IntPtr windowHandle, string databasePath)
+		{
+			// User ID (32 байта) — случайный, чтобы каждая база/устройство получали отдельный credential
+			byte[] userId = new byte[32];
+			using (var rng = new RNGCryptoServiceProvider())
+				rng.GetBytes(userId);
+
+			// Имя базы попадает в user entity и видно в диалогах Windows/телефона
+			string dbName = string.IsNullOrEmpty(databasePath)
+				? "KeePass Database"
+				: System.IO.Path.GetFileName(databasePath);
+
+			try
+			{
+				// displayName = полный путь: по нему очистка в Tools → KeePassFIDO2 находит credential удалённых баз
+				PrfResult created = WebAuthnHelper.CreateCredential(windowHandle, userId, $"KeePass: {dbName}", databasePath);
+
+				// PRF secret: на API 8+ уже получен при создании, иначе — отдельный GetAssertion
+				if (created.PrfSecret == null)
+				{
+					System.Threading.Thread.Sleep(500);
+					created.PrfSecret = WebAuthnHelper.GetPrfSecret(windowHandle, new[] { created.CredentialId }).PrfSecret;
+				}
+				return created;
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(userId);
+			}
+		}
+
+		/// <summary>
+		/// Разблокирует базу: записи из заголовка → GetAssertion по allowList → K = обёртка ⊕ PRF
+		/// </summary>
+		private byte[] UnlockWithCredential(KeyProviderQueryContext ctx)
+		{
+			List<DeviceRecord> records = LoadRecords(ctx);
+			if (records == null)
+				return null;
+
+			PrfResult assertion = WebAuthnHelper.GetPrfSecret(GetActiveWindowHandle(), DeviceKeyStore.GetAllowList(records));
+			try
+			{
+				DeviceRecord record = DeviceKeyStore.Find(records, assertion.CredentialId);
+				if (record == null)
+					throw new WebAuthnException("Аутентификатор предъявил credential, не зарегистрированный в этой базе");
+
+				return DeviceKeyStore.Wrap(record.WrappedKey, assertion.PrfSecret);
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(assertion.CredentialId);
+				MemUtil.ZeroByteArray(assertion.PrfSecret);
+			}
+		}
+
+		/// <summary>
+		/// Записи устройств из заголовка файла; null (с сообщением), если их нет или прочитать не удалось —
+		/// без них базу открыть нельзя
+		/// </summary>
+		private static List<DeviceRecord> LoadRecords(KeyProviderQueryContext ctx)
+		{
+			string problem;
+			try
+			{
+				List<DeviceRecord> records = ctx.DatabaseIOInfo == null
+					? new List<DeviceRecord>()
+					: DeviceKeyStore.LoadFromFile(ctx.DatabaseIOInfo);
+				if (records.Count > 0)
+					return records;
+				problem = "В заголовке базы нет записей устройств FIDO2 (база не сохранена после создания ключа " +
+				          "или создана несовместимой версией плагина).";
+			}
+			catch (Exception ex)
+			{
+				problem = "Не удалось прочитать записи устройств из заголовка базы:\n" + ex.Message;
+			}
+
+			MessageService.ShowWarning(problem, "Открыть базу этим плагином невозможно.");
+			return null;
 		}
 
 		/// <summary>
 		/// Получает дескриптор активного окна
 		/// </summary>
-		private IntPtr GetActiveWindowHandle()
+		private static IntPtr GetActiveWindowHandle()
 		{
 			// Пытаемся получить главное окно KeePass
 			var mainForm = Form.ActiveForm ?? Application.OpenForms[0];
 			return mainForm?.Handle ?? IntPtr.Zero;
 		}
 
-		public override string Name => "FIDO2 Key Provider (Windows WebAuthn)";
-		
+		public override string Name => ProviderName;
+
 		// WebAuthn API работает только из интерактивного окружения пользователя
 		public override bool SecureDesktopCompatible => false;
-		
+
 		// PRF возвращает 32-байтовый ключ, который уже является криптографически стойким
 		// Не требуется дополнительное хеширование
 		public override bool DirectKey => true;

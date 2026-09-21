@@ -1,8 +1,11 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
+using KeePass.Forms;
 using KeePass.Plugins;
 using KeePass.UI;
+using KeePassFIDO2.WebAuthn;
+using KeePassLib;
 
 namespace KeePassFIDO2
 {
@@ -20,17 +23,95 @@ namespace KeePassFIDO2
 
 			PluginHost = host;
 			PluginHost.KeyProviderPool.Add(keyProvider);
+			PluginHost.MainWindow.FileCreated += OnFileCreated;
+			PluginHost.MainWindow.MasterKeyChanged += OnMasterKeyChanged;
+			GlobalWindowManager.WindowAdded += OnWindowAdded;
 			return true;
+		}
+
+		/// <summary>
+		/// Новая база с нашим ключом: устройство уже записано при показе параметров базы (иначе — сейчас).
+		/// KeePass новую базу сам не сохраняет, а без файла с записями её нельзя открыть — сохраняем.
+		/// </summary>
+		private void OnFileCreated(object sender, FileCreatedEventArgs e)
+		{
+			PwDatabase db = e?.Database;
+			if (db == null || !FIDO2KeyProvider.UsesFido2Key(db)) return;
+
+			FIDO2KeyProvider.RegisterPendingDevice(db);
+			PluginHost.MainWindow.SaveDatabase(db, null);
+		}
+
+		/// <summary>
+		/// После смены мастер‑ключа записи устройств шифруют уже недействительный ключ — удаляем их
+		/// (устройства нужно добавить заново) и записываем устройство нового ключа
+		/// </summary>
+		private void OnMasterKeyChanged(object sender, MasterKeyChangedEventArgs e)
+		{
+			if (e?.Database == null) return;
+
+			// Старые credential Windows Hello больше не нужны (для YubiKey/телефона API удаления нет)
+			try
+			{
+				foreach (DeviceRecord r in DeviceKeyStore.Load(e.Database))
+					WebAuthnHelper.DeletePlatformCredential(r.CredentialId);
+			}
+			catch { /* повреждённые записи — просто очищаем */ }
+
+			DeviceKeyStore.Clear(e.Database);
+			if (FIDO2KeyProvider.RegisterPendingDevice(e.Database))
+				PluginHost.MainWindow.SaveDatabase(e.Database, null);
+		}
+
+		/// <summary>
+		/// Добавляет вкладку «FIDO2» в диалог параметров базы (новой и существующей).
+		/// Мастер‑ключ к этому моменту уже задан (KeyCreationForm идёт раньше), поэтому для новой базы
+		/// устройство, которым он создан, записывается здесь — до «OK», чтобы сразу быть в списке.
+		/// </summary>
+		private void OnWindowAdded(object sender, GwmWindowEventArgs e)
+		{
+			var settingsForm = e.Form as DatabaseSettingsForm;
+			if (settingsForm == null) return;
+
+			TabControl tabs = FindTabControl(settingsForm);
+			if (tabs == null) return;
+
+			var control = new FIDO2DevicesControl { Dock = DockStyle.Fill };
+			var page = new TabPage("FIDO2");
+			page.Controls.Add(control);
+			tabs.TabPages.Add(page);
+
+			// База доступна после InitEx — к моменту Shown она уже присвоена
+			settingsForm.Shown += (s, args) =>
+			{
+				PwDatabase db = settingsForm.DatabaseEx;
+				FIDO2KeyProvider.RegisterPendingDevice(db);
+				control.Initialize(PluginHost, db);
+			};
+		}
+
+		private static TabControl FindTabControl(Control parent)
+		{
+			foreach (Control c in parent.Controls)
+			{
+				if (c is TabControl tabs) return tabs;
+				TabControl nested = FindTabControl(c);
+				if (nested != null) return nested;
+			}
+			return null;
 		}
 
 		private void OnMenuItemClick(object sender, EventArgs e)
 		{
-			var form = new FIDO2OptionsForm(this);
+			var form = new FIDO2OptionsForm(PluginHost);
 			UIUtil.ShowDialogAndDestroy(form);
 		}
 
 		public override void Terminate()
 		{
+			GlobalWindowManager.WindowAdded -= OnWindowAdded;
+			PluginHost.MainWindow.MasterKeyChanged -= OnMasterKeyChanged;
+			PluginHost.MainWindow.FileCreated -= OnFileCreated;
 			PluginHost.KeyProviderPool.Remove(keyProvider);
 		}
 

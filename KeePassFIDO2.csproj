@@ -50,7 +50,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="src\DeviceKeyStore.cs" />
+    <Compile Include="src\HelloCredentialAudit.cs" />
     <Compile Include="src\FIDO2KeyProvider.cs" />
+    <Compile Include="src\DeviceNameForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\DeviceNameForm.Designer.cs">
+      <DependentUpon>DeviceNameForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="src\FIDO2DevicesControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\FIDO2DevicesControl.Designer.cs">
+      <DependentUpon>FIDO2DevicesControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="src\FIDO2OptionsForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -63,7 +77,6 @@
     <Compile Include="src\KeePassFIDO2Ext.cs" />
     <Compile Include="src\WebAuthn\WebAuthnApi.cs" />
     <Compile Include="src\WebAuthn\WebAuthnHelper.cs" />
-    <Compile Include="src\WebAuthn\CredentialStorage.cs" />
     <Compile Include="src\Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
