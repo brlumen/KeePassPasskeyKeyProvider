@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Windows.Forms;
+using KeePass.Plugins;
 using KeePass.UI;
 using KeePassFIDO2.WebAuthn;
 using KeePassLib;
@@ -30,6 +31,19 @@ namespace KeePassFIDO2
 		private static byte[] pendingWrappedKey;
 		private static byte[] pendingKeyHash;
 		private static string pendingLabel;
+
+		/// <summary>
+		/// Смена мастер‑ключа с сохранением остальных устройств: прежний ключ базы, чтобы перешифровать
+		/// их обёртки на новый K (как при ротации). null — остальные устройства удаляются.
+		/// </summary>
+		private static byte[] pendingOldKey;
+
+		private readonly IPluginHost host;
+
+		public FIDO2KeyProvider(IPluginHost host)
+		{
+			this.host = host;
+		}
 
 		public override byte[] GetKey(KeyProviderQueryContext ctx)
 		{
@@ -60,28 +74,86 @@ namespace KeePassFIDO2
 		}
 
 		/// <summary>
-		/// Создаёт новый credential и случайный ключ базы K; обёртка K ⊕ PRF ждёт записи в базу
+		/// Создаёт новый credential и случайный ключ базы K; обёртка K ⊕ PRF ждёт записи в базу.
+		/// При смене мастер‑ключа открытой базы пользователь выбирает, сохранить ли её остальные устройства.
 		/// </summary>
 		private byte[] CreateNewCredential(KeyProviderQueryContext ctx)
 		{
-			var form = new DeviceNameForm();
-			if (UIUtil.ShowDialogAndDestroy(form) != DialogResult.OK)
-				return null;
-			string label = form.DeviceName;
+			PwDatabase current = FindOpenDatabase(ctx);
+			byte[] oldKey = GetDatabaseKey(current);
+			List<DeviceRecord> existing = oldKey != null ? LoadRecordsSafe(current) : new List<DeviceRecord>();
 
-			PrfResult created = CreateCredentialForDatabase(GetActiveWindowHandle(), ctx.DatabasePath);
 			try
 			{
-				byte[] key = GenerateKey();
-				pendingCredentialId = created.CredentialId;
-				pendingWrappedKey = DeviceKeyStore.Wrap(key, created.PrfSecret);
-				pendingKeyHash = HashKey(key);
-				pendingLabel = label.Length > 0 ? label : DefaultLabel(created.Transport);
-				return key;
+				var form = new DeviceNameForm(existing.ConvertAll(r => r.Label));
+				if (UIUtil.ShowDialogAndDestroy(form) != DialogResult.OK)
+					return null;
+				string label = form.DeviceName;
+				bool keep = form.KeepDevices && existing.Count > 0;
+
+				PrfResult created = CreateCredentialForDatabase(GetActiveWindowHandle(), ctx.DatabasePath);
+				try
+				{
+					byte[] key = GenerateKey();
+					pendingCredentialId = created.CredentialId;
+					pendingWrappedKey = DeviceKeyStore.Wrap(key, created.PrfSecret);
+					pendingKeyHash = HashKey(key);
+					pendingLabel = label.Length > 0 ? label : DefaultLabel(created.Transport);
+					pendingOldKey = keep ? (byte[])oldKey.Clone() : null;
+					return key;
+				}
+				finally
+				{
+					MemUtil.ZeroByteArray(created.PrfSecret);
+				}
 			}
 			finally
 			{
-				MemUtil.ZeroByteArray(created.PrfSecret);
+				if (oldKey != null) MemUtil.ZeroByteArray(oldKey);
+			}
+		}
+
+		/// <summary>Открытая база, мастер‑ключ которой сейчас меняется; null для новой базы</summary>
+		private PwDatabase FindOpenDatabase(KeyProviderQueryContext ctx)
+		{
+			string path = ctx.DatabaseIOInfo?.Path;
+			if (host == null || string.IsNullOrEmpty(path)) return null;
+
+			foreach (PwDocument doc in host.MainWindow.DocumentManager.Documents)
+			{
+				PwDatabase db = doc.Database;
+				if (db != null && db.IsOpen && string.Equals(db.IOConnectionInfo.Path, path, StringComparison.OrdinalIgnoreCase))
+					return db;
+			}
+			return null;
+		}
+
+		private static List<DeviceRecord> LoadRecordsSafe(PwDatabase db)
+		{
+			try { return DeviceKeyStore.Load(db); }
+			catch { return new List<DeviceRecord>(); } // повреждённые записи сохранить всё равно нельзя
+		}
+
+		/// <summary>
+		/// Смена мастер‑ключа базы на ключ последнего созданного credential с сохранением остальных устройств
+		/// </summary>
+		public static bool PendingKeepsDevices(PwDatabase db)
+		{
+			return pendingOldKey != null && MatchesPending(db);
+		}
+
+		private static bool MatchesPending(PwDatabase db)
+		{
+			if (pendingCredentialId == null) return false;
+			byte[] key = GetDatabaseKey(db);
+			if (key == null) return false;
+			try
+			{
+				return MemUtil.ArraysEqual(HashKey(key), pendingKeyHash);
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(key);
 			}
 		}
 
@@ -93,27 +165,28 @@ namespace KeePassFIDO2
 
 		/// <summary>
 		/// Если мастер‑ключ базы — ключ последнего созданного credential, добавляет его запись
-		/// в PublicCustomData. Возвращает true, если запись добавлена.
+		/// в PublicCustomData (при сохранении устройств — перешифровав их обёртки на новый ключ).
+		/// Возвращает true, если запись добавлена.
 		/// </summary>
 		public static bool RegisterPendingDevice(PwDatabase db)
 		{
-			if (pendingCredentialId == null || db == null) return false;
-
-			byte[] key = GetDatabaseKey(db);
-			if (key == null) return false;
-
-			try
-			{
-				if (!MemUtil.ArraysEqual(HashKey(key), pendingKeyHash))
-					return false;
-			}
-			finally
-			{
-				MemUtil.ZeroByteArray(key);
-			}
+			if (!MatchesPending(db)) return false;
 
 			List<DeviceRecord> records = DeviceKeyStore.Load(db);
-			records.Insert(0, new DeviceRecord
+			if (pendingOldKey != null)
+			{
+				byte[] key = GetDatabaseKey(db);
+				try
+				{
+					DeviceKeyStore.Rewrap(records, pendingOldKey, key);
+				}
+				finally
+				{
+					MemUtil.ZeroByteArray(key);
+				}
+			}
+
+			records.Add(new DeviceRecord
 			{
 				CredentialId = pendingCredentialId,
 				WrappedKey = pendingWrappedKey,
@@ -121,6 +194,8 @@ namespace KeePassFIDO2
 			});
 			DeviceKeyStore.Save(db, records);
 
+			if (pendingOldKey != null) MemUtil.ZeroByteArray(pendingOldKey);
+			pendingOldKey = null;
 			pendingCredentialId = null;
 			pendingWrappedKey = null;
 			pendingKeyHash = null;

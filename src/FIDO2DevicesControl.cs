@@ -166,22 +166,32 @@ namespace KeePassFIDO2
 			if (result != DialogResult.Yes) return;
 
 			DeviceRecord removed = records[index];
-			try
+			Exception error = null;
+
+			// Сохранение базы (KDF) и удаление credential Hello занимают секунды и блокируют UI‑поток
+			using (BusyIndicator.Show(this, "Удаление устройства и замена мастер‑ключа базы…"))
 			{
-				records.RemoveAt(index);
-				FIDO2KeyProvider.RotateDatabaseKey(database, records);
-				SaveRecords();
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(this, $"Не удалось удалить устройство:\n{ex.Message}", "KeePassFIDO2",
-				                MessageBoxButtons.OK, MessageBoxIcon.Error);
-				UpdateDeviceList();
-				return;
+				try
+				{
+					records.RemoveAt(index);
+					FIDO2KeyProvider.RotateDatabaseKey(database, records);
+					SaveRecords();
+
+					// Если credential был на Windows Hello — удаляем и его (иначе останется «сиротой»)
+					WebAuthnHelper.DeletePlatformCredential(removed.CredentialId);
+				}
+				catch (Exception ex)
+				{
+					error = ex;
+				}
 			}
 
-			// Если credential был на Windows Hello — удаляем и его (иначе останется «сиротой»)
-			WebAuthnHelper.DeletePlatformCredential(removed.CredentialId);
+			if (error != null)
+			{
+				MessageBox.Show(this, $"Не удалось удалить устройство:\n{error.Message}", "KeePassFIDO2",
+				                MessageBoxButtons.OK, MessageBoxIcon.Error);
+				UpdateDeviceList();
+			}
 		}
 
 		/// <summary>

@@ -24,6 +24,8 @@ namespace KeePassFIDO2
 			this.labelDescription = new System.Windows.Forms.Label();
 			this.labelDeviceName = new System.Windows.Forms.Label();
 			this.textBoxDeviceName = new System.Windows.Forms.TextBox();
+			this.checkBoxKeepDevices = new System.Windows.Forms.CheckBox();
+			this.labelKeepDevices = new System.Windows.Forms.Label();
 			this.buttons = new System.Windows.Forms.FlowLayoutPanel();
 			this.buttonCancel = new System.Windows.Forms.Button();
 			this.buttonOK = new System.Windows.Forms.Button();
@@ -40,7 +42,9 @@ namespace KeePassFIDO2
 			this.layout.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.layout.Name = "layout";
 			this.layout.Padding = new System.Windows.Forms.Padding(9);
-			this.layout.RowCount = 4;
+			this.layout.RowCount = 6;
+			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
+			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -48,7 +52,9 @@ namespace KeePassFIDO2
 			this.layout.Controls.Add(this.labelDescription, 0, 0);
 			this.layout.Controls.Add(this.labelDeviceName, 0, 1);
 			this.layout.Controls.Add(this.textBoxDeviceName, 0, 2);
-			this.layout.Controls.Add(this.buttons, 0, 3);
+			this.layout.Controls.Add(this.checkBoxKeepDevices, 0, 3);
+			this.layout.Controls.Add(this.labelKeepDevices, 0, 4);
+			this.layout.Controls.Add(this.buttons, 0, 5);
 			//
 			// labelDescription
 			//
@@ -71,6 +77,23 @@ namespace KeePassFIDO2
 			this.textBoxDeviceName.Name = "textBoxDeviceName";
 			this.textBoxDeviceName.TabIndex = 0;
 			//
+			// checkBoxKeepDevices
+			//
+			this.checkBoxKeepDevices.AutoSize = true;
+			this.checkBoxKeepDevices.Checked = true;
+			this.checkBoxKeepDevices.Margin = new System.Windows.Forms.Padding(3, 0, 3, 3);
+			this.checkBoxKeepDevices.Name = "checkBoxKeepDevices";
+			this.checkBoxKeepDevices.TabIndex = 1;
+			this.checkBoxKeepDevices.Text = "Сохранить доступ устройствам, уже зарегистрированным в базе";
+			this.checkBoxKeepDevices.UseVisualStyleBackColor = true;
+			//
+			// labelKeepDevices
+			//
+			this.labelKeepDevices.AutoSize = true;
+			this.labelKeepDevices.Margin = new System.Windows.Forms.Padding(20, 0, 3, 12);
+			this.labelKeepDevices.MaximumSize = new System.Drawing.Size(500, 0);
+			this.labelKeepDevices.Name = "labelKeepDevices";
+			//
 			// buttons
 			//
 			this.buttons.Anchor = System.Windows.Forms.AnchorStyles.Right;
@@ -87,7 +110,7 @@ namespace KeePassFIDO2
 			this.buttonCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.buttonCancel.Name = "buttonCancel";
 			this.buttonCancel.Size = new System.Drawing.Size(90, 25);
-			this.buttonCancel.TabIndex = 2;
+			this.buttonCancel.TabIndex = 3;
 			this.buttonCancel.Text = "Отмена";
 			this.buttonCancel.UseVisualStyleBackColor = true;
 			//
@@ -96,7 +119,7 @@ namespace KeePassFIDO2
 			this.buttonOK.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.buttonOK.Name = "buttonOK";
 			this.buttonOK.Size = new System.Drawing.Size(90, 25);
-			this.buttonOK.TabIndex = 1;
+			this.buttonOK.TabIndex = 2;
 			this.buttonOK.Text = "Продолжить";
 			this.buttonOK.UseVisualStyleBackColor = true;
 			//
@@ -128,6 +151,8 @@ namespace KeePassFIDO2
 		private System.Windows.Forms.Label labelDescription;
 		private System.Windows.Forms.Label labelDeviceName;
 		private System.Windows.Forms.TextBox textBoxDeviceName;
+		private System.Windows.Forms.CheckBox checkBoxKeepDevices;
+		private System.Windows.Forms.Label labelKeepDevices;
 		private System.Windows.Forms.FlowLayoutPanel buttons;
 		private System.Windows.Forms.Button buttonCancel;
 		private System.Windows.Forms.Button buttonOK;

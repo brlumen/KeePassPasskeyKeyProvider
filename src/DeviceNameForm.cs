@@ -1,13 +1,20 @@
+using System.Collections.Generic;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace KeePassFIDO2
 {
 	/// <summary>
-	/// Диалог перед созданием credential для мастер‑ключа: пояснение и название устройства
+	/// Диалог перед созданием credential для мастер‑ключа: пояснение, название устройства и — при смене
+	/// мастер‑ключа базы с устройствами — выбор, сохранить ли их
 	/// </summary>
 	public partial class DeviceNameForm : Form
 	{
-		public DeviceNameForm()
+		private readonly string deviceList;
+		private readonly bool changingKey;
+
+		/// <param name="existingDevices">Подписи устройств базы, мастер‑ключ которой меняется; пусто для новой базы</param>
+		public DeviceNameForm(IList<string> existingDevices)
 		{
 			InitializeComponent();
 			labelDescription.Text =
@@ -20,14 +27,43 @@ namespace KeePassFIDO2
 				"3. Подтвердить создание credential (обычно нажатием кнопки на ключе)\n\n" +
 				"Credential сохраняется на самом устройстве — файлы рядом с базой не нужны.\n" +
 				"Другие устройства: Файл → Параметры базы → вкладка «FIDO2».";
+
+			changingKey = existingDevices != null && existingDevices.Count > 0;
+			checkBoxKeepDevices.Visible = changingKey;
+			labelKeepDevices.Visible = changingKey;
+			if (changingKey)
+			{
+				deviceList = "«" + string.Join("», «", existingDevices) + "»";
+				checkBoxKeepDevices.CheckedChanged += (s, e) => UpdateKeepDevicesText();
+				UpdateKeepDevicesText();
+			}
 		}
 
 		/// <summary>Введённое название без пробелов по краям; пусто, если не указано. Доступно и после закрытия формы</summary>
 		public string DeviceName { get; private set; } = string.Empty;
 
+		/// <summary>Сохранить остальные устройства базы (перешифровать их обёртки на новый ключ)</summary>
+		public bool KeepDevices { get; private set; }
+
+		private void UpdateKeepDevicesText()
+		{
+			if (checkBoxKeepDevices.Checked)
+			{
+				labelKeepDevices.ForeColor = SystemColors.GrayText;
+				labelKeepDevices.Text = $"Устройства {deviceList} продолжат открывать базу без повторной регистрации.";
+			}
+			else
+			{
+				labelKeepDevices.ForeColor = Color.Firebrick;
+				labelKeepDevices.Text = $"Устройства {deviceList} будут удалены из базы, их credential Windows Hello — " +
+				                        "удалены с этого ПК. Открыть базу можно будет только новым устройством.";
+			}
+		}
+
 		protected override void OnFormClosing(FormClosingEventArgs e)
 		{
 			DeviceName = textBoxDeviceName.Text.Trim();
+			KeepDevices = changingKey && checkBoxKeepDevices.Checked;
 			base.OnFormClosing(e);
 		}
 	}

@@ -12,7 +12,7 @@ namespace KeePassFIDO2
 	public class KeePassFIDO2Ext : Plugin
 	{
 		public IPluginHost PluginHost;
-		private readonly FIDO2KeyProvider keyProvider = new FIDO2KeyProvider();
+		private FIDO2KeyProvider keyProvider;
 
 		public override bool Initialize(IPluginHost host)
 		{
@@ -22,6 +22,7 @@ namespace KeePassFIDO2
 			}
 
 			PluginHost = host;
+			keyProvider = new FIDO2KeyProvider(host);
 			PluginHost.KeyProviderPool.Add(keyProvider);
 			PluginHost.MainWindow.FileCreated += OnFileCreated;
 			PluginHost.MainWindow.MasterKeyChanged += OnMasterKeyChanged;
@@ -43,24 +44,29 @@ namespace KeePassFIDO2
 		}
 
 		/// <summary>
-		/// После смены мастер‑ключа записи устройств шифруют уже недействительный ключ — удаляем их
-		/// (устройства нужно добавить заново) и записываем устройство нового ключа
+		/// Смена мастер‑ключа. Если пользователь выбрал сохранить устройства — их обёртки перешифровываются
+		/// на новый ключ. Иначе (или новый мастер‑ключ без FIDO2) записи шифруют недействительный ключ — удаляем их.
 		/// </summary>
 		private void OnMasterKeyChanged(object sender, MasterKeyChangedEventArgs e)
 		{
-			if (e?.Database == null) return;
+			PwDatabase db = e?.Database;
+			if (db == null) return;
 
-			// Старые credential Windows Hello больше не нужны (для YubiKey/телефона API удаления нет)
-			try
+			if (!FIDO2KeyProvider.PendingKeepsDevices(db))
 			{
-				foreach (DeviceRecord r in DeviceKeyStore.Load(e.Database))
-					WebAuthnHelper.DeletePlatformCredential(r.CredentialId);
-			}
-			catch { /* повреждённые записи — просто очищаем */ }
+				// Старые credential Windows Hello больше не нужны (для YubiKey/телефона API удаления нет)
+				try
+				{
+					foreach (DeviceRecord r in DeviceKeyStore.Load(db))
+						WebAuthnHelper.DeletePlatformCredential(r.CredentialId);
+				}
+				catch { /* повреждённые записи — просто очищаем */ }
 
-			DeviceKeyStore.Clear(e.Database);
-			if (FIDO2KeyProvider.RegisterPendingDevice(e.Database))
-				PluginHost.MainWindow.SaveDatabase(e.Database, null);
+				DeviceKeyStore.Clear(db);
+			}
+
+			if (FIDO2KeyProvider.RegisterPendingDevice(db))
+				PluginHost.MainWindow.SaveDatabase(db, null);
 		}
 
 		/// <summary>
@@ -85,7 +91,10 @@ namespace KeePassFIDO2
 			settingsForm.Shown += (s, args) =>
 			{
 				PwDatabase db = settingsForm.DatabaseEx;
-				FIDO2KeyProvider.RegisterPendingDevice(db);
+				// Записано устройство только что созданного мастер‑ключа — это новая база с FIDO2:
+				// сразу показываем вкладку, чтобы можно было добавить остальные устройства
+				if (FIDO2KeyProvider.RegisterPendingDevice(db))
+					tabs.SelectedTab = page;
 				control.Initialize(PluginHost, db);
 			};
 		}
