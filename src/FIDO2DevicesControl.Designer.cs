@@ -46,9 +46,9 @@ namespace KeePassFIDO2
 			this.layout.Padding = new System.Windows.Forms.Padding(6);
 			this.layout.RowCount = 8;
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
+			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -79,6 +79,7 @@ namespace KeePassFIDO2
 			// listBoxDevices
 			//
 			this.listBoxDevices.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.listBoxDevices.MinimumSize = new System.Drawing.Size(0, 60);
 			this.listBoxDevices.IntegralHeight = false;
 			this.listBoxDevices.Name = "listBoxDevices";
 			this.listBoxDevices.TabIndex = 0;
