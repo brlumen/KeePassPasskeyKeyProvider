@@ -16,7 +16,7 @@ namespace KeePassFIDO2
 	/// с поддержкой PRF extension (WebAuthn Level 3).
 	/// Ключ базы K — случайные 32 байта; в заголовке KDBX (PublicCustomData) для каждого устройства
 	/// хранится K ⊕ PRF_i (см. <see cref="DeviceKeyStore"/>). Credential — discoverable: файлов рядом с базой нет.
-	/// Удаление устройства = ротация K: новый K перешифровывается для оставшихся устройств.
+	/// Удаление устройства = ротация K: новый K перешифровывается для оставшихся устройств и фразы восстановления.
 	/// </summary>
 	public class FIDO2KeyProvider : KeyProvider
 	{
@@ -45,21 +45,24 @@ namespace KeePassFIDO2
 			this.host = host;
 		}
 
+		private const string WebAuthnUnavailableMessage =
+			"Windows WebAuthn API недоступен.\n\n" +
+			"Этот плагин требует Windows 10 22H2 или Windows 11 (WebAuthn API v4+).\n" +
+			"Убедитесь, что ваша система соответствует минимальным требованиям.";
+
 		public override byte[] GetKey(KeyProviderQueryContext ctx)
 		{
-			// Проверка доступности WebAuthn API
-			if (!WebAuthnHelper.IsWebAuthnAvailable())
-			{
-				MessageService.ShowWarning(
-					"Windows WebAuthn API недоступен.\n\n" +
-					"Этот плагин требует Windows 10 22H2 или Windows 11 (WebAuthn API v4+).\n" +
-					"Убедитесь, что ваша система соответствует минимальным требованиям.");
-				return null;
-			}
-
 			try
 			{
-				return ctx.CreatingNewKey ? CreateNewCredential(ctx) : UnlockWithCredential(ctx);
+				if (!ctx.CreatingNewKey)
+					return Unlock(ctx);
+
+				if (!WebAuthnHelper.IsWebAuthnAvailable())
+				{
+					MessageService.ShowWarning(WebAuthnUnavailableMessage);
+					return null;
+				}
+				return CreateNewCredential(ctx);
 			}
 			catch (WebAuthnException ex)
 			{
@@ -179,6 +182,7 @@ namespace KeePassFIDO2
 				try
 				{
 					DeviceKeyStore.Rewrap(records, pendingOldKey, key);
+					RewrapRecovery(db, pendingOldKey, key);
 				}
 				finally
 				{
@@ -204,7 +208,7 @@ namespace KeePassFIDO2
 		}
 
 		/// <summary>
-		/// Ротация ключа базы: новый случайный K перешифровывается для всех записей и подставляется
+		/// Ротация ключа базы: новый случайный K перешифровывается для всех записей и фразы восстановления и подставляется
 		/// в мастер‑ключ базы (остальные компоненты мастер‑ключа сохраняются). Аутентификаторы не нужны.
 		/// Базу после этого необходимо сохранить.
 		/// </summary>
@@ -218,6 +222,7 @@ namespace KeePassFIDO2
 			try
 			{
 				DeviceKeyStore.Rewrap(records, oldKey, newKey);
+				RewrapRecovery(db, oldKey, newKey);
 
 				var masterKey = new CompositeKey();
 				foreach (IUserKey userKey in db.MasterKey.UserKeys)
@@ -232,6 +237,14 @@ namespace KeePassFIDO2
 				MemUtil.ZeroByteArray(oldKey);
 				MemUtil.ZeroByteArray(newKey);
 			}
+		}
+
+		private static void RewrapRecovery(PwDatabase db, byte[] oldKey, byte[] newKey)
+		{
+			byte[] wrappedKey = DeviceKeyStore.LoadRecovery(db);
+			if (wrappedKey == null) return;
+			DeviceKeyStore.Rewrap(wrappedKey, oldKey, newKey);
+			DeviceKeyStore.SaveRecovery(db, wrappedKey);
 		}
 
 		/// <summary>
@@ -312,14 +325,69 @@ namespace KeePassFIDO2
 		}
 
 		/// <summary>
-		/// Разблокирует базу: записи из заголовка → GetAssertion по allowList → K = обёртка ⊕ PRF
+		/// Разблокирует базу устройством; если WebAuthn недоступен или аутентификация не удалась —
+		/// предлагает фразу восстановления (когда она есть)
 		/// </summary>
-		private byte[] UnlockWithCredential(KeyProviderQueryContext ctx)
+		private static byte[] Unlock(KeyProviderQueryContext ctx)
 		{
 			List<DeviceRecord> records = LoadRecords(ctx);
 			if (records == null)
 				return null;
 
+			string problem;
+			if (!WebAuthnHelper.IsWebAuthnAvailable())
+				problem = WebAuthnUnavailableMessage;
+			else
+			{
+				try
+				{
+					return UnlockWithCredential(records);
+				}
+				catch (WebAuthnException ex)
+				{
+					problem = $"Ошибка FIDO2 аутентификации:\n{ex.Message}";
+				}
+			}
+			return UnlockWithRecoveryPhrase(ctx, problem);
+		}
+
+		/// <summary>K = (K ⊕ R) ⊕ R, где R — секрет введённой фразы. Неверную фразу отклонит сам KeePass.</summary>
+		private static byte[] UnlockWithRecoveryPhrase(KeyProviderQueryContext ctx, string problem)
+		{
+			byte[] wrappedKey = null;
+			try { wrappedKey = DeviceKeyStore.LoadRecoveryFromFile(ctx.DatabaseIOInfo); }
+			catch { /* повреждённую запись фразы не предлагаем */ }
+
+			if (wrappedKey == null)
+			{
+				MessageService.ShowWarning(problem);
+				return null;
+			}
+
+			if (!MessageService.AskYesNo(problem + "\n\nОткрыть базу фразой восстановления?", "KeePassFIDO2"))
+				return null;
+
+			var form = new RecoveryPhraseInputForm();
+			if (UIUtil.ShowDialogAndDestroy(form) != DialogResult.OK)
+				return null;
+
+			byte[] secret = RecoveryPhrase.DeriveSecret(form.Entropy);
+			try
+			{
+				return DeviceKeyStore.Wrap(wrappedKey, secret);
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(secret);
+				MemUtil.ZeroByteArray(form.Entropy);
+			}
+		}
+
+		/// <summary>
+		/// Разблокирует базу устройством: GetAssertion по allowList записей → K = обёртка ⊕ PRF
+		/// </summary>
+		private static byte[] UnlockWithCredential(List<DeviceRecord> records)
+		{
 			PrfResult assertion = WebAuthnHelper.GetPrfSecret(GetActiveWindowHandle(), DeviceKeyStore.GetAllowList(records));
 			try
 			{

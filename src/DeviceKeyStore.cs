@@ -30,6 +30,7 @@ namespace KeePassFIDO2
 	/// Смена K (ротация при удалении устройства) — перешифрование обёрток без участия аутентификаторов:
 	/// K_new ⊕ PRF_i = (K_old ⊕ PRF_i) ⊕ K_old ⊕ K_new.
 	/// Credential ID всех записей передаются в allowList, чтобы Windows не показывал выбор credential.
+	/// Фраза восстановления хранится отдельно той же обёрткой K ⊕ R (см. <see cref="RecoveryPhrase"/>).
 	/// </summary>
 	public static class DeviceKeyStore
 	{
@@ -37,6 +38,8 @@ namespace KeePassFIDO2
 		// v1 (пустой WrappedKey = «PRF основного устройства и есть K») больше не поддерживается.
 		private const string CustomDataKey = "KeePassFIDO2.Devices";
 		private const byte FormatVersion = 2;
+		private const string RecoveryDataKey = "KeePassFIDO2.Recovery";
+		private const byte RecoveryFormatVersion = 1;
 		public const int KeyLength = 32;
 
 		// Внешний заголовок KDBX (константы KdbxFile в KeePassLib не публичны)
@@ -64,26 +67,61 @@ namespace KeePassFIDO2
 			db.Modified = true;
 		}
 
-		/// <summary>
-		/// Удаляет все записи (после смены мастер‑ключа они шифруют уже недействительный K)
-		/// </summary>
-		public static bool Clear(PwDatabase db)
+		/// <summary>Обёртка ключа фразой восстановления K ⊕ R; null, если фразы нет</summary>
+		public static byte[] LoadRecovery(PwDatabase db)
 		{
-			return db.PublicCustomData.Remove(CustomDataKey);
+			return ParseRecovery(db.PublicCustomData.GetByteArray(RecoveryDataKey));
+		}
+
+		/// <summary>Записывает (null — удаляет) обёртку фразы восстановления и помечает базу изменённой</summary>
+		public static void SaveRecovery(PwDatabase db, byte[] wrappedKey)
+		{
+			if (wrappedKey == null)
+				db.PublicCustomData.Remove(RecoveryDataKey);
+			else
+			{
+				CheckLength(wrappedKey, "обёрнутого ключа");
+				byte[] data = new byte[KeyLength + 1];
+				data[0] = RecoveryFormatVersion;
+				Array.Copy(wrappedKey, 0, data, 1, KeyLength);
+				db.PublicCustomData.SetByteArray(RecoveryDataKey, data);
+			}
+			db.Modified = true;
 		}
 
 		/// <summary>
-		/// Читает записи из файла базы до её разблокировки. KeePass не даёт API «прочитать только
-		/// заголовок», поэтому внешний заголовок (TLV) разбирается самостоятельно.
-		/// KDBX 3.x и файлы без PublicCustomData дают пустой список.
+		/// Удаляет все записи и фразу восстановления (после смены мастер‑ключа они шифруют уже недействительный K)
 		/// </summary>
+		public static bool Clear(PwDatabase db)
+		{
+			bool devices = db.PublicCustomData.Remove(CustomDataKey);
+			bool recovery = db.PublicCustomData.Remove(RecoveryDataKey);
+			return devices || recovery;
+		}
+
+		/// <summary>Записи устройств из файла базы до её разблокировки; нет записей — пустой список</summary>
 		public static List<DeviceRecord> LoadFromFile(IOConnectionInfo ioc)
+		{
+			return Parse(ReadPublicCustomData(ioc)?.GetByteArray(CustomDataKey));
+		}
+
+		/// <summary>Обёртка фразы восстановления из файла базы до её разблокировки; null, если фразы нет</summary>
+		public static byte[] LoadRecoveryFromFile(IOConnectionInfo ioc)
+		{
+			return ParseRecovery(ReadPublicCustomData(ioc)?.GetByteArray(RecoveryDataKey));
+		}
+
+		/// <summary>
+		/// PublicCustomData из файла базы. KeePass не даёт API «прочитать только заголовок», поэтому
+		/// внешний заголовок (TLV) разбирается самостоятельно. KDBX 3.x и файлы без PublicCustomData дают null.
+		/// </summary>
+		private static VariantDictionary ReadPublicCustomData(IOConnectionInfo ioc)
 		{
 			using (Stream s = IOConnection.OpenRead(ioc))
 			using (var br = new BinaryReader(s))
 			{
 				if (br.ReadUInt32() != FileSignature1 || br.ReadUInt32() != FileSignature2)
-					return new List<DeviceRecord>();
+					return null;
 
 				bool kdbx4 = (br.ReadUInt32() & FileVersionCriticalMask) >= FileVersion4;
 				while (true)
@@ -94,9 +132,9 @@ namespace KeePassFIDO2
 					byte[] data = br.ReadBytes(size);
 
 					if (id == HeaderEndOfHeader)
-						return new List<DeviceRecord>();
+						return null;
 					if (id == HeaderPublicCustomData)
-						return Parse(VariantDictionary.Deserialize(data).GetByteArray(CustomDataKey));
+						return VariantDictionary.Deserialize(data);
 				}
 			}
 		}
@@ -130,15 +168,19 @@ namespace KeePassFIDO2
 		/// </summary>
 		public static void Rewrap(IEnumerable<DeviceRecord> records, byte[] oldKey, byte[] newKey)
 		{
+			foreach (DeviceRecord r in records)
+				Rewrap(r.WrappedKey, oldKey, newKey);
+		}
+
+		/// <summary>Перешифровывает одну обёртку (устройства или фразы) со старого ключа на новый (на месте)</summary>
+		public static void Rewrap(byte[] wrappedKey, byte[] oldKey, byte[] newKey)
+		{
 			CheckLength(oldKey, "старого ключа");
 			CheckLength(newKey, "нового ключа");
+			CheckLength(wrappedKey, "обёрнутого ключа");
 
-			foreach (DeviceRecord r in records)
-			{
-				CheckLength(r.WrappedKey, "обёрнутого ключа");
-				for (int i = 0; i < KeyLength; i++)
-					r.WrappedKey[i] ^= (byte)(oldKey[i] ^ newKey[i]);
-			}
+			for (int i = 0; i < KeyLength; i++)
+				wrappedKey[i] ^= (byte)(oldKey[i] ^ newKey[i]);
 		}
 
 		private static void CheckLength(byte[] data, string what)
@@ -191,6 +233,19 @@ namespace KeePassFIDO2
 				}
 			}
 			return records;
+		}
+
+		private static byte[] ParseRecovery(byte[] data)
+		{
+			if (data == null || data.Length == 0) return null;
+			if (data[0] != RecoveryFormatVersion)
+				throw new InvalidDataException($"Неподдерживаемая версия записи фразы восстановления: {data[0]}");
+			if (data.Length != KeyLength + 1)
+				throw new InvalidDataException("Повреждена запись фразы восстановления в заголовке базы");
+
+			byte[] wrappedKey = new byte[KeyLength];
+			Array.Copy(data, 1, wrappedKey, 0, KeyLength);
+			return wrappedKey;
 		}
 
 		private static void WriteBlock(BinaryWriter bw, byte[] block)

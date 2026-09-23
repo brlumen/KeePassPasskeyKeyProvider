@@ -28,7 +28,12 @@ namespace KeePassFIDO2
 			this.textBoxDeviceName = new System.Windows.Forms.TextBox();
 			this.buttonAddDevice = new System.Windows.Forms.Button();
 			this.labelStatus = new System.Windows.Forms.Label();
+			this.labelRecovery = new System.Windows.Forms.Label();
+			this.recoveryButtons = new System.Windows.Forms.FlowLayoutPanel();
+			this.buttonRecovery = new System.Windows.Forms.Button();
+			this.buttonRemoveRecovery = new System.Windows.Forms.Button();
 			this.layout.SuspendLayout();
+			this.recoveryButtons.SuspendLayout();
 			this.SuspendLayout();
 			//
 			// layout
@@ -39,7 +44,9 @@ namespace KeePassFIDO2
 			this.layout.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.layout.Name = "layout";
 			this.layout.Padding = new System.Windows.Forms.Padding(6);
-			this.layout.RowCount = 6;
+			this.layout.RowCount = 8;
+			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
+			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -52,10 +59,14 @@ namespace KeePassFIDO2
 			this.layout.Controls.Add(this.labelDeviceName, 0, 3);
 			this.layout.Controls.Add(this.textBoxDeviceName, 0, 4);
 			this.layout.Controls.Add(this.buttonAddDevice, 1, 4);
-			this.layout.Controls.Add(this.labelStatus, 0, 5);
+			this.layout.Controls.Add(this.labelRecovery, 0, 5);
+			this.layout.Controls.Add(this.recoveryButtons, 0, 6);
+			this.layout.Controls.Add(this.labelStatus, 0, 7);
 			this.layout.SetColumnSpan(this.labelDevices, 2);
 			this.layout.SetColumnSpan(this.listBoxDevices, 2);
 			this.layout.SetColumnSpan(this.labelDeviceName, 2);
+			this.layout.SetColumnSpan(this.labelRecovery, 2);
+			this.layout.SetColumnSpan(this.recoveryButtons, 2);
 			this.layout.SetColumnSpan(this.labelStatus, 2);
 			//
 			// labelDevices
@@ -107,6 +118,41 @@ namespace KeePassFIDO2
 			this.buttonAddDevice.UseVisualStyleBackColor = true;
 			this.buttonAddDevice.Click += new System.EventHandler(this.AddDeviceButtonClick);
 			//
+			// labelRecovery
+			//
+			this.labelRecovery.AutoSize = true;
+			this.labelRecovery.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.labelRecovery.Margin = new System.Windows.Forms.Padding(3, 18, 3, 6);
+			this.labelRecovery.Name = "labelRecovery";
+			//
+			// recoveryButtons
+			//
+			this.recoveryButtons.AutoSize = true;
+			this.recoveryButtons.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+			this.recoveryButtons.Margin = new System.Windows.Forms.Padding(0);
+			this.recoveryButtons.Name = "recoveryButtons";
+			this.recoveryButtons.Controls.Add(this.buttonRecovery);
+			this.recoveryButtons.Controls.Add(this.buttonRemoveRecovery);
+			//
+			// buttonRecovery
+			//
+			this.buttonRecovery.AutoSize = true;
+			this.buttonRecovery.Name = "buttonRecovery";
+			this.buttonRecovery.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
+			this.buttonRecovery.TabIndex = 4;
+			this.buttonRecovery.UseVisualStyleBackColor = true;
+			this.buttonRecovery.Click += new System.EventHandler(this.RecoveryButtonClick);
+			//
+			// buttonRemoveRecovery
+			//
+			this.buttonRemoveRecovery.AutoSize = true;
+			this.buttonRemoveRecovery.Name = "buttonRemoveRecovery";
+			this.buttonRemoveRecovery.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
+			this.buttonRemoveRecovery.TabIndex = 5;
+			this.buttonRemoveRecovery.Text = "Удалить фразу";
+			this.buttonRemoveRecovery.UseVisualStyleBackColor = true;
+			this.buttonRemoveRecovery.Click += new System.EventHandler(this.RemoveRecoveryButtonClick);
+			//
 			// labelStatus
 			//
 			this.labelStatus.AutoSize = true;
@@ -121,6 +167,8 @@ namespace KeePassFIDO2
 			this.Controls.Add(this.layout);
 			this.Name = "FIDO2DevicesControl";
 			this.Size = new System.Drawing.Size(500, 300);
+			this.recoveryButtons.ResumeLayout(false);
+			this.recoveryButtons.PerformLayout();
 			this.layout.ResumeLayout(false);
 			this.layout.PerformLayout();
 			this.ResumeLayout(false);
@@ -134,6 +182,10 @@ namespace KeePassFIDO2
 		private System.Windows.Forms.TextBox textBoxDeviceName;
 		private System.Windows.Forms.Button buttonAddDevice;
 		private System.Windows.Forms.Label labelStatus;
+		private System.Windows.Forms.Label labelRecovery;
+		private System.Windows.Forms.FlowLayoutPanel recoveryButtons;
+		private System.Windows.Forms.Button buttonRecovery;
+		private System.Windows.Forms.Button buttonRemoveRecovery;
 
 		#endregion
 	}

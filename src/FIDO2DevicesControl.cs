@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Windows.Forms;
 using KeePass.Plugins;
+using KeePass.UI;
 using KeePassFIDO2.WebAuthn;
 using KeePassLib;
 using KeePassLib.Serialization;
@@ -10,7 +12,7 @@ using KeePassLib.Utility;
 namespace KeePassFIDO2
 {
 	/// <summary>
-	/// Управление дополнительными устройствами базы (записи в PublicCustomData).
+	/// Управление дополнительными устройствами и фразой восстановления базы (записи в PublicCustomData).
 	/// Встраивается во вкладку «FIDO2» диалога параметров базы.
 	/// </summary>
 	public partial class FIDO2DevicesControl : UserControl
@@ -18,6 +20,7 @@ namespace KeePassFIDO2
 		private IPluginHost host;
 		private PwDatabase database;
 		private List<DeviceRecord> records = new List<DeviceRecord>();
+		private bool hasRecovery;
 
 		public FIDO2DevicesControl()
 		{
@@ -35,6 +38,8 @@ namespace KeePassFIDO2
 		{
 			listBoxDevices.Items.Clear();
 			records = new List<DeviceRecord>();
+			hasRecovery = false;
+			labelRecovery.Text = string.Empty;
 
 			if (!WebAuthnHelper.IsWebAuthnAvailable())
 			{
@@ -56,6 +61,7 @@ namespace KeePassFIDO2
 			try
 			{
 				records = DeviceKeyStore.Load(database);
+				hasRecovery = DeviceKeyStore.LoadRecovery(database) != null;
 			}
 			catch (Exception ex)
 			{
@@ -67,10 +73,33 @@ namespace KeePassFIDO2
 			foreach (DeviceRecord r in records)
 				listBoxDevices.Items.Add(string.IsNullOrEmpty(r.Label) ? "(без названия)" : r.Label);
 
+			UpdateRecoveryStatus();
 			ShowStatus("Записи хранятся в заголовке базы и сохраняются автоматически\n" +
-			           "(новая база — при нажатии «OK»). Удаление устройства заменяет мастер‑ключ базы:\n" +
-			           "удалённое устройство не откроет её новые версии. Последнее устройство удалить нельзя.");
+			           "(новая база — при нажатии «OK»). Удаление устройства или фразы заменяет мастер‑ключ базы:\n" +
+			           "удалённое не откроет её новые версии. Последнее устройство удалить нельзя.");
 			SetEnabled(true);
+		}
+
+		/// <summary>Состояние фразы; единственное устройство без фразы — предупреждение о риске потери доступа</summary>
+		private void UpdateRecoveryStatus()
+		{
+			buttonRecovery.Text = hasRecovery ? "Заменить фразу" : "Создать фразу восстановления";
+			if (hasRecovery)
+			{
+				labelRecovery.ForeColor = SystemColors.ControlText;
+				labelRecovery.Text = "Фраза восстановления создана: она открывает базу без устройства.";
+			}
+			else if (records.Count == 1)
+			{
+				labelRecovery.ForeColor = Color.Firebrick;
+				labelRecovery.Text = "Устройство одно, фразы восстановления нет: при его потере или поломке база станет " +
+				                     "недоступна. Добавьте второе устройство или создайте фразу восстановления.";
+			}
+			else
+			{
+				labelRecovery.ForeColor = SystemColors.ControlText;
+				labelRecovery.Text = "Фраза восстановления не создана.";
+			}
 		}
 
 		private void SetEnabled(bool enabled)
@@ -79,6 +108,8 @@ namespace KeePassFIDO2
 			textBoxDeviceName.Enabled = enabled;
 			buttonAddDevice.Enabled = enabled;
 			buttonRemoveDevice.Enabled = enabled && CanRemoveSelected();
+			buttonRecovery.Enabled = enabled;
+			buttonRemoveRecovery.Enabled = enabled && hasRecovery;
 		}
 
 		/// <summary>Удалять можно любое устройство, кроме последнего: без записей базу не открыть</summary>
@@ -166,19 +197,94 @@ namespace KeePassFIDO2
 			if (result != DialogResult.Yes) return;
 
 			DeviceRecord removed = records[index];
-			Exception error = null;
+			RunBusy("Удаление устройства и замена мастер‑ключа базы…", "Не удалось удалить устройство", () =>
+			{
+				records.RemoveAt(index);
+				FIDO2KeyProvider.RotateDatabaseKey(database, records);
+				SaveRecords();
 
-			// Сохранение базы (KDF) и удаление credential Hello занимают секунды и блокируют UI‑поток
-			using (BusyIndicator.Show(this, "Удаление устройства и замена мастер‑ключа базы…"))
+				// Если credential был на Windows Hello — удаляем и его (иначе останется «сиротой»)
+				WebAuthnHelper.DeletePlatformCredential(removed.CredentialId);
+			});
+		}
+
+		/// <summary>
+		/// Создание (замена) фразы восстановления: запись K ⊕ R в заголовок базы. Замена = отзыв старой фразы,
+		/// поэтому сначала ротация ключа: иначе старая фраза с её копией обёртки из прежних версий файла дала бы K.
+		/// </summary>
+		private void RecoveryButtonClick(object sender, EventArgs e)
+		{
+			if (hasRecovery && MessageBox.Show(this,
+				    "Заменить фразу восстановления?\n\nМастер‑ключ базы будет заменён, база сохранена. " +
+				    "Старая фраза не откроет эту базу и её последующие версии (копии, сделанные раньше, — откроет).",
+				    "Замена фразы восстановления", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+				return;
+
+			byte[] entropy = RecoveryPhrase.GenerateEntropy();
+			try
+			{
+				if (UIUtil.ShowDialogAndDestroy(new RecoveryPhraseForm(RecoveryPhrase.ToWords(entropy))) != DialogResult.OK)
+					return;
+
+				RunBusy("Сохранение фразы восстановления…", "Не удалось сохранить фразу восстановления", () =>
+				{
+					if (hasRecovery)
+					{
+						DeviceKeyStore.SaveRecovery(database, null);
+						FIDO2KeyProvider.RotateDatabaseKey(database, records);
+					}
+
+					byte[] key = FIDO2KeyProvider.GetDatabaseKey(database);
+					byte[] secret = RecoveryPhrase.DeriveSecret(entropy);
+					try
+					{
+						DeviceKeyStore.SaveRecovery(database, DeviceKeyStore.Wrap(key, secret));
+					}
+					finally
+					{
+						MemUtil.ZeroByteArray(key);
+						MemUtil.ZeroByteArray(secret);
+					}
+					SaveRecords();
+				});
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(entropy);
+			}
+		}
+
+		/// <summary>Удаление фразы = ротация ключа (как удаление устройства)</summary>
+		private void RemoveRecoveryButtonClick(object sender, EventArgs e)
+		{
+			if (!hasRecovery) return;
+
+			if (MessageBox.Show(this,
+				    "Удалить фразу восстановления?\n\nМастер‑ключ базы будет заменён, база сохранена. " +
+				    "Фраза не откроет эту базу и её последующие версии; копии, сделанные раньше, — откроет.",
+				    "Удаление фразы восстановления", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+				return;
+
+			RunBusy("Удаление фразы и замена мастер‑ключа базы…", "Не удалось удалить фразу восстановления", () =>
+			{
+				DeviceKeyStore.SaveRecovery(database, null);
+				FIDO2KeyProvider.RotateDatabaseKey(database, records);
+				SaveRecords();
+			});
+		}
+
+		/// <summary>
+		/// Выполняет действие под индикатором: сохранение базы (KDF) и удаление credential Hello занимают
+		/// секунды и блокируют UI‑поток. При ошибке — сообщение и перечитывание записей из базы.
+		/// </summary>
+		private void RunBusy(string busyText, string errorText, Action action)
+		{
+			Exception error = null;
+			using (BusyIndicator.Show(this, busyText))
 			{
 				try
 				{
-					records.RemoveAt(index);
-					FIDO2KeyProvider.RotateDatabaseKey(database, records);
-					SaveRecords();
-
-					// Если credential был на Windows Hello — удаляем и его (иначе останется «сиротой»)
-					WebAuthnHelper.DeletePlatformCredential(removed.CredentialId);
+					action();
 				}
 				catch (Exception ex)
 				{
@@ -188,7 +294,7 @@ namespace KeePassFIDO2
 
 			if (error != null)
 			{
-				MessageBox.Show(this, $"Не удалось удалить устройство:\n{error.Message}", "KeePassFIDO2",
+				MessageBox.Show(this, $"{errorText}:\n{error.Message}", "KeePassFIDO2",
 				                MessageBoxButtons.OK, MessageBoxIcon.Error);
 				UpdateDeviceList();
 			}

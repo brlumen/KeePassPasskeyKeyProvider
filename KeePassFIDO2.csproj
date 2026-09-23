@@ -76,6 +76,19 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\KeePassFIDO2Ext.cs" />
+    <Compile Include="src\RecoveryPhrase.cs" />
+    <Compile Include="src\RecoveryPhraseForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\RecoveryPhraseForm.Designer.cs">
+      <DependentUpon>RecoveryPhraseForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="src\RecoveryPhraseInputForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\RecoveryPhraseInputForm.Designer.cs">
+      <DependentUpon>RecoveryPhraseInputForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="src\WebAuthn\WebAuthnApi.cs" />
     <Compile Include="src\WebAuthn\WebAuthnHelper.cs" />
     <Compile Include="src\Properties\AssemblyInfo.cs" />
@@ -86,6 +99,9 @@
     <Content Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="src\bip39-english.txt">
+      <LogicalName>KeePassFIDO2.bip39-english.txt</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\FIDO2OptionsForm.resx">
       <DependentUpon>FIDO2OptionsForm.cs</DependentUpon>
     </EmbeddedResource>
