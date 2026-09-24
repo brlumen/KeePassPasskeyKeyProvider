@@ -7,7 +7,7 @@ using KeePassLib.Collections;
 using KeePassLib.Serialization;
 using KeePassLib.Utility;
 
-namespace KeePassFIDO2
+namespace KeePassPasskey
 {
 	/// <summary>
 	/// Запись об устройстве: ключ базы K, «обёрнутый» PRF‑секретом этого устройства
@@ -49,6 +49,8 @@ namespace KeePassFIDO2
 		private const uint FileVersion4 = 0x00040000;
 		private const byte HeaderEndOfHeader = 0;
 		private const byte HeaderPublicCustomData = 12;
+		// Поля внешнего заголовка — байты/килобайты; больше — повреждённый или подделанный файл
+		private const int MaxHeaderFieldSize = 1024 * 1024;
 
 		public static List<DeviceRecord> Load(PwDatabase db)
 		{
@@ -128,8 +130,9 @@ namespace KeePassFIDO2
 				{
 					byte id = br.ReadByte();
 					int size = kdbx4 ? br.ReadInt32() : br.ReadUInt16();
-					if (size < 0) throw new InvalidDataException("Повреждён заголовок KDBX");
+					if (size < 0 || size > MaxHeaderFieldSize) throw new InvalidDataException("Повреждён заголовок KDBX");
 					byte[] data = br.ReadBytes(size);
+					if (data.Length != size) throw new InvalidDataException("Повреждён заголовок KDBX");
 
 					if (id == HeaderEndOfHeader)
 						return null;

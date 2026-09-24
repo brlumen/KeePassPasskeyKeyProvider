@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace KeePassFIDO2.WebAuthn
+namespace KeePassPasskey.WebAuthn
 {
 	/// <summary>
 	/// Высокоуровневый helper для работы с Windows WebAuthn API
@@ -19,7 +19,7 @@ namespace KeePassFIDO2.WebAuthn
 		// и с "localhost" в список попадали бы passkey от локальной веб‑разработки.
 		private const string RP_ID = "keepass-fido2.local";
 		public static string RpId => RP_ID;
-		private const string RP_NAME = "KeePass FIDO2 Plugin";
+		private const string RP_NAME = "KeePassPasskey";
 		private const uint TIMEOUT_MS = 120000; // 2 минуты — hybrid (телефон) требует времени на QR/BLE
 
 		// Минимальная версия API: pHmacSecretSaltValues в GetAssertion (API 4 = Win10 22H2 / Win11)

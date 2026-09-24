@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using KeePassLib.Utility;
 
-namespace KeePassFIDO2
+namespace KeePassPasskey
 {
 	/// <summary>
 	/// Фраза восстановления: 128 бит случайной энтропии в виде 12 слов BIP39 (английский словарь,
@@ -16,7 +16,7 @@ namespace KeePassFIDO2
 	{
 		// ВАЖНО: метка и схема вывода — часть «формата» базы: их изменение делает выданные фразы недействительными
 		private static readonly byte[] DerivationLabel = Encoding.ASCII.GetBytes("KeePassFIDO2 recovery phrase v1");
-		private const string WordListResource = "KeePassFIDO2.bip39-english.txt";
+		private const string WordListResource = "KeePassPasskey.bip39-english.txt";
 
 		private const int EntropyLength = 16;
 		public const int WordCount = 12;

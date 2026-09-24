@@ -4,12 +4,11 @@ using System.Windows.Forms;
 using KeePass.Forms;
 using KeePass.Plugins;
 using KeePass.UI;
-using KeePassFIDO2.WebAuthn;
 using KeePassLib;
 
-namespace KeePassFIDO2
+namespace KeePassPasskey
 {
-	public class KeePassFIDO2Ext : Plugin
+	public class KeePassPasskeyExt : Plugin
 	{
 		public IPluginHost PluginHost;
 		private FIDO2KeyProvider keyProvider;
@@ -52,18 +51,9 @@ namespace KeePassFIDO2
 			PwDatabase db = e?.Database;
 			if (db == null) return;
 
+			// Credential Windows Hello не удаляем: они могут понадобиться для старых копий базы
 			if (!FIDO2KeyProvider.PendingKeepsDevices(db))
-			{
-				// Старые credential Windows Hello больше не нужны (для YubiKey/телефона API удаления нет)
-				try
-				{
-					foreach (DeviceRecord r in DeviceKeyStore.Load(db))
-						WebAuthnHelper.DeletePlatformCredential(r.CredentialId);
-				}
-				catch { /* повреждённые записи — просто очищаем */ }
-
 				DeviceKeyStore.Clear(db);
-			}
 
 			if (FIDO2KeyProvider.RegisterPendingDevice(db))
 				PluginHost.MainWindow.SaveDatabase(db, null);
@@ -131,13 +121,14 @@ namespace KeePassFIDO2
 				return null;
 			}
 
-			var menuItem = new ToolStripMenuItem("KeePassFIDO2");
+			var menuItem = new ToolStripMenuItem("KeePassPasskey", SmallIcon);
 			menuItem.Click += OnMenuItemClick;
 
 			return menuItem;
 		}
 
-		public override Image SmallIcon { get; } // TODO: create and add an icon
+		// Стандартная иконка «ключ» KeePass (16×16)
+		public override Image SmallIcon => PluginHost?.MainWindow.ClientIcons.Images[(int)PwIcon.Key];
 		public override string UpdateUrl => "https://raw.githubusercontent.com/brlumen/KeePassPasskey/master/KeePassPlugin/keepass.version";
 	}
 }

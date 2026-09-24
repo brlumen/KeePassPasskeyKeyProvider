@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Forms;
 
-namespace KeePassFIDO2
+namespace KeePassPasskey
 {
 	/// <summary>
 	/// Ввод фразы восстановления для открытия базы без FIDO2‑устройства

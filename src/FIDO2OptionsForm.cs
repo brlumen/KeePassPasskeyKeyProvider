@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using KeePass.Plugins;
-using KeePassFIDO2.WebAuthn;
+using KeePassPasskey.WebAuthn;
 
-namespace KeePassFIDO2
+namespace KeePassPasskey
 {
 	/// <summary>
-	/// Форма плагина KeePassFIDO2: информация о WebAuthn API, очистка credential Windows Hello
+	/// Форма плагина KeePassPasskey: информация о WebAuthn API, очистка credential Windows Hello
 	/// и диагностика PRF. Устройства базы — вкладка «FIDO2» в «Файл → Параметры базы».
 	/// </summary>
 	public partial class FIDO2OptionsForm : Form
@@ -119,7 +119,7 @@ namespace KeePassFIDO2
 			{
 				SetBusy(false, 0);
 				if (t.Result < toDelete.Count)
-					MessageBox.Show(this, $"Удалено {t.Result} из {toDelete.Count}.", "KeePassFIDO2",
+					MessageBox.Show(this, $"Удалено {t.Result} из {toDelete.Count}.", "KeePassPasskey",
 					                MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				RefreshCredentials();
 			}, TaskScheduler.FromCurrentSynchronizationContext());

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace KeePassFIDO2
+namespace KeePassPasskey
 {
 	partial class RecoveryPhraseForm
 	{

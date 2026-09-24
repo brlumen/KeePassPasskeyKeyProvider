@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace KeePassFIDO2
+namespace KeePassPasskey
 {
 	partial class FIDO2DevicesControl
 	{
@@ -32,6 +32,7 @@ namespace KeePassFIDO2
 			this.recoveryButtons = new System.Windows.Forms.FlowLayoutPanel();
 			this.buttonRecovery = new System.Windows.Forms.Button();
 			this.buttonRemoveRecovery = new System.Windows.Forms.Button();
+			this.buttonHelloCleanup = new System.Windows.Forms.Button();
 			this.layout.SuspendLayout();
 			this.recoveryButtons.SuspendLayout();
 			this.SuspendLayout();
@@ -56,6 +57,7 @@ namespace KeePassFIDO2
 			this.layout.Controls.Add(this.labelDevices, 0, 0);
 			this.layout.Controls.Add(this.listBoxDevices, 0, 1);
 			this.layout.Controls.Add(this.buttonRemoveDevice, 0, 2);
+			this.layout.Controls.Add(this.buttonHelloCleanup, 1, 2);
 			this.layout.Controls.Add(this.labelDeviceName, 0, 3);
 			this.layout.Controls.Add(this.textBoxDeviceName, 0, 4);
 			this.layout.Controls.Add(this.buttonAddDevice, 1, 4);
@@ -95,6 +97,18 @@ namespace KeePassFIDO2
 			this.buttonRemoveDevice.Text = "Удалить выбранное устройство";
 			this.buttonRemoveDevice.UseVisualStyleBackColor = true;
 			this.buttonRemoveDevice.Click += new System.EventHandler(this.RemoveDeviceButtonClick);
+			//
+			// buttonHelloCleanup
+			//
+			this.buttonHelloCleanup.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+			this.buttonHelloCleanup.AutoSize = true;
+			this.buttonHelloCleanup.Margin = new System.Windows.Forms.Padding(3, 6, 3, 12);
+			this.buttonHelloCleanup.Name = "buttonHelloCleanup";
+			this.buttonHelloCleanup.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
+			this.buttonHelloCleanup.TabIndex = 6;
+			this.buttonHelloCleanup.Text = "Очистка Windows Hello…";
+			this.buttonHelloCleanup.UseVisualStyleBackColor = true;
+			this.buttonHelloCleanup.Click += new System.EventHandler(this.HelloCleanupButtonClick);
 			//
 			// labelDeviceName
 			//
@@ -187,6 +201,7 @@ namespace KeePassFIDO2
 		private System.Windows.Forms.FlowLayoutPanel recoveryButtons;
 		private System.Windows.Forms.Button buttonRecovery;
 		private System.Windows.Forms.Button buttonRemoveRecovery;
+		private System.Windows.Forms.Button buttonHelloCleanup;
 
 		#endregion
 	}

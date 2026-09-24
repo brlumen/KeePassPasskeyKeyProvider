@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Text;
 using System.Windows.Forms;
-using KeePassFIDO2.WebAuthn;
+using KeePassPasskey.WebAuthn;
 
-namespace KeePassFIDO2
+namespace KeePassPasskey
 {
 	/// <summary>
 	/// Форма для диагностики FIDO2 ключей и проверки поддержки PRF (Pseudo-Random Function)
@@ -207,7 +207,7 @@ namespace KeePassFIDO2
 					Log($"✓ Credential создан успешно!");
 					Log($"  Credential ID: {BitConverter.ToString(credentialId, 0, Math.Min(16, credentialId.Length)).Replace("-", "")}... ({credentialId.Length} байт)");
 					if (creationSecret != null)
-						Log($"  PRF secret при создании: {BitConverter.ToString(creationSecret, 0, Math.Min(8, creationSecret.Length)).Replace("-", " ")}... ({creationSecret.Length} байт)");
+						Log($"  PRF secret при создании: получен ({creationSecret.Length} байт)");
 				}
 				catch (WebAuthnException ex)
 				{
@@ -229,18 +229,14 @@ namespace KeePassFIDO2
 				byte[] prfSecret;
 				try
 				{
-					// Discoverable‑режим (как при разблокировке базы): allowList пуст, credential ID — из ответа
-					PrfResult assertion = WebAuthnHelper.GetPrfSecret(this.Handle);
+					// allowList только из тестового credential: credential рабочих баз в тест не попадают
+					PrfResult assertion = WebAuthnHelper.GetPrfSecret(this.Handle, new[] { credentialId });
 					prfSecret = assertion.PrfSecret;
-					Log(System.Linq.Enumerable.SequenceEqual(assertion.CredentialId, credentialId)
-						? "  ✓ Аутентификатор предъявил только что созданный credential"
-						: "  ⚠ Предъявлен другой credential (выбран не тот аккаунт?) — секрет сравнивать нельзя");
-					
+
 					if (prfSecret != null && prfSecret.Length > 0)
 					{
 						Log($"✓✓✓ УСПЕХ! PRF secret получен!");
 						Log($"  Длина: {prfSecret.Length} байт");
-						Log($"  Первые байты: {BitConverter.ToString(prfSecret, 0, Math.Min(8, prfSecret.Length)).Replace("-", " ")}");
 						if (creationSecret != null)
 						{
 							bool same = creationSecret.Length == prfSecret.Length

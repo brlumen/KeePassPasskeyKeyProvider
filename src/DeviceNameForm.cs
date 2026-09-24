@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace KeePassFIDO2
+namespace KeePassPasskey
 {
 	/// <summary>
 	/// Диалог перед созданием credential для мастер‑ключа: пояснение, название устройства и — при смене
@@ -55,8 +55,8 @@ namespace KeePassFIDO2
 			else
 			{
 				labelKeepDevices.ForeColor = Color.Firebrick;
-				labelKeepDevices.Text = $"Устройства {deviceList} будут удалены из базы, их credential Windows Hello — " +
-				                        "удалены с этого ПК. Открыть базу можно будет только новым устройством.";
+				labelKeepDevices.Text = $"Устройства {deviceList} будут удалены из базы. " +
+				                        "Открыть базу можно будет только новым устройством.";
 			}
 		}
 

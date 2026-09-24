@@ -1,17 +1,9 @@
-# KeePassFIDO2 - Native Windows WebAuthn Plugin
+# KeePassPasskey - Native Windows WebAuthn Plugin
 
 Плагин KeePass Key Provider, который позволяет разблокировать базу данных KeePass с помощью FIDO2 аутентификатора (аппаратный ключ, Android-телефон или Windows Hello), используя нативный Windows WebAuthn API.
 
-## 🎯 Основные преимущества нового подхода
+## 🎯 Основные преимущества
 
-### Было (старая версия):
-- ❌ Отдельное C++ приложение для взаимодействия с FIDO2
-- ❌ Запуск с повышенными правами (UAC prompt)
-- ❌ Хранение ключа в поле "icon" credential (костыль)
-- ❌ Требование создания двух credentials
-- ❌ Зависимость от libfido2
-
-### Стало (новая версия):
 - ✅ Нативный Windows WebAuthn API (встроен в Windows 10 22H2+ / Windows 11)
 - ✅ Без требования повышенных прав
 - ✅ Использование стандартного механизма **hmac-secret** extension
@@ -30,7 +22,7 @@
 
 ## 🔧 Установка
 
-1. Скопируйте `KeePassFIDO2.dll` в папку Plugins вашего KeePass
+1. Скопируйте `KeePassPasskey.dll` в папку Plugins вашего KeePass
 2. Перезапустите KeePass
 3. Плагин появится в списке Key Providers
 
@@ -58,7 +50,7 @@
 
 ### Управление Credentials
 
-1. Откройте `Tools` → `KeePassFIDO2`
+1. Откройте `Tools` → `KeePassPasskey`
 2. В открывшемся окне вы увидите:
    - Версию Windows WebAuthn API
    - Статус credential для текущей базы данных
@@ -89,7 +81,7 @@
 ## 🏗️ Архитектура
 
 ```
-KeePassFIDO2.dll
+KeePassPasskey.dll
 ├── FIDO2KeyProvider.cs          - Key Provider для KeePass
 ├── WebAuthn/
 │   ├── WebAuthnApi.cs           - P/Invoke обертки для webauthn.dll
@@ -97,7 +89,7 @@ KeePassFIDO2.dll
 │   └── CredentialStorage.cs     - Сохранение/загрузка credential ID
 ├── FIDO2OptionsForm.cs          - Форма настроек плагина
 ├── FIDO2DiagnosticsForm.cs      - Диагностика (лог WebAuthn, тест PRF)
-└── KeePassFIDO2Ext.cs           - Точка входа плагина
+└── KeePassPasskeyExt.cs           - Точка входа плагина
 ```
 
 ## ⚠️ Важные замечания
@@ -108,18 +100,9 @@ KeePassFIDO2.dll
 
 3. **Один credential = одна база данных:** Каждая база данных использует свой уникальный credential.
 
-4. **Совместимость аутентификаторов:** аппаратный ключ должен поддерживать `hmac-secret`; телефон — PRF (Google Password Manager, Android 14+; Samsung Pass и др. не поддерживают); Windows Hello — только с KB5077181 (build ≥ 26100.7840 / 26200.7840). Проверить можно через `Tools → KeePassFIDO2 → Диагностика`.
+4. **Совместимость аутентификаторов:** аппаратный ключ должен поддерживать `hmac-secret`; телефон — PRF (Google Password Manager, Android 14+; Samsung Pass и др. не поддерживают); Windows Hello — только с KB5077181 (build ≥ 26100.7840 / 26200.7840). Проверить можно через `Tools → KeePassPasskey → Диагностика`.
 
 5. **Не меняйте RP ID и соль** (`WebAuthnHelper.RP_ID`, `PRF_SALT`) — от них зависит выводимый ключ; изменение сделает все существующие базы неоткрываемыми.
-
-## 🔄 Миграция со старой версии
-
-Если вы использовали старую версию плагина (с C++ DeviceCommunicator):
-
-1. **Старые credentials не совместимы с новой версией!**
-2. Создайте новую базу данных с новым подходом
-3. Перенесите данные из старой базы в новую
-4. Удалите старые credentials с аутентификатора через приложение производителя
 
 ## 🐛 Устранение неполадок
 
@@ -151,11 +134,6 @@ KeePassFIDO2.dll
 - Спецификация: https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-errata-20220621.html#sctn-hmac-secret-extension
 - Алгоритм: HMAC-SHA256, соль передаётся с PRF-преобразованием (WebAuthn PRF extension)
 - Размер ключа: 32 байта
-
-## 📝 Лицензия
-
-Этот проект был переработан для использования нативного Windows WebAuthn API вместо внешнего C++ приложения и библиотеки libfido2.
-
 
 ## 🤝 Вклад
 
