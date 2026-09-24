@@ -4,7 +4,7 @@ using System.Windows.Forms;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Ввод фразы восстановления для открытия базы без FIDO2‑устройства
+	/// Recovery phrase input for opening the database without a FIDO2 device
 	/// </summary>
 	public partial class RecoveryPhraseInputForm : Form
 	{
@@ -12,12 +12,12 @@ namespace KeePassPasskeyKeyProvider
 		{
 			InitializeComponent();
 			labelDescription.Text =
-				$"Введите {RecoveryPhrase.WordCount} слов фразы восстановления через пробел в исходном порядке. " +
-				"Регистр не важен, слова можно сокращать до первых 4 букв.\n\n" +
-				"После открытия базы добавьте новое устройство: Файл → Параметры базы → вкладка «FIDO2».";
+				$"Enter the {RecoveryPhrase.WordCount} recovery phrase words separated by spaces in the original order. " +
+				"Case does not matter; words can be shortened to their first 4 letters.\n\n" +
+				"After opening the database, add a new device: File → Database Settings → \"FIDO2\" tab.";
 		}
 
-		/// <summary>Энтропия проверенной фразы (после «OK»); вызывающий обнуляет её после использования</summary>
+		/// <summary>Entropy of the verified phrase (after "OK"); the caller zeroes it after use</summary>
 		public byte[] Entropy { get; private set; }
 
 		private void OkButtonClick(object sender, EventArgs e)

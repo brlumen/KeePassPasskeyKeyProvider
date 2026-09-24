@@ -10,46 +10,46 @@ using KeePassLib.Utility;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Запись об устройстве: ключ базы K, «обёрнутый» PRF‑секретом этого устройства
+	/// Device record: database key K "wrapped" with this device's PRF secret
 	/// </summary>
 	public sealed class DeviceRecord
 	{
 		public byte[] CredentialId { get; set; }
 
-		/// <summary>K ⊕ PRF (32 байта)</summary>
+		/// <summary>K ⊕ PRF (32 bytes)</summary>
 		public byte[] WrappedKey { get; set; }
 
 		public string Label { get; set; }
 	}
 
 	/// <summary>
-	/// Хранение записей устройств в PublicCustomData внешнего заголовка KDBX 4.
-	/// Заголовок не зашифрован (читается до разблокировки), но защищён HMAC — подмена обнаружится.
-	/// Ключ базы K случаен и существует только в обёртках K ⊕ PRF_i — одноразовый блокнот: PRF_i случаен,
-	/// той же длины и нигде больше не используется. Без записей базу открыть нельзя.
-	/// Смена K (ротация при удалении устройства) — перешифрование обёрток без участия аутентификаторов:
+	/// Stores device records in PublicCustomData of the KDBX 4 outer header.
+	/// The header is not encrypted (read before unlocking) but is HMAC-protected, so tampering is detected.
+	/// Database key K is random and exists only in wrapped keys K ⊕ PRF_i — a one-time pad: PRF_i is random,
+	/// of the same length and used nowhere else. The database cannot be opened without the records.
+	/// Changing K (rotation on device removal) re-wraps keys without authenticators:
 	/// K_new ⊕ PRF_i = (K_old ⊕ PRF_i) ⊕ K_old ⊕ K_new.
-	/// Credential ID всех записей передаются в allowList, чтобы Windows не показывал выбор credential.
-	/// Фраза восстановления хранится отдельно той же обёрткой K ⊕ R (см. <see cref="RecoveryPhrase"/>).
+	/// Credential IDs of all records are passed in allowList so that Windows does not show a credential picker.
+	/// The recovery phrase is stored separately with the same wrapping K ⊕ R (see <see cref="RecoveryPhrase"/>).
 	/// </summary>
 	public static class DeviceKeyStore
 	{
-		// ВАЖНО: имя ключа и формат записей — часть «формата» базы. Менять только с bump версии.
-		// v1 (пустой WrappedKey = «PRF основного устройства и есть K») больше не поддерживается.
+		// IMPORTANT: the key name and record format are part of the database "format". Change only with a version bump.
+		// v1 (empty WrappedKey = "the main device's PRF is K") is no longer supported.
 		private const string CustomDataKey = "KeePassFIDO2.Devices";
 		private const byte FormatVersion = 2;
 		private const string RecoveryDataKey = "KeePassFIDO2.Recovery";
 		private const byte RecoveryFormatVersion = 1;
 		public const int KeyLength = 32;
 
-		// Внешний заголовок KDBX (константы KdbxFile в KeePassLib не публичны)
+		// KDBX outer header (KdbxFile constants in KeePassLib are not public)
 		private const uint FileSignature1 = 0x9AA2D903;
 		private const uint FileSignature2 = 0xB54BFB67;
 		private const uint FileVersionCriticalMask = 0xFFFF0000;
 		private const uint FileVersion4 = 0x00040000;
 		private const byte HeaderEndOfHeader = 0;
 		private const byte HeaderPublicCustomData = 12;
-		// Поля внешнего заголовка — байты/килобайты; больше — повреждённый или подделанный файл
+		// Outer header fields are bytes/kilobytes; anything larger is a corrupted or forged file
 		private const int MaxHeaderFieldSize = 1024 * 1024;
 
 		public static List<DeviceRecord> Load(PwDatabase db)
@@ -58,7 +58,7 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Записывает записи в открытую базу и помечает её изменённой. KeePass сам поднимет формат до KDBX 4.
+		/// Writes records to the open database and marks it modified. KeePass upgrades the format to KDBX 4 itself.
 		/// </summary>
 		public static void Save(PwDatabase db, List<DeviceRecord> records)
 		{
@@ -69,20 +69,20 @@ namespace KeePassPasskeyKeyProvider
 			db.Modified = true;
 		}
 
-		/// <summary>Обёртка ключа фразой восстановления K ⊕ R; null, если фразы нет</summary>
+		/// <summary>Key wrapped with the recovery phrase K ⊕ R; null if there is no phrase</summary>
 		public static byte[] LoadRecovery(PwDatabase db)
 		{
 			return ParseRecovery(db.PublicCustomData.GetByteArray(RecoveryDataKey));
 		}
 
-		/// <summary>Записывает (null — удаляет) обёртку фразы восстановления и помечает базу изменённой</summary>
+		/// <summary>Writes (null removes) the recovery phrase wrapped key and marks the database modified</summary>
 		public static void SaveRecovery(PwDatabase db, byte[] wrappedKey)
 		{
 			if (wrappedKey == null)
 				db.PublicCustomData.Remove(RecoveryDataKey);
 			else
 			{
-				CheckLength(wrappedKey, "обёрнутого ключа");
+				CheckLength(wrappedKey, "wrapped key");
 				byte[] data = new byte[KeyLength + 1];
 				data[0] = RecoveryFormatVersion;
 				Array.Copy(wrappedKey, 0, data, 1, KeyLength);
@@ -92,7 +92,7 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Удаляет все записи и фразу восстановления (после смены мастер‑ключа они шифруют уже недействительный K)
+		/// Removes all records and the recovery phrase (after a master key change they wrap an invalid K)
 		/// </summary>
 		public static bool Clear(PwDatabase db)
 		{
@@ -101,21 +101,21 @@ namespace KeePassPasskeyKeyProvider
 			return devices || recovery;
 		}
 
-		/// <summary>Записи устройств из файла базы до её разблокировки; нет записей — пустой список</summary>
+		/// <summary>Device records from the database file before unlocking; no records — empty list</summary>
 		public static List<DeviceRecord> LoadFromFile(IOConnectionInfo ioc)
 		{
 			return Parse(ReadPublicCustomData(ioc)?.GetByteArray(CustomDataKey));
 		}
 
-		/// <summary>Обёртка фразы восстановления из файла базы до её разблокировки; null, если фразы нет</summary>
+		/// <summary>Recovery phrase wrapped key from the database file before unlocking; null if there is no phrase</summary>
 		public static byte[] LoadRecoveryFromFile(IOConnectionInfo ioc)
 		{
 			return ParseRecovery(ReadPublicCustomData(ioc)?.GetByteArray(RecoveryDataKey));
 		}
 
 		/// <summary>
-		/// PublicCustomData из файла базы. KeePass не даёт API «прочитать только заголовок», поэтому
-		/// внешний заголовок (TLV) разбирается самостоятельно. KDBX 3.x и файлы без PublicCustomData дают null.
+		/// PublicCustomData from the database file. KeePass has no "read header only" API, so
+		/// the outer header (TLV) is parsed manually. KDBX 3.x and files without PublicCustomData yield null.
 		/// </summary>
 		private static VariantDictionary ReadPublicCustomData(IOConnectionInfo ioc)
 		{
@@ -130,9 +130,9 @@ namespace KeePassPasskeyKeyProvider
 				{
 					byte id = br.ReadByte();
 					int size = kdbx4 ? br.ReadInt32() : br.ReadUInt16();
-					if (size < 0 || size > MaxHeaderFieldSize) throw new InvalidDataException("Повреждён заголовок KDBX");
+					if (size < 0 || size > MaxHeaderFieldSize) throw new InvalidDataException("Corrupted KDBX header");
 					byte[] data = br.ReadBytes(size);
-					if (data.Length != size) throw new InvalidDataException("Повреждён заголовок KDBX");
+					if (data.Length != size) throw new InvalidDataException("Corrupted KDBX header");
 
 					if (id == HeaderEndOfHeader)
 						return null;
@@ -147,17 +147,17 @@ namespace KeePassPasskeyKeyProvider
 			return records.Find(r => MemUtil.ArraysEqual(r.CredentialId, credentialId));
 		}
 
-		/// <summary>Credential ID всех записей для allowList</summary>
+		/// <summary>Credential IDs of all records for allowList</summary>
 		public static List<byte[]> GetAllowList(List<DeviceRecord> records)
 		{
 			return records.ConvertAll(r => r.CredentialId);
 		}
 
-		/// <summary>K ⊕ PRF — и шифрование, и расшифровка</summary>
+		/// <summary>K ⊕ PRF — both encryption and decryption</summary>
 		public static byte[] Wrap(byte[] key, byte[] prf)
 		{
-			CheckLength(key, "ключа");
-			CheckLength(prf, "PRF‑секрета");
+			CheckLength(key, "key");
+			CheckLength(prf, "PRF secret");
 
 			byte[] result = new byte[KeyLength];
 			for (int i = 0; i < KeyLength; i++)
@@ -166,8 +166,8 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Перешифровывает обёртки со старого ключа базы на новый (на месте).
-		/// PRF_i в память не попадает: обёртка меняется за один проход XOR.
+		/// Re-wraps keys from the old database key to the new one (in place).
+		/// PRF_i never enters memory: the wrapped key changes in a single XOR pass.
 		/// </summary>
 		public static void Rewrap(IEnumerable<DeviceRecord> records, byte[] oldKey, byte[] newKey)
 		{
@@ -175,12 +175,12 @@ namespace KeePassPasskeyKeyProvider
 				Rewrap(r.WrappedKey, oldKey, newKey);
 		}
 
-		/// <summary>Перешифровывает одну обёртку (устройства или фразы) со старого ключа на новый (на месте)</summary>
+		/// <summary>Re-wraps one wrapped key (device or phrase) from the old key to the new one (in place)</summary>
 		public static void Rewrap(byte[] wrappedKey, byte[] oldKey, byte[] newKey)
 		{
-			CheckLength(oldKey, "старого ключа");
-			CheckLength(newKey, "нового ключа");
-			CheckLength(wrappedKey, "обёрнутого ключа");
+			CheckLength(oldKey, "old key");
+			CheckLength(newKey, "new key");
+			CheckLength(wrappedKey, "wrapped key");
 
 			for (int i = 0; i < KeyLength; i++)
 				wrappedKey[i] ^= (byte)(oldKey[i] ^ newKey[i]);
@@ -189,7 +189,7 @@ namespace KeePassPasskeyKeyProvider
 		private static void CheckLength(byte[] data, string what)
 		{
 			if (data == null || data.Length != KeyLength)
-				throw new ArgumentException($"Ожидается {KeyLength} байт {what}");
+				throw new ArgumentException($"Expected {KeyLength} bytes of {what}");
 		}
 
 		private static byte[] Serialize(List<DeviceRecord> records)
@@ -219,7 +219,7 @@ namespace KeePassPasskeyKeyProvider
 			{
 				byte version = br.ReadByte();
 				if (version != FormatVersion)
-					throw new InvalidDataException($"Неподдерживаемая версия записей устройств: {version}");
+					throw new InvalidDataException($"Unsupported device records version: {version}");
 
 				int count = br.ReadUInt16();
 				for (int i = 0; i < count; i++)
@@ -231,7 +231,7 @@ namespace KeePassPasskeyKeyProvider
 						Label = Encoding.UTF8.GetString(ReadBlock(br))
 					};
 					if (record.CredentialId.Length == 0 || record.WrappedKey.Length != KeyLength)
-						throw new InvalidDataException("Повреждена запись устройства в заголовке базы");
+						throw new InvalidDataException("Corrupted device record in the database header");
 					records.Add(record);
 				}
 			}
@@ -242,9 +242,9 @@ namespace KeePassPasskeyKeyProvider
 		{
 			if (data == null || data.Length == 0) return null;
 			if (data[0] != RecoveryFormatVersion)
-				throw new InvalidDataException($"Неподдерживаемая версия записи фразы восстановления: {data[0]}");
+				throw new InvalidDataException($"Unsupported recovery phrase record version: {data[0]}");
 			if (data.Length != KeyLength + 1)
-				throw new InvalidDataException("Повреждена запись фразы восстановления в заголовке базы");
+				throw new InvalidDataException("Corrupted recovery phrase record in the database header");
 
 			byte[] wrappedKey = new byte[KeyLength];
 			Array.Copy(data, 1, wrappedKey, 0, KeyLength);

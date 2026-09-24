@@ -9,23 +9,23 @@ using System.Windows.Forms;
 namespace KeePassPasskeyKeyProvider.WebAuthn
 {
 	/// <summary>
-	/// Высокоуровневый helper для работы с Windows WebAuthn API
-	/// с поддержкой hmac-secret/PRF extension для генерации детерминированных ключей
+	/// High-level helper for the Windows WebAuthn API
+	/// with hmac-secret/PRF extension support for deriving deterministic keys
 	/// </summary>
 	public static class WebAuthnHelper
 	{
-		// ВАЖНО: RP_ID и PRF_SALT — часть «формата» ключа. Их изменение сделает существующие базы неоткрываемыми!
-		// Уникальный RP ID: с discoverable credentials пустой allowList показывает ВСЕ credential для RP,
-		// и с "localhost" в список попадали бы passkey от локальной веб‑разработки.
+		// IMPORTANT: RP_ID and PRF_SALT are part of the key "format". Changing them makes existing databases unopenable!
+		// Unique RP ID: with discoverable credentials an empty allowList shows ALL credentials for the RP,
+		// and with "localhost" the list would include passkeys from local web development.
 		private const string RP_ID = "keepass-fido2.local";
 		public static string RpId => RP_ID;
 		private const string RP_NAME = "KeePassPasskeyKeyProvider";
-		private const uint TIMEOUT_MS = 120000; // 2 минуты — hybrid (телефон) требует времени на QR/BLE
+		private const uint TIMEOUT_MS = 120000; // 2 minutes: hybrid (phone) needs time for QR/BLE
 
-		// Минимальная версия API: pHmacSecretSaltValues в GetAssertion (API 4 = Win10 22H2 / Win11)
+		// Minimum API version: pHmacSecretSaltValues in GetAssertion (API 4 = Win10 22H2 / Win11)
 		private const uint MIN_API_VERSION = WebAuthnApi.WEBAUTHN_API_VERSION_4;
 
-		// Соль для PRF (32 байта). Windows преобразует её по спецификации WebAuthn PRF:
+		// PRF salt (32 bytes). Windows transforms it per the WebAuthn PRF spec:
 		// hmac-secret salt = SHA-256("WebAuthn PRF" || 0x00 || PRF_SALT)
 		private static readonly byte[] PRF_SALT =
 		{
@@ -35,7 +35,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 		};
 
-		/// <summary>Делегат для логирования (диагностическая форма подписывается на него)</summary>
+		/// <summary>Logging delegate (the diagnostics form subscribes to it)</summary>
 		public static Action<string> Logger { get; set; }
 
 		private static void Log(string message) => Logger?.Invoke("[WebAuthn] " + message);
@@ -46,7 +46,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			byte[] bytes = new byte[Math.Min((int)length, maxLength)];
 			Marshal.Copy(ptr, bytes, 0, bytes.Length);
 			string hex = BitConverter.ToString(bytes).Replace("-", " ");
-			if (length > maxLength) hex += $"... ({length} байт всего)";
+			if (length > maxLength) hex += $"... ({length} bytes total)";
 			return hex;
 		}
 
@@ -72,7 +72,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Проверяет доступность WebAuthn API нужной версии
+		/// Checks that the WebAuthn API of the required version is available
 		/// </summary>
 		public static bool IsWebAuthnAvailable()
 		{
@@ -80,7 +80,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Получает версию WebAuthn API (0 — недоступен)
+		/// Gets the WebAuthn API version (0 if unavailable)
 		/// </summary>
 		public static uint GetApiVersion()
 		{
@@ -93,13 +93,13 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Создает новый credential с hmac-secret/PRF extension.
-		/// Credential создаётся discoverable (resident): ключ хранит его сам, и при GetAssertion
-		/// с пустым allowList аутентификатор возвращает credential ID в ответе.
+		/// Creates a new credential with the hmac-secret/PRF extension.
+		/// The credential is discoverable (resident): the key stores it itself, and on GetAssertion
+		/// with an empty allowList the authenticator returns the credential ID in the response.
 		/// </summary>
-		/// <param name="userName">Имя пользователя/базы — показывается в диалогах Windows и на телефоне</param>
-		/// <param name="displayName">Полный путь базы — по нему очистка находит осиротевшие credential</param>
-		/// <returns>Credential ID и, если API ≥ 8, сразу PRF-секрет (иначе null)</returns>
+		/// <param name="userName">User/database name shown in Windows dialogs and on the phone</param>
+		/// <param name="displayName">Full database path, used by cleanup to find orphaned credentials</param>
+		/// <returns>Credential ID and, if API ≥ 8, the PRF secret right away (otherwise null)</returns>
 		public static PrfResult CreateCredential(IntPtr windowHandle, byte[] userId, string userName, string displayName = null)
 		{
 			if (userId == null || userId.Length == 0)
@@ -108,7 +108,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				throw new ArgumentException("User name cannot be empty", nameof(userName));
 
 			uint apiVersion = GetApiVersion();
-			Log($"Создание credential: RP ID=\"{RP_ID}\", user=\"{userName}\", API v{apiVersion}, userId {userId.Length} байт");
+			Log($"Creating credential: RP ID=\"{RP_ID}\", user=\"{userName}\", API v{apiVersion}, userId {userId.Length} bytes");
 
 			IntPtr pUserId = IntPtr.Zero;
 			IntPtr pClientDataJson = IntPtr.Zero;
@@ -161,8 +161,8 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 					pCredentialParameters = pCredParam
 				};
 
-				// Расширение hmac-secret (BOOL TRUE) — универсальный способ запросить hmac-secret при создании.
-				// Дополнительно bEnablePrf (options v6, API 5+) — для аутентификаторов/транспортов с PRF-семантикой.
+				// hmac-secret extension (BOOL TRUE) is the universal way to request hmac-secret at creation.
+				// Additionally bEnablePrf (options v6, API 5+) for authenticators/transports with PRF semantics.
 				pHmacSecretFlag = AllocStruct(1); // BOOL TRUE
 				pExtension = AllocStruct(new WebAuthnApi.WEBAUTHN_EXTENSION
 				{
@@ -171,8 +171,8 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 					pvExtension = pHmacSecretFlag
 				});
 
-				// API 8+: pPRFGlobalEval — PRF eval прямо при создании (так делает Chrome 147+;
-				// без него Windows Hello возвращает bPrfEnabled=false). Секрет приходит в attestation.pHmacSecret.
+				// API 8+: pPRFGlobalEval performs PRF eval right at creation (as Chrome 147+ does;
+				// without it Windows Hello returns bPrfEnabled=false). The secret arrives in attestation.pHmacSecret.
 				bool usePrfFlag = apiVersion >= WebAuthnApi.WEBAUTHN_API_VERSION_5;
 				bool usePrfEval = apiVersion >= WebAuthnApi.WEBAUTHN_API_VERSION_8;
 				if (usePrfEval)
@@ -210,34 +210,34 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				if (hr != 0)
 				{
 					string errorName = WebAuthnApi.WebAuthNGetErrorName(hr);
-					Log($"ОШИБКА MakeCredential: {errorName} (HRESULT: 0x{hr:X8})");
+					Log($"ERROR MakeCredential: {errorName} (HRESULT: 0x{hr:X8})");
 					throw new WebAuthnException($"Failed to create credential: {errorName} (HRESULT: 0x{hr:X8})");
 				}
 
 				var attestation = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_CREDENTIAL_ATTESTATION>(pAttestation);
 				Log($"MakeCredential OK: attestation v{attestation.dwVersion}, format={attestation.pwszFormatType}, " +
-				    $"transport={attestation.dwUsedTransport}, credId {attestation.cbCredentialId} байт");
+				    $"transport={attestation.dwUsedTransport}, credId {attestation.cbCredentialId} bytes");
 				Log($"  Credential ID: {DumpBytes(attestation.pbCredentialId, attestation.cbCredentialId)}");
 
 				if (attestation.cbCredentialId == 0 || attestation.pbCredentialId == IntPtr.Zero)
 					throw new WebAuthnException("Credential ID is empty");
 
-				// Проверяем, что аутентификатор действительно включил hmac-secret/PRF для credential
+				// Verify that the authenticator actually enabled hmac-secret/PRF for the credential
 				bool hmacSecretEnabled = ReadHmacSecretExtensionOutput(attestation.Extensions);
 				bool prfEnabled = attestation.dwVersion >= WebAuthnApi.WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_5 && attestation.bPrfEnabled;
 				byte[] prfSecret = attestation.dwVersion >= WebAuthnApi.WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_7
 					? ReadHmacSecret(attestation.pHmacSecret)
 					: null;
 				Log($"  hmac-secret ext output: {hmacSecretEnabled}, bPrfEnabled: {prfEnabled}, " +
-				    $"PRF secret при создании: {(prfSecret == null ? "нет" : prfSecret.Length + " байт")}");
+				    $"PRF secret at creation: {(prfSecret == null ? "none" : prfSecret.Length + " bytes")}");
 
 				if (!hmacSecretEnabled && !prfEnabled && prfSecret == null)
 				{
-					Log("❌ Аутентификатор НЕ включил hmac-secret/PRF для credential");
+					Log("❌ Authenticator did NOT enable hmac-secret/PRF for the credential");
 					throw new WebAuthnException(
-						"Аутентификатор не поддерживает hmac-secret/PRF. " +
-						"Используйте FIDO2-ключ с поддержкой hmac-secret (YubiKey 5, SoloKey и т.п.) " +
-						"или телефон с менеджером паролей, поддерживающим PRF.");
+						"The authenticator does not support hmac-secret/PRF. " +
+						"Use a FIDO2 security key with hmac-secret support (YubiKey 5, SoloKey, etc.) " +
+						"or a phone with a password manager that supports PRF.");
 				}
 
 				return new PrfResult
@@ -263,7 +263,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Читает первое значение из PWEBAUTHN_HMAC_SECRET_SALT (результат hmac-secret/PRF); null, если пусто
+		/// Reads the first value from PWEBAUTHN_HMAC_SECRET_SALT (hmac-secret/PRF result); null if empty
 		/// </summary>
 		private static byte[] ReadHmacSecret(IntPtr pHmacSecret)
 		{
@@ -275,7 +275,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Ищет в выходных расширениях attestation "hmac-secret" со значением BOOL TRUE
+		/// Looks for "hmac-secret" with BOOL TRUE among the attestation output extensions
 		/// </summary>
 		private static bool ReadHmacSecretExtensionOutput(WebAuthnApi.WEBAUTHN_EXTENSIONS extensions)
 		{
@@ -283,7 +283,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			for (uint i = 0; i < extensions.cExtensions && extensions.pExtensions != IntPtr.Zero; i++)
 			{
 				var ext = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_EXTENSION>(extensions.pExtensions + (int)(i * extSize));
-				Log($"  ext[{i}]: {ext.pwszExtensionIdentifier}, {ext.cbExtension} байт");
+				Log($"  ext[{i}]: {ext.pwszExtensionIdentifier}, {ext.cbExtension} bytes");
 				if (ext.pwszExtensionIdentifier == WebAuthnApi.WEBAUTHN_EXTENSIONS_IDENTIFIER_HMAC_SECRET
 				    && ext.cbExtension >= sizeof(int) && ext.pvExtension != IntPtr.Zero)
 				{
@@ -294,17 +294,17 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Получает PRF secret (32 байта, детерминированный) от аутентификатора.
+		/// Gets the PRF secret (32 bytes, deterministic) from the authenticator.
 		/// </summary>
-		/// <param name="allowList">Credential ID, среди которых аутентификатор выбирает (Windows сразу открывает
-		/// Hello, если один из них на этом ПК). null/пусто — discoverable‑режим: аутентификатор сам предъявляет
-		/// credential для RP, при нескольких Windows покажет выбор</param>
-		/// <returns>PRF‑секрет и credential ID, которым он получен</returns>
+		/// <param name="allowList">Credential IDs the authenticator chooses from (Windows opens
+		/// Hello directly if one of them is on this PC). null/empty means discoverable mode: the authenticator presents
+		/// a credential for the RP itself; if there are several, Windows shows a picker</param>
+		/// <returns>PRF secret and the credential ID it was obtained with</returns>
 		public static PrfResult GetPrfSecret(IntPtr windowHandle, IList<byte[]> allowList = null)
 		{
 			bool discoverable = allowList == null || allowList.Count == 0;
-			Log($"Получение hmac-secret: RP ID=\"{RP_ID}\", API v{GetApiVersion()}, " +
-			    (discoverable ? "discoverable (allowList пуст)" : $"allowList из {allowList.Count} credential"));
+			Log($"Getting hmac-secret: RP ID=\"{RP_ID}\", API v{GetApiVersion()}, " +
+			    (discoverable ? "discoverable (allowList empty)" : $"allowList of {allowList.Count} credential(s)"));
 
 			IntPtr pClientDataJson = IntPtr.Zero;
 			var pCredentialIds = new List<IntPtr>();
@@ -326,7 +326,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 					pwszHashAlgId = "SHA-256"
 				};
 
-				// allowList — непрерывный массив WEBAUTHN_CREDENTIAL
+				// allowList is a contiguous WEBAUTHN_CREDENTIAL array
 				var credentialList = new WebAuthnApi.WEBAUTHN_CREDENTIALS();
 				if (!discoverable)
 				{
@@ -351,7 +351,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 					};
 				}
 
-				// Соль: WEBAUTHN_HMAC_SECRET_SALT_VALUES → pGlobalHmacSalt → WEBAUTHN_HMAC_SECRET_SALT → PRF_SALT
+				// Salt: WEBAUTHN_HMAC_SECRET_SALT_VALUES → pGlobalHmacSalt → WEBAUTHN_HMAC_SECRET_SALT → PRF_SALT
 				pSaltBytes = AllocBytes(PRF_SALT);
 				pSalt = AllocStruct(new WebAuthnApi.WEBAUTHN_HMAC_SECRET_SALT
 				{
@@ -373,7 +373,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 					pHmacSecretSaltValues = pSaltValues
 				};
 
-				Log($"GetAssertion: options v{options.dwVersion}, pHmacSecretSaltValues (global salt {PRF_SALT.Length} байт)");
+				Log($"GetAssertion: options v{options.dwVersion}, pHmacSecretSaltValues (global salt {PRF_SALT.Length} bytes)");
 				IntPtr hWnd = PrepareOwnerWindow(windowHandle);
 				IntPtr pResult = IntPtr.Zero;
 				int hr = RunNativeCall(hWnd, () => WebAuthnApi.WebAuthNAuthenticatorGetAssertion(
@@ -383,31 +383,31 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				if (hr != 0)
 				{
 					string errorName = WebAuthnApi.WebAuthNGetErrorName(hr);
-					Log($"ОШИБКА GetAssertion: {errorName} (HRESULT: 0x{hr:X8})");
+					Log($"ERROR GetAssertion: {errorName} (HRESULT: 0x{hr:X8})");
 					throw new WebAuthnException($"Failed to get assertion: {errorName} (HRESULT: 0x{hr:X8})");
 				}
 
 				var assertion = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_ASSERTION>(pAssertion);
-				Log($"GetAssertion OK: assertion v{assertion.dwVersion}, authData {assertion.cbAuthenticatorData} байт, " +
-				    $"credId {assertion.Credential.cbId} байт, userId {assertion.cbUserId} байт, " +
+				Log($"GetAssertion OK: assertion v{assertion.dwVersion}, authData {assertion.cbAuthenticatorData} bytes, " +
+				    $"credId {assertion.Credential.cbId} bytes, userId {assertion.cbUserId} bytes, " +
 				    $"extensions={assertion.Extensions.cExtensions}, pHmacSecret=0x{assertion.pHmacSecret.ToString("X")}");
 
 				if (assertion.dwVersion < WebAuthnApi.WEBAUTHN_ASSERTION_VERSION_3)
-					throw new WebAuthnException($"Assertion v{assertion.dwVersion} не содержит pHmacSecret (требуется v3+)");
+					throw new WebAuthnException($"Assertion v{assertion.dwVersion} has no pHmacSecret (v3+ required)");
 
 				byte[] prfSecret = ReadHmacSecret(assertion.pHmacSecret);
 				if (prfSecret == null)
 				{
-					Log("❌ Аутентификатор не вернул hmac-secret");
+					Log("❌ Authenticator did not return hmac-secret");
 					throw new WebAuthnException(
 						"hmac-secret not returned by authenticator. " +
-						"Убедитесь, что credential был создан с hmac-secret/PRF и аутентификатор его поддерживает.");
+						"Make sure the credential was created with hmac-secret/PRF and the authenticator supports it.");
 				}
 
 				if (assertion.Credential.cbId == 0 || assertion.Credential.pbId == IntPtr.Zero)
-					throw new WebAuthnException("Assertion не содержит credential ID");
+					throw new WebAuthnException("Assertion has no credential ID");
 
-				Log($"✓ hmac-secret получен, {prfSecret.Length} байт");
+				Log($"✓ hmac-secret received, {prfSecret.Length} bytes");
 				return new PrfResult
 				{
 					CredentialId = CopyBytes(assertion.Credential.pbId, assertion.Credential.cbId),
@@ -433,20 +433,20 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Название типа устройства по транспорту (WEBAUTHN_CTAP_TRANSPORT_*) — для подписи в списке устройств
+		/// Device type name by transport (WEBAUTHN_CTAP_TRANSPORT_*), used as a label in the device list
 		/// </summary>
 		public static string TransportName(uint transport)
 		{
 			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_INTERNAL) != 0) return "Windows Hello";
-			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_HYBRID) != 0) return "Телефон";
-			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_USB) != 0) return "USB‑ключ";
-			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_NFC) != 0) return "NFC‑ключ";
-			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_BLE) != 0) return "Bluetooth‑ключ";
-			return "FIDO2‑устройство";
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_HYBRID) != 0) return "Phone";
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_USB) != 0) return "USB security key";
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_NFC) != 0) return "NFC security key";
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_BLE) != 0) return "Bluetooth security key";
+			return "FIDO2 device";
 		}
 
 		/// <summary>
-		/// Discoverable credential Windows Hello для нашего RP (API 4+). Пустой список, если их нет.
+		/// Windows Hello discoverable credentials for our RP (API 4+). Empty list if there are none.
 		/// </summary>
 		public static List<PlatformCredential> ListPlatformCredentials()
 		{
@@ -462,7 +462,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			if (hr != 0)
 			{
 				Log($"GetPlatformCredentialList: {WebAuthnApi.WebAuthNGetErrorName(hr)} (0x{hr:X8})");
-				return result; // NTE_NOT_FOUND — credential нет
+				return result; // NTE_NOT_FOUND: no credentials
 			}
 
 			try
@@ -483,7 +483,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 						DisplayName = user.pwszDisplayName ?? string.Empty
 					});
 				}
-				Log($"GetPlatformCredentialList: {result.Count} credential для {RP_ID}");
+				Log($"GetPlatformCredentialList: {result.Count} credential(s) for {RP_ID}");
 				return result;
 			}
 			finally
@@ -493,19 +493,19 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Удаляет credential Windows Hello. false — не найден/не Hello (например, YubiKey или телефон).
+		/// Deletes a Windows Hello credential. false if not found or not Hello (e.g. YubiKey or phone).
 		/// </summary>
 		public static bool DeletePlatformCredential(byte[] credentialId)
 		{
 			if (credentialId == null || credentialId.Length == 0) return false;
 			int hr = WebAuthnApi.WebAuthNDeletePlatformCredential((uint)credentialId.Length, credentialId);
-			Log($"DeletePlatformCredential({credentialId.Length} байт): " +
+			Log($"DeletePlatformCredential({credentialId.Length} bytes): " +
 			    (hr == 0 ? "OK" : $"{WebAuthnApi.WebAuthNGetErrorName(hr)} (0x{hr:X8})"));
 			return hr == 0;
 		}
 
 		/// <summary>
-		/// Создает JSON для ClientData со случайным challenge
+		/// Creates the ClientData JSON with a random challenge
 		/// </summary>
 		private static string CreateClientDataJson(string type)
 		{
@@ -524,16 +524,16 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Подбирает окно‑владельца для диалога «Безопасность Windows» и выводит его на передний план.
-		/// Диалог WebAuthn привязывается по z‑order к hWnd: если владелец не активен (или hWnd = 0),
-		/// диалог открывается под окном KeePass.
+		/// Picks the owner window for the "Windows Security" dialog and brings it to the foreground.
+		/// The WebAuthn dialog is z-ordered relative to hWnd: if the owner is inactive (or hWnd = 0),
+		/// the dialog opens beneath the KeePass window.
 		/// </summary>
 		private static IntPtr PrepareOwnerWindow(IntPtr windowHandle)
 		{
 			IntPtr foreground = User32.GetForegroundWindow();
 			uint currentProcess = User32.GetCurrentProcessId();
 
-			// Нет владельца, он свёрнут или скрыт (трей) — берём активное окно нашего процесса, если оно есть
+			// No owner, or it is minimized or hidden (tray): use our process's active window, if any
 			if (windowHandle == IntPtr.Zero || User32.IsIconic(windowHandle) || !User32.IsWindowVisible(windowHandle))
 			{
 				if (foreground != IntPtr.Zero && GetWindowProcessId(foreground) == currentProcess)
@@ -544,7 +544,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 
 			if (windowHandle == IntPtr.Zero)
 			{
-				Log("Окно‑владелец не определено, диалог WebAuthn будет без владельца");
+				Log("Owner window not determined, the WebAuthn dialog will have no owner");
 				return windowHandle;
 			}
 
@@ -558,10 +558,10 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Выполняет блокирующий вызов webauthn.dll в отдельном потоке, пока UI‑поток продолжает
-		/// обрабатывать сообщения. Иначе окно KeePass переходит в состояние «Не отвечает», Windows
-		/// подменяет его ghost‑окном и диалог «Безопасность Windows» оказывается под ним.
-		/// Окно‑владелец на время вызова отключается (как при модальном диалоге).
+		/// Runs the blocking webauthn.dll call on a separate thread while the UI thread keeps
+		/// pumping messages. Otherwise the KeePass window becomes "Not Responding", Windows
+		/// replaces it with a ghost window and the "Windows Security" dialog ends up beneath it.
+		/// The owner window is disabled for the duration of the call (as with a modal dialog).
 		/// </summary>
 		private static int RunNativeCall(IntPtr ownerHandle, Func<int> nativeCall)
 		{
@@ -584,8 +584,8 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			if (ownerWasEnabled) User32.EnableWindow(ownerHandle, false);
 			try
 			{
-				// Диалог «Безопасность Windows» рисует другой процесс (брокер). Пока KeePass — foreground‑процесс,
-				// брокеру запрещено забирать фокус, и его окно оказывается под KeePass. Разрешаем явно.
+				// The "Windows Security" dialog is drawn by another process (the broker). While KeePass is the foreground process,
+				// the broker may not take focus and its window ends up beneath KeePass. Allow it explicitly.
 				User32.AllowSetForegroundWindow(User32.ASFW_ANY);
 
 				thread.Start();
@@ -603,12 +603,12 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			}
 
 			if (error != null)
-				throw new WebAuthnException("Ошибка вызова WebAuthn API", error);
+				throw new WebAuthnException("WebAuthn API call failed", error);
 			return hr;
 		}
 
 		/// <summary>
-		/// Страховка: находит окно «Безопасность Windows» и выводит его на передний план (один раз).
+		/// Fallback: finds the "Windows Security" window and brings it to the foreground (once).
 		/// </summary>
 		private static bool RaiseSecurityDialog()
 		{
@@ -619,12 +619,12 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			if (User32.GetForegroundWindow() != dialog)
 			{
 				bool ok = User32.SetForegroundWindow(dialog);
-				Log($"Диалог «Безопасность Windows» 0x{dialog.ToInt64():X} выведен на передний план: {ok}");
+				Log($"\"Windows Security\" dialog 0x{dialog.ToInt64():X} brought to foreground: {ok}");
 			}
 			return true;
 		}
 
-		// Класс окна диалога «Безопасность Windows» (Windows Hello / WebAuthn)
+		// Window class of the "Windows Security" dialog (Windows Hello / WebAuthn)
 		private const string SECURITY_DIALOG_CLASS = "Credential Dialog Xaml Host";
 
 		private static uint GetWindowProcessId(IntPtr hWnd)
@@ -677,32 +677,32 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 	}
 
 	/// <summary>
-	/// Результат MakeCredential / GetAssertion: credential ID и PRF‑секрет
+	/// MakeCredential / GetAssertion result: credential ID and PRF secret
 	/// </summary>
 	public class PrfResult
 	{
 		public byte[] CredentialId { get; set; }
 
-		/// <summary>PRF-секрет (32 байта). При создании на API &lt; 8 — null, тогда нужен GetPrfSecret</summary>
+		/// <summary>PRF secret (32 bytes). null at creation on API &lt; 8, then GetPrfSecret is needed</summary>
 		public byte[] PrfSecret { get; set; }
 
-		/// <summary>Транспорт аутентификатора (WEBAUTHN_CTAP_TRANSPORT_*); 0, если неизвестен</summary>
+		/// <summary>Authenticator transport (WEBAUTHN_CTAP_TRANSPORT_*); 0 if unknown</summary>
 		public uint Transport { get; set; }
 	}
 
 	/// <summary>
-	/// Credential Windows Hello из WebAuthNGetPlatformCredentialList
+	/// Windows Hello credential from WebAuthNGetPlatformCredentialList
 	/// </summary>
 	public class PlatformCredential
 	{
 		public byte[] CredentialId { get; set; }
 		public string UserName { get; set; }
-		/// <summary>Полный путь базы (credential плагина) либо имя пользователя</summary>
+		/// <summary>Full database path (plugin credential) or user name</summary>
 		public string DisplayName { get; set; }
 	}
 
 	/// <summary>
-	/// Исключение для ошибок WebAuthn
+	/// Exception for WebAuthn errors
 	/// </summary>
 	public class WebAuthnException : Exception
 	{

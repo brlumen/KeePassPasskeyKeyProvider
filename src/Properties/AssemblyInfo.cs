@@ -7,9 +7,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("KeePassPasskeyKeyProvider")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Григорий Ермолаев")]
+[assembly: AssemblyCompany("Grigory Ermolaev")]
 [assembly: AssemblyProduct("KeePass Plugin")]
-[assembly: AssemblyCopyright("Copyright © Григорий Ермолаев 2026")]
+[assembly: AssemblyCopyright("Copyright © Grigory Ermolaev 2026")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

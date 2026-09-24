@@ -6,10 +6,10 @@ using System.Windows.Forms;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Модальная плашка «идёт операция» со спиннером поверх окна‑владельца.
-	/// Работает в собственном UI‑потоке: операции KeePass (сохранение базы с KDF) обязаны
-	/// выполняться в главном потоке и блокируют его, а плашка при этом продолжает анимироваться.
-	/// Использование: <c>using (BusyIndicator.Show(owner, "…")) { долгая операция }</c>.
+	/// Modal "operation in progress" overlay with a spinner on top of the owner window.
+	/// Runs on its own UI thread: KeePass operations (saving the database with KDF) must
+	/// run on the main thread and block it, while the overlay keeps animating.
+	/// Usage: <c>using (BusyIndicator.Show(owner, "…")) { long operation }</c>.
 	/// </summary>
 	public sealed class BusyIndicator : IDisposable
 	{
@@ -23,7 +23,7 @@ namespace KeePassPasskeyKeyProvider
 			thread = new Thread(() => RunForm(ownerBounds, message)) { IsBackground = true, Name = "KeePassPasskeyKeyProvider busy" };
 			thread.SetApartmentState(ApartmentState.STA);
 			thread.Start();
-			shown.WaitOne(2000); // не ждём вечно, если окно не удалось показать
+			shown.WaitOne(2000); // don't wait forever if the window failed to show
 		}
 
 		public static BusyIndicator Show(Control owner, string message)
@@ -80,7 +80,7 @@ namespace KeePassPasskeyKeyProvider
 			form.Shown += (s, e) =>
 			{
 				shown.Set();
-				if (closing) form.Close(); // операция завершилась раньше, чем окно появилось
+				if (closing) form.Close(); // the operation finished before the window appeared
 			};
 
 			Application.Run(form);
@@ -93,7 +93,7 @@ namespace KeePassPasskeyKeyProvider
 			if (f != null && f.IsHandleCreated)
 			{
 				try { f.BeginInvoke((Action)f.Close); }
-				catch (InvalidOperationException) { /* окно уже закрыто */ }
+				catch (InvalidOperationException) { /* window already closed */ }
 			}
 			if (thread.Join(2000))
 				shown.Dispose();

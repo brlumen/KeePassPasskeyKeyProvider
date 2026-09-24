@@ -12,8 +12,8 @@ using KeePassLib.Utility;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Управление дополнительными устройствами и фразой восстановления базы (записи в PublicCustomData).
-	/// Встраивается во вкладку «FIDO2» диалога параметров базы.
+	/// Manages additional devices and the database recovery phrase (records in PublicCustomData).
+	/// Embedded in the "FIDO2" tab of the database settings dialog.
 	/// </summary>
 	public partial class FIDO2DevicesControl : UserControl
 	{
@@ -43,7 +43,7 @@ namespace KeePassPasskeyKeyProvider
 
 			if (!WebAuthnHelper.IsWebAuthnAvailable())
 			{
-				ShowStatus("Windows WebAuthn API недоступен (требуется Windows 10 22H2 / Windows 11).");
+				ShowStatus("Windows WebAuthn API is not available (requires Windows 10 22H2 / Windows 11).");
 				SetEnabled(false);
 				return;
 			}
@@ -51,8 +51,8 @@ namespace KeePassPasskeyKeyProvider
 			byte[] key = FIDO2KeyProvider.GetDatabaseKey(database);
 			if (key == null)
 			{
-				ShowStatus("Мастер‑ключ этой базы не использует FIDO2.\n" +
-				           "Файл → Изменить мастер‑ключ → «FIDO2 Key Provider (Windows WebAuthn)».");
+				ShowStatus("The master key of this database does not use FIDO2.\n" +
+				           "File → Change Master Key → \"FIDO2 Key Provider (Windows WebAuthn)\".");
 				SetEnabled(false);
 				return;
 			}
@@ -65,40 +65,40 @@ namespace KeePassPasskeyKeyProvider
 			}
 			catch (Exception ex)
 			{
-				ShowStatus($"Не удалось прочитать записи устройств:\n{ex.Message}");
+				ShowStatus($"Failed to read device records:\n{ex.Message}");
 				SetEnabled(false);
 				return;
 			}
 
 			foreach (DeviceRecord r in records)
-				listBoxDevices.Items.Add(string.IsNullOrEmpty(r.Label) ? "(без названия)" : r.Label);
+				listBoxDevices.Items.Add(string.IsNullOrEmpty(r.Label) ? "(unnamed)" : r.Label);
 
 			UpdateRecoveryStatus();
-			ShowStatus("Записи хранятся в заголовке базы и сохраняются автоматически (новая база — при нажатии «OK»). " +
-			           "Удаление устройства или фразы заменяет мастер‑ключ базы: удалённое не откроет её новые версии. " +
-			           "Последнее устройство удалить нельзя.");
+			ShowStatus("Records are stored in the database header and saved automatically (a new database — when you click \"OK\"). " +
+			           "Removing a device or the phrase replaces the database master key: the removed one will not open its new versions. " +
+			           "The last device cannot be removed.");
 			SetEnabled(true);
 		}
 
-		/// <summary>Состояние фразы; единственное устройство без фразы — предупреждение о риске потери доступа</summary>
+		/// <summary>Phrase status; a single device without a phrase shows a warning about the risk of losing access</summary>
 		private void UpdateRecoveryStatus()
 		{
-			buttonRecovery.Text = hasRecovery ? "Заменить фразу" : "Создать фразу восстановления";
+			buttonRecovery.Text = hasRecovery ? "Replace phrase" : "Create recovery phrase";
 			if (hasRecovery)
 			{
 				labelRecovery.ForeColor = SystemColors.ControlText;
-				labelRecovery.Text = "Фраза восстановления создана: она открывает базу без устройства.";
+				labelRecovery.Text = "A recovery phrase has been created: it opens the database without a device.";
 			}
 			else if (records.Count == 1)
 			{
 				labelRecovery.ForeColor = Color.Firebrick;
-				labelRecovery.Text = "Устройство одно, фразы восстановления нет: при его потере или поломке база станет " +
-				                     "недоступна. Добавьте второе устройство или создайте фразу восстановления.";
+				labelRecovery.Text = "Only one device and no recovery phrase: if the device is lost or broken, the database will become " +
+				                     "inaccessible. Add a second device or create a recovery phrase.";
 			}
 			else
 			{
 				labelRecovery.ForeColor = SystemColors.ControlText;
-				labelRecovery.Text = "Фраза восстановления не создана.";
+				labelRecovery.Text = "No recovery phrase has been created.";
 			}
 		}
 
@@ -112,7 +112,7 @@ namespace KeePassPasskeyKeyProvider
 			buttonRemoveRecovery.Enabled = enabled && hasRecovery;
 		}
 
-		/// <summary>Удалять можно любое устройство, кроме последнего: без записей базу не открыть</summary>
+		/// <summary>Any device except the last one can be removed: without records the database cannot be opened</summary>
 		private bool CanRemoveSelected()
 		{
 			int index = listBoxDevices.SelectedIndex;
@@ -125,14 +125,14 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Добавление устройства: новый credential с PRF → запись K ⊕ PRF в заголовок базы
+		/// Adding a device: new credential with PRF → record K ⊕ PRF in the database header
 		/// </summary>
 		private void AddDeviceButtonClick(object sender, EventArgs e)
 		{
 			string label = textBoxDeviceName.Text.Trim();
 			if (label.Length == 0)
 			{
-				MessageBox.Show(this, "Укажите название устройства.", "KeePassPasskeyKeyProvider",
+				MessageBox.Show(this, "Enter a device name.", "KeePassPasskeyKeyProvider",
 				                MessageBoxButtons.OK, MessageBoxIcon.Information);
 				textBoxDeviceName.Focus();
 				return;
@@ -168,7 +168,7 @@ namespace KeePassPasskeyKeyProvider
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this, $"Не удалось добавить устройство:\n{ex.Message}", "KeePassPasskeyKeyProvider",
+				MessageBox.Show(this, $"Failed to add the device:\n{ex.Message}", "KeePassPasskeyKeyProvider",
 				                MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 			finally
@@ -178,8 +178,8 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Удаление устройства = ротация ключа базы: иначе удалённое устройство открывало бы
-		/// текущий файл своей обёрткой K ⊕ PRF, оставшейся в его копиях
+		/// Removing a device = database key rotation: otherwise the removed device would open
+		/// the current file with its wrapped key K ⊕ PRF left in its copies
 		/// </summary>
 		private void RemoveDeviceButtonClick(object sender, EventArgs e)
 		{
@@ -187,18 +187,18 @@ namespace KeePassPasskeyKeyProvider
 			int index = listBoxDevices.SelectedIndex;
 
 			var result = MessageBox.Show(this,
-				$"Удалить устройство «{listBoxDevices.Items[index]}»?\n\n" +
-				"Мастер‑ключ базы будет заменён новым, база сохранена. Удалённое устройство не сможет " +
-				"открыть эту базу и все её последующие версии; остальные устройства продолжат открывать её " +
-				"без перерегистрации.\n\n" +
-				"Копии базы, сделанные до удаления (резервные копии, история версий в облаке), это устройство " +
-				"по‑прежнему откроет: если в базе есть секреты, которые ему не должны быть доступны, смените их.",
-				"Удаление устройства", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+				$"Remove device \"{listBoxDevices.Items[index]}\"?\n\n" +
+				"The database master key will be replaced with a new one and the database saved. The removed device will not be able to " +
+				"open this database or any of its later versions; the other devices will keep opening it " +
+				"without re-registration.\n\n" +
+				"Copies of the database made before the removal (backups, version history in the cloud) can still be opened " +
+				"by this device: if the database contains secrets it should not have access to, change them.",
+				"Remove device", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 			if (result != DialogResult.Yes) return;
 
-			// Credential на устройстве не трогаем: он может понадобиться для старых копий базы.
-			// Ненужные credential Windows Hello удаляются осознанно — кнопкой «Очистка Windows Hello».
-			RunBusy("Удаление устройства и замена мастер‑ключа базы…", "Не удалось удалить устройство", () =>
+			// The credential on the device is left untouched: it may be needed for old copies of the database.
+			// Unneeded Windows Hello credentials are removed deliberately — with the "Windows Hello cleanup" button.
+			RunBusy("Removing the device and replacing the database master key…", "Failed to remove the device", () =>
 			{
 				records.RemoveAt(index);
 				FIDO2KeyProvider.RotateDatabaseKey(database, records);
@@ -212,15 +212,15 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Создание (замена) фразы восстановления: запись K ⊕ R в заголовок базы. Замена = отзыв старой фразы,
-		/// поэтому сначала ротация ключа: иначе старая фраза с её копией обёртки из прежних версий файла дала бы K.
+		/// Creating (replacing) the recovery phrase: record K ⊕ R in the database header. Replacement = revoking the old phrase,
+		/// so rotation comes first: otherwise the old phrase plus its copy of the wrapped key from earlier file versions would yield K.
 		/// </summary>
 		private void RecoveryButtonClick(object sender, EventArgs e)
 		{
 			if (hasRecovery && MessageBox.Show(this,
-				    "Заменить фразу восстановления?\n\nМастер‑ключ базы будет заменён, база сохранена. " +
-				    "Старая фраза не откроет эту базу и её последующие версии (копии, сделанные раньше, — откроет).",
-				    "Замена фразы восстановления", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+				    "Replace the recovery phrase?\n\nThe database master key will be replaced and the database saved. " +
+				    "The old phrase will not open this database or its later versions (copies made earlier — it will).",
+				    "Replace recovery phrase", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
 				return;
 
 			byte[] entropy = RecoveryPhrase.GenerateEntropy();
@@ -229,7 +229,7 @@ namespace KeePassPasskeyKeyProvider
 				if (UIUtil.ShowDialogAndDestroy(new RecoveryPhraseForm(RecoveryPhrase.ToWords(entropy))) != DialogResult.OK)
 					return;
 
-				RunBusy("Сохранение фразы восстановления…", "Не удалось сохранить фразу восстановления", () =>
+				RunBusy("Saving the recovery phrase…", "Failed to save the recovery phrase", () =>
 				{
 					if (hasRecovery)
 					{
@@ -257,18 +257,18 @@ namespace KeePassPasskeyKeyProvider
 			}
 		}
 
-		/// <summary>Удаление фразы = ротация ключа (как удаление устройства)</summary>
+		/// <summary>Removing the phrase = key rotation (same as removing a device)</summary>
 		private void RemoveRecoveryButtonClick(object sender, EventArgs e)
 		{
 			if (!hasRecovery) return;
 
 			if (MessageBox.Show(this,
-				    "Удалить фразу восстановления?\n\nМастер‑ключ базы будет заменён, база сохранена. " +
-				    "Фраза не откроет эту базу и её последующие версии; копии, сделанные раньше, — откроет.",
-				    "Удаление фразы восстановления", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+				    "Remove the recovery phrase?\n\nThe database master key will be replaced and the database saved. " +
+				    "The phrase will not open this database or its later versions; copies made earlier — it will.",
+				    "Remove recovery phrase", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
 				return;
 
-			RunBusy("Удаление фразы и замена мастер‑ключа базы…", "Не удалось удалить фразу восстановления", () =>
+			RunBusy("Removing the phrase and replacing the database master key…", "Failed to remove the recovery phrase", () =>
 			{
 				DeviceKeyStore.SaveRecovery(database, null);
 				FIDO2KeyProvider.RotateDatabaseKey(database, records);
@@ -277,7 +277,7 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Выполняет действие под индикатором: сохранение базы (KDF) занимает секунды и блокирует UI‑поток. При ошибке — сообщение и перечитывание записей из базы.
+		/// Runs the action under a busy indicator: saving the database (KDF) takes seconds and blocks the UI thread. On error — a message and re-reading the records from the database.
 		/// </summary>
 		private void RunBusy(string busyText, string errorText, Action action)
 		{
@@ -303,8 +303,8 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Записывает записи в базу и сразу сохраняет файл. Для новой базы файла ещё нет —
-		/// её KeePass сохранит сам после «OK» в диалоге параметров.
+		/// Writes the records to the database and saves the file immediately. A new database has no file yet —
+		/// KeePass saves it itself after "OK" in the settings dialog.
 		/// </summary>
 		private void SaveRecords()
 		{

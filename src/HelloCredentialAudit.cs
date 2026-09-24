@@ -11,13 +11,13 @@ namespace KeePassPasskeyKeyProvider
 {
 	public enum HelloCredentialStatus
 	{
-		/// <summary>Credential есть в заголовке существующей базы</summary>
+		/// <summary>Credential is present in the header of an existing database</summary>
 		InUse,
-		/// <summary>Файл базы по сохранённому пути не найден — можно удалять</summary>
+		/// <summary>Database file not found at the stored path; safe to delete</summary>
 		DatabaseMissing,
-		/// <summary>База есть, но credential в её заголовке нет (сменён мастер‑ключ или база старого формата)</summary>
+		/// <summary>Database exists but its header lacks the credential (master key changed or old-format database)</summary>
 		NotInDatabase,
-		/// <summary>Путь неизвестен (credential создан до сохранения пути), в открытых базах не найден</summary>
+		/// <summary>Path unknown (credential created before paths were stored); not found in open databases</summary>
 		Unknown
 	}
 
@@ -35,18 +35,18 @@ namespace KeePassPasskeyKeyProvider
 			{
 				switch (Status)
 				{
-					case HelloCredentialStatus.InUse: return "используется";
-					case HelloCredentialStatus.DatabaseMissing: return "база не найдена";
-					case HelloCredentialStatus.NotInDatabase: return "в заголовке базы отсутствует";
-					default: return "путь неизвестен";
+					case HelloCredentialStatus.InUse: return "in use";
+					case HelloCredentialStatus.DatabaseMissing: return "database not found";
+					case HelloCredentialStatus.NotInDatabase: return "missing from database header";
+					default: return "path unknown";
 				}
 			}
 		}
 	}
 
 	/// <summary>
-	/// Сопоставляет credential Windows Hello плагина с базами: путь берётся из displayName credential,
-	/// принадлежность — из записей устройств в заголовке (база открывать не нужно).
+	/// Matches the plugin's Windows Hello credentials to databases: the path comes from the credential's displayName,
+	/// membership from the device records in the header (the database need not be opened).
 	/// </summary>
 	public static class HelloCredentialAudit
 	{
@@ -105,7 +105,7 @@ namespace KeePassPasskeyKeyProvider
 					if (DeviceKeyStore.Find(DeviceKeyStore.Load(db), credentialId) != null)
 						return true;
 				}
-				catch { /* повреждённые записи — считаем, что не найден */ }
+				catch { /* corrupted records: treat as not found */ }
 			}
 			return false;
 		}

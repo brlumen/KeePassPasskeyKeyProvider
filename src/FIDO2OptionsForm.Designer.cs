@@ -92,7 +92,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonDeleteChecked.Name = "buttonDeleteChecked";
 			this.buttonDeleteChecked.Size = new System.Drawing.Size(180, 26);
 			this.buttonDeleteChecked.TabIndex = 2;
-			this.buttonDeleteChecked.Text = "Удалить отмеченные";
+			this.buttonDeleteChecked.Text = "Delete checked";
 			this.buttonDeleteChecked.UseVisualStyleBackColor = true;
 			this.buttonDeleteChecked.Click += new System.EventHandler(this.DeleteCheckedButtonClick);
 			//
@@ -102,7 +102,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonRefresh.Name = "buttonRefresh";
 			this.buttonRefresh.Size = new System.Drawing.Size(100, 26);
 			this.buttonRefresh.TabIndex = 3;
-			this.buttonRefresh.Text = "Обновить";
+			this.buttonRefresh.Text = "Refresh";
 			this.buttonRefresh.UseVisualStyleBackColor = true;
 			this.buttonRefresh.Click += new System.EventHandler(this.RefreshButtonClick);
 			//
@@ -120,7 +120,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonDiagnostics.Name = "buttonDiagnostics";
 			this.buttonDiagnostics.Size = new System.Drawing.Size(180, 26);
 			this.buttonDiagnostics.TabIndex = 2;
-			this.buttonDiagnostics.Text = "🔍 Диагностика PRF";
+			this.buttonDiagnostics.Text = "🔍 PRF diagnostics";
 			this.buttonDiagnostics.UseVisualStyleBackColor = true;
 			this.buttonDiagnostics.Click += new System.EventHandler(this.DiagnosticsButtonClick);
 			//

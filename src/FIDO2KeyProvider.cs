@@ -12,20 +12,20 @@ using KeePassLib.Utility;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Key Provider для KeePass, использующий FIDO2 аутентификацию через Windows WebAuthn API
-	/// с поддержкой PRF extension (WebAuthn Level 3).
-	/// Ключ базы K — случайные 32 байта; в заголовке KDBX (PublicCustomData) для каждого устройства
-	/// хранится K ⊕ PRF_i (см. <see cref="DeviceKeyStore"/>). Credential — discoverable: файлов рядом с базой нет.
-	/// Удаление устройства = ротация K: новый K перешифровывается для оставшихся устройств и фразы восстановления.
+	/// KeePass Key Provider using FIDO2 authentication via the Windows WebAuthn API
+	/// with PRF extension support (WebAuthn Level 3).
+	/// Database key K is 32 random bytes; the KDBX header (PublicCustomData) stores K ⊕ PRF_i
+	/// for each device (see <see cref="DeviceKeyStore"/>). Credentials are discoverable: no files next to the database.
+	/// Removing a device = rotation of K: the new K is re-wrapped for the remaining devices and the recovery phrase.
 	/// </summary>
 	public class FIDO2KeyProvider : KeyProvider
 	{
 		public const string ProviderName = "FIDO2 Key Provider (Windows WebAuthn)";
 
 		/// <summary>
-		/// Устройство, созданное последним вызовом GetKey(CreatingNewKey): credential ID, обёртка K ⊕ PRF,
-		/// подпись и SHA‑256 ключа K. База в этот момент ещё недоступна; запись делает
-		/// <see cref="RegisterPendingDevice"/> при показе параметров базы либо по событиям FileCreated / MasterKeyChanged.
+		/// Device created by the last GetKey(CreatingNewKey) call: credential ID, wrapped key K ⊕ PRF,
+		/// label and SHA‑256 of K. The database is not yet available at this point; the record is written by
+		/// <see cref="RegisterPendingDevice"/> when database settings are shown or on FileCreated / MasterKeyChanged events.
 		/// </summary>
 		private static byte[] pendingCredentialId;
 		private static byte[] pendingWrappedKey;
@@ -33,8 +33,8 @@ namespace KeePassPasskeyKeyProvider
 		private static string pendingLabel;
 
 		/// <summary>
-		/// Смена мастер‑ключа с сохранением остальных устройств: прежний ключ базы, чтобы перешифровать
-		/// их обёртки на новый K (как при ротации). null — остальные устройства удаляются.
+		/// Master key change keeping the other devices: the previous database key, used to re-wrap
+		/// their wrapped keys for the new K (as in rotation). null — the other devices are removed.
 		/// </summary>
 		private static byte[] pendingOldKey;
 
@@ -46,9 +46,9 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		private const string WebAuthnUnavailableMessage =
-			"Windows WebAuthn API недоступен.\n\n" +
-			"Этот плагин требует Windows 10 22H2 или Windows 11 (WebAuthn API v4+).\n" +
-			"Убедитесь, что ваша система соответствует минимальным требованиям.";
+			"Windows WebAuthn API is not available.\n\n" +
+			"This plugin requires Windows 10 22H2 or Windows 11 (WebAuthn API v4+).\n" +
+			"Make sure your system meets the minimum requirements.";
 
 		public override byte[] GetKey(KeyProviderQueryContext ctx)
 		{
@@ -66,19 +66,19 @@ namespace KeePassPasskeyKeyProvider
 			}
 			catch (WebAuthnException ex)
 			{
-				MessageService.ShowWarning($"Ошибка FIDO2 аутентификации:\n{ex.Message}");
+				MessageService.ShowWarning($"FIDO2 authentication error:\n{ex.Message}");
 				return null;
 			}
 			catch (Exception ex)
 			{
-				MessageService.ShowWarning($"Неожиданная ошибка:\n{ex.Message}\n\nТип: {ex.GetType().Name}");
+				MessageService.ShowWarning($"Unexpected error:\n{ex.Message}\n\nType: {ex.GetType().Name}");
 				return null;
 			}
 		}
 
 		/// <summary>
-		/// Создаёт новый credential и случайный ключ базы K; обёртка K ⊕ PRF ждёт записи в базу.
-		/// При смене мастер‑ключа открытой базы пользователь выбирает, сохранить ли её остальные устройства.
+		/// Creates a new credential and a random database key K; the wrapped key K ⊕ PRF awaits writing to the database.
+		/// When changing the master key of an open database, the user chooses whether to keep its other devices.
 		/// </summary>
 		private byte[] CreateNewCredential(KeyProviderQueryContext ctx)
 		{
@@ -116,7 +116,7 @@ namespace KeePassPasskeyKeyProvider
 			}
 		}
 
-		/// <summary>Открытая база, мастер‑ключ которой сейчас меняется; null для новой базы</summary>
+		/// <summary>Open database whose master key is being changed; null for a new database</summary>
 		private PwDatabase FindOpenDatabase(KeyProviderQueryContext ctx)
 		{
 			string path = ctx.DatabaseIOInfo?.Path;
@@ -134,11 +134,11 @@ namespace KeePassPasskeyKeyProvider
 		private static List<DeviceRecord> LoadRecordsSafe(PwDatabase db)
 		{
 			try { return DeviceKeyStore.Load(db); }
-			catch { return new List<DeviceRecord>(); } // повреждённые записи сохранить всё равно нельзя
+			catch { return new List<DeviceRecord>(); } // corrupted records cannot be kept anyway
 		}
 
 		/// <summary>
-		/// Смена мастер‑ключа базы на ключ последнего созданного credential с сохранением остальных устройств
+		/// Changes the database master key to the key of the last created credential, keeping the other devices
 		/// </summary>
 		public static bool PendingKeepsDevices(PwDatabase db)
 		{
@@ -160,16 +160,16 @@ namespace KeePassPasskeyKeyProvider
 			}
 		}
 
-		/// <summary>Подпись устройства по умолчанию: тип по транспорту и момент создания credential</summary>
+		/// <summary>Default device label: type by transport and credential creation time</summary>
 		private static string DefaultLabel(uint transport)
 		{
 			return $"{WebAuthnHelper.TransportName(transport)}, {DateTime.Now:dd.MM.yyyy HH:mm}";
 		}
 
 		/// <summary>
-		/// Если мастер‑ключ базы — ключ последнего созданного credential, добавляет его запись
-		/// в PublicCustomData (при сохранении устройств — перешифровав их обёртки на новый ключ).
-		/// Возвращает true, если запись добавлена.
+		/// If the database master key is the key of the last created credential, adds its record
+		/// to PublicCustomData (when keeping devices, re-wraps their keys for the new key).
+		/// Returns true if the record was added.
 		/// </summary>
 		public static bool RegisterPendingDevice(PwDatabase db)
 		{
@@ -208,15 +208,15 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Ротация ключа базы: новый случайный K перешифровывается для всех записей и фразы восстановления и подставляется
-		/// в мастер‑ключ базы (остальные компоненты мастер‑ключа сохраняются). Аутентификаторы не нужны.
-		/// Базу после этого необходимо сохранить.
+		/// Database key rotation: a new random K is re-wrapped for all records and the recovery phrase and substituted
+		/// into the database master key (other master key components are kept). No authenticators needed.
+		/// The database must be saved afterwards.
 		/// </summary>
 		public static void RotateDatabaseKey(PwDatabase db, List<DeviceRecord> records)
 		{
 			byte[] oldKey = GetDatabaseKey(db);
 			if (oldKey == null)
-				throw new InvalidOperationException("Мастер‑ключ базы не использует FIDO2");
+				throw new InvalidOperationException("The database master key does not use FIDO2");
 
 			byte[] newKey = GenerateKey();
 			try
@@ -248,7 +248,7 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Ключ базы K из мастер‑ключа (KcpCustomKey нашего провайдера), иначе null
+		/// Database key K from the master key (our provider's KcpCustomKey), otherwise null
 		/// </summary>
 		public static byte[] GetDatabaseKey(PwDatabase db)
 		{
@@ -290,27 +290,27 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Создаёт credential с PRF для базы и возвращает credential ID + PRF‑секрет
-		/// (используется и при создании ключа, и при добавлении устройства)
+		/// Creates a credential with PRF for the database and returns credential ID + PRF secret
+		/// (used both when creating the key and when adding a device)
 		/// </summary>
 		public static PrfResult CreateCredentialForDatabase(IntPtr windowHandle, string databasePath)
 		{
-			// User ID (32 байта) — случайный, чтобы каждая база/устройство получали отдельный credential
+			// User ID (32 bytes) is random so that each database/device gets a separate credential
 			byte[] userId = new byte[32];
 			using (var rng = new RNGCryptoServiceProvider())
 				rng.GetBytes(userId);
 
-			// Имя базы попадает в user entity и видно в диалогах Windows/телефона
+			// Database name goes into the user entity and is visible in Windows/phone dialogs
 			string dbName = string.IsNullOrEmpty(databasePath)
 				? "KeePass Database"
 				: System.IO.Path.GetFileName(databasePath);
 
 			try
 			{
-				// displayName = полный путь: по нему очистка в Tools → KeePassPasskeyKeyProvider находит credential удалённых баз
+				// displayName = full path: cleanup in Tools → KeePassPasskeyKeyProvider uses it to find credentials of deleted databases
 				PrfResult created = WebAuthnHelper.CreateCredential(windowHandle, userId, $"KeePass: {dbName}", databasePath);
 
-				// PRF secret: на API 8+ уже получен при создании, иначе — отдельный GetAssertion
+				// PRF secret: on API 8+ already obtained at creation, otherwise via a separate GetAssertion
 				if (created.PrfSecret == null)
 				{
 					System.Threading.Thread.Sleep(500);
@@ -325,8 +325,8 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Разблокирует базу устройством; если WebAuthn недоступен или аутентификация не удалась —
-		/// предлагает фразу восстановления (когда она есть)
+		/// Unlocks the database with a device; if WebAuthn is unavailable or authentication fails,
+		/// offers the recovery phrase (if there is one)
 		/// </summary>
 		private static byte[] Unlock(KeyProviderQueryContext ctx)
 		{
@@ -345,18 +345,18 @@ namespace KeePassPasskeyKeyProvider
 				}
 				catch (WebAuthnException ex)
 				{
-					problem = $"Ошибка FIDO2 аутентификации:\n{ex.Message}";
+					problem = $"FIDO2 authentication error:\n{ex.Message}";
 				}
 			}
 			return UnlockWithRecoveryPhrase(ctx, problem);
 		}
 
-		/// <summary>K = (K ⊕ R) ⊕ R, где R — секрет введённой фразы. Неверную фразу отклонит сам KeePass.</summary>
+		/// <summary>K = (K ⊕ R) ⊕ R, where R is the secret of the entered phrase. KeePass itself rejects a wrong phrase.</summary>
 		private static byte[] UnlockWithRecoveryPhrase(KeyProviderQueryContext ctx, string problem)
 		{
 			byte[] wrappedKey = null;
 			try { wrappedKey = DeviceKeyStore.LoadRecoveryFromFile(ctx.DatabaseIOInfo); }
-			catch { /* повреждённую запись фразы не предлагаем */ }
+			catch { /* a corrupted phrase record is not offered */ }
 
 			if (wrappedKey == null)
 			{
@@ -364,7 +364,7 @@ namespace KeePassPasskeyKeyProvider
 				return null;
 			}
 
-			if (!MessageService.AskYesNo(problem + "\n\nОткрыть базу фразой восстановления?", "KeePassPasskeyKeyProvider"))
+			if (!MessageService.AskYesNo(problem + "\n\nOpen the database with the recovery phrase?", "KeePassPasskeyKeyProvider"))
 				return null;
 
 			var form = new RecoveryPhraseInputForm();
@@ -384,7 +384,7 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Разблокирует базу устройством: GetAssertion по allowList записей → K = обёртка ⊕ PRF
+		/// Unlocks the database with a device: GetAssertion with the records' allowList → K = wrapped key ⊕ PRF
 		/// </summary>
 		private static byte[] UnlockWithCredential(List<DeviceRecord> records)
 		{
@@ -393,7 +393,7 @@ namespace KeePassPasskeyKeyProvider
 			{
 				DeviceRecord record = DeviceKeyStore.Find(records, assertion.CredentialId);
 				if (record == null)
-					throw new WebAuthnException("Аутентификатор предъявил credential, не зарегистрированный в этой базе");
+					throw new WebAuthnException("The authenticator presented a credential not registered in this database");
 
 				return DeviceKeyStore.Wrap(record.WrappedKey, assertion.PrfSecret);
 			}
@@ -405,8 +405,8 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Записи устройств из заголовка файла; null (с сообщением), если их нет или прочитать не удалось —
-		/// без них базу открыть нельзя
+		/// Device records from the file header; null (with a message) if there are none or reading failed —
+		/// the database cannot be opened without them
 		/// </summary>
 		private static List<DeviceRecord> LoadRecords(KeyProviderQueryContext ctx)
 		{
@@ -418,35 +418,35 @@ namespace KeePassPasskeyKeyProvider
 					: DeviceKeyStore.LoadFromFile(ctx.DatabaseIOInfo);
 				if (records.Count > 0)
 					return records;
-				problem = "В заголовке базы нет записей устройств FIDO2 (база не сохранена после создания ключа " +
-				          "или создана несовместимой версией плагина).";
+				problem = "The database header has no FIDO2 device records (the database was not saved after creating the key " +
+				          "or was created by an incompatible plugin version).";
 			}
 			catch (Exception ex)
 			{
-				problem = "Не удалось прочитать записи устройств из заголовка базы:\n" + ex.Message;
+				problem = "Failed to read device records from the database header:\n" + ex.Message;
 			}
 
-			MessageService.ShowWarning(problem, "Открыть базу этим плагином невозможно.");
+			MessageService.ShowWarning(problem, "This plugin cannot open the database.");
 			return null;
 		}
 
 		/// <summary>
-		/// Получает дескриптор активного окна
+		/// Gets the active window handle
 		/// </summary>
 		private static IntPtr GetActiveWindowHandle()
 		{
-			// Пытаемся получить главное окно KeePass
+			// Try to get the KeePass main window
 			var mainForm = Form.ActiveForm ?? Application.OpenForms[0];
 			return mainForm?.Handle ?? IntPtr.Zero;
 		}
 
 		public override string Name => ProviderName;
 
-		// WebAuthn API работает только из интерактивного окружения пользователя
+		// WebAuthn API works only in an interactive user session
 		public override bool SecureDesktopCompatible => false;
 
-		// PRF возвращает 32-байтовый ключ, который уже является криптографически стойким
-		// Не требуется дополнительное хеширование
+		// PRF returns a 32-byte key that is already cryptographically strong
+		// No additional hashing required
 		public override bool DirectKey => true;
 	}
 }

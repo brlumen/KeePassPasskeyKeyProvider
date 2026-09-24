@@ -6,7 +6,7 @@ using KeePassPasskeyKeyProvider.WebAuthn;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Форма для диагностики FIDO2 ключей и проверки поддержки PRF (Pseudo-Random Function)
+	/// Form for diagnosing FIDO2 security keys and checking PRF (Pseudo-Random Function) support
 	/// </summary>
 	public partial class FIDO2DiagnosticsForm : Form
 	{
@@ -49,7 +49,7 @@ namespace KeePassPasskeyKeyProvider
 			this.btnCheckApiVersion.Name = "btnCheckApiVersion";
 			this.btnCheckApiVersion.Size = new System.Drawing.Size(150, 30);
 			this.btnCheckApiVersion.TabIndex = 1;
-			this.btnCheckApiVersion.Text = "Проверить API";
+			this.btnCheckApiVersion.Text = "Check API";
 			this.btnCheckApiVersion.UseVisualStyleBackColor = true;
 			this.btnCheckApiVersion.Click += new EventHandler(this.BtnCheckApiVersion_Click);
 
@@ -59,7 +59,7 @@ namespace KeePassPasskeyKeyProvider
 			this.btnTestHmacSecret.Name = "btnTestHmacSecret";
 			this.btnTestHmacSecret.Size = new System.Drawing.Size(180, 30);
 			this.btnTestHmacSecret.TabIndex = 2;
-			this.btnTestHmacSecret.Text = "Тест PRF";
+			this.btnTestHmacSecret.Text = "PRF test";
 			this.btnTestHmacSecret.UseVisualStyleBackColor = true;
 			this.btnTestHmacSecret.Click += new EventHandler(this.BtnTestHmacSecret_Click);
 
@@ -69,7 +69,7 @@ namespace KeePassPasskeyKeyProvider
 			this.btnClose.Name = "btnClose";
 			this.btnClose.Size = new System.Drawing.Size(75, 30);
 			this.btnClose.TabIndex = 3;
-			this.btnClose.Text = "Закрыть";
+			this.btnClose.Text = "Close";
 			this.btnClose.UseVisualStyleBackColor = true;
 			this.btnClose.Click += new EventHandler(this.BtnClose_Click);
 
@@ -84,7 +84,7 @@ namespace KeePassPasskeyKeyProvider
 			this.MinimumSize = new System.Drawing.Size(600, 400);
 			this.Name = "FIDO2DiagnosticsForm";
 			this.StartPosition = FormStartPosition.CenterParent;
-			this.Text = "FIDO2 Диагностика - Проверка поддержки PRF";
+			this.Text = "FIDO2 Diagnostics - PRF Support Check";
 			this.Load += new EventHandler(this.FIDO2DiagnosticsForm_Load);
 			this.ResumeLayout(false);
 			this.PerformLayout();
@@ -92,18 +92,18 @@ namespace KeePassPasskeyKeyProvider
 
 		private void FIDO2DiagnosticsForm_Load(object sender, EventArgs e)
 		{
-			Log("=== FIDO2 Диагностика - PRF Extension ===");
+			Log("=== FIDO2 Diagnostics - PRF Extension ===");
 			Log("");
-			Log("Эта утилита поможет определить, поддерживает ли ваш FIDO2 ключ");
-			Log("расширение PRF (Pseudo-Random Function) - WebAuthn Level 3.");
+			Log("This utility helps determine whether your FIDO2 security key supports");
+			Log("the PRF (Pseudo-Random Function) extension - WebAuthn Level 3.");
 			Log("");
-			Log("PRF - это современная замена hmac-secret, поддерживаемая новыми ключами.");
+			Log("PRF is the modern replacement for hmac-secret, supported by newer keys.");
 			Log("");
-			Log("Шаги:");
-			Log("1. Нажмите 'Проверить API' для проверки доступности WebAuthn API");
-			Log("2. Нажмите 'Тест PRF' для создания тестового credential и проверки PRF");
+			Log("Steps:");
+			Log("1. Click 'Check API' to check WebAuthn API availability");
+			Log("2. Click 'PRF test' to create a test credential and check PRF");
 			Log("");
-			Log("Готов к тестированию.");
+			Log("Ready for testing.");
 			Log("----------------------------------------");
 			Log("");
 		}
@@ -112,41 +112,41 @@ namespace KeePassPasskeyKeyProvider
 		{
 			try
 			{
-				Log(">>> Проверка Windows WebAuthn API...");
+				Log(">>> Checking Windows WebAuthn API...");
 				
 				if (!WebAuthnHelper.IsWebAuthnAvailable())
 				{
-					Log("❌ ОШИБКА: WebAuthn API недоступен!");
-					Log("   Требуется Windows 10 22H2 или Windows 11 (WebAuthn API v4+)");
+					Log("❌ ERROR: WebAuthn API is unavailable!");
+					Log("   Windows 10 22H2 or Windows 11 (WebAuthn API v4+) is required");
 					return;
 				}
 
-				Log("✓ WebAuthn API доступен");
+				Log("✓ WebAuthn API is available");
 
 				uint version = WebAuthnHelper.GetApiVersion();
-				Log($"✓ Версия API: {version}");
+				Log($"✓ API version: {version}");
 
 				bool isPlatformAuthAvailable = false;
 				int hr = WebAuthnApi.WebAuthNIsUserVerifyingPlatformAuthenticatorAvailable(out isPlatformAuthAvailable);
 				
 				if (hr == 0)
 				{
-					Log($"✓ Platform Authenticator: {(isPlatformAuthAvailable ? "Доступен (Windows Hello)" : "Недоступен")}");
+					Log($"✓ Platform Authenticator: {(isPlatformAuthAvailable ? "Available (Windows Hello)" : "Unavailable")}");
 				}
 				else
 				{
-					Log($"⚠ Не удалось проверить Platform Authenticator (HRESULT: 0x{hr:X8})");
+					Log($"⚠ Failed to check Platform Authenticator (HRESULT: 0x{hr:X8})");
 				}
 
 				Log("");
-				Log("Система готова к работе с FIDO2 ключами.");
+				Log("The system is ready to work with FIDO2 security keys.");
 				Log("----------------------------------------");
 				Log("");
 			}
 			catch (Exception ex)
 			{
-				Log($"❌ ОШИБКА: {ex.Message}");
-				Log($"   Тип: {ex.GetType().Name}");
+				Log($"❌ ERROR: {ex.Message}");
+				Log($"   Type: {ex.GetType().Name}");
 				Log("----------------------------------------");
 				Log("");
 			}
@@ -156,62 +156,62 @@ namespace KeePassPasskeyKeyProvider
 		{
 			try
 			{
-				Log(">>> Начало теста PRF (Pseudo-Random Function)...");
+				Log(">>> Starting PRF (Pseudo-Random Function) test...");
 				Log("");
 
-				// Предупреждение пользователя
+				// Warn the user
 				var result = MessageBox.Show(
-					"Сейчас будет создан ТЕСТОВЫЙ credential на вашем FIDO2 ключе.\n\n" +
-					"Вам потребуется:\n" +
-					"1. Вставить/подключить FIDO2 ключ\n" +
-					"2. Ввести PIN-код ключа\n" +
-					"3. Подтвердить создание (коснуться кнопки на ключе)\n\n" +
-					"Этот тест НЕ повлияет на ваши существующие базы данных,\n" +
-					"но тестовый credential останется на ключе (discoverable) — его можно удалить\n" +
-					"в Параметры Windows → Учётные записи → Варианты входа → Ключ безопасности.\n\n" +
-					"Продолжить тест?",
-					"Тест PRF",
+					"A TEST credential will now be created on your FIDO2 security key.\n\n" +
+					"You will need to:\n" +
+					"1. Insert/connect the FIDO2 security key\n" +
+					"2. Enter the key PIN\n" +
+					"3. Confirm creation (touch the button on the key)\n\n" +
+					"This test will NOT affect your existing databases,\n" +
+					"but the test credential will remain on the key (discoverable). You can delete it\n" +
+					"in Windows Settings → Accounts → Sign-in options → Security Key.\n\n" +
+					"Continue the test?",
+					"PRF test",
 					MessageBoxButtons.YesNo,
 					MessageBoxIcon.Question);
 
 				if (result != DialogResult.Yes)
 				{
-					Log("Тест отменён пользователем.");
+					Log("Test cancelled by the user.");
 					Log("----------------------------------------");
 					Log("");
 					return;
 				}
 
-				Log("Шаг 1: Создание тестового credential с PRF extension...");
+				Log("Step 1: Creating a test credential with the PRF extension...");
 
-				// Генерируем тестовый User ID
+				// Generate a test User ID
 				byte[] testUserId = new byte[32];
 				using (var rng = new System.Security.Cryptography.RNGCryptoServiceProvider())
 				{
 					rng.GetBytes(testUserId);
 				}
 
-				Log($"  User ID: {BitConverter.ToString(testUserId, 0, 8).Replace("-", "")}... ({testUserId.Length} байт)");
+				Log($"  User ID: {BitConverter.ToString(testUserId, 0, 8).Replace("-", "")}... ({testUserId.Length} bytes)");
 
-				// Включаем логирование для диагностики
+				// Enable logging for diagnostics
 				WebAuthnHelper.Logger = (msg) => Log($"  {msg}");
 
-				// Создаём credential
+				// Create the credential
 				byte[] credentialId;
 				byte[] creationSecret;
 				try
 				{
-					var created = WebAuthnHelper.CreateCredential(this.Handle, testUserId, "KeePass: диагностика PRF");
+					var created = WebAuthnHelper.CreateCredential(this.Handle, testUserId, "KeePass: PRF diagnostics");
 					credentialId = created.CredentialId;
 					creationSecret = created.PrfSecret;
-					Log($"✓ Credential создан успешно!");
-					Log($"  Credential ID: {BitConverter.ToString(credentialId, 0, Math.Min(16, credentialId.Length)).Replace("-", "")}... ({credentialId.Length} байт)");
+					Log($"✓ Credential created successfully!");
+					Log($"  Credential ID: {BitConverter.ToString(credentialId, 0, Math.Min(16, credentialId.Length)).Replace("-", "")}... ({credentialId.Length} bytes)");
 					if (creationSecret != null)
-						Log($"  PRF secret при создании: получен ({creationSecret.Length} байт)");
+						Log($"  PRF secret at creation: received ({creationSecret.Length} bytes)");
 				}
 				catch (WebAuthnException ex)
 				{
-					Log($"❌ ОШИБКА при создании credential: {ex.Message}");
+					Log($"❌ ERROR creating credential: {ex.Message}");
 					Log("----------------------------------------");
 					Log("");
 					WebAuthnHelper.Logger = null;
@@ -219,81 +219,81 @@ namespace KeePassPasskeyKeyProvider
 				}
 
 				Log("");
-				Log("Шаг 2: Получение PRF secret от аутентификатора...");
-				Log("  (Снова потребуется PIN и подтверждение на ключе)");
+				Log("Step 2: Getting the PRF secret from the authenticator...");
+				Log("  (PIN and confirmation on the key will be required again)");
 
-				// Пауза для завершения операции
+				// Pause to let the operation complete
 				System.Threading.Thread.Sleep(500);
 
-				// Получаем PRF secret
+				// Get the PRF secret
 				byte[] prfSecret;
 				try
 				{
-					// allowList только из тестового credential: credential рабочих баз в тест не попадают
+					// allowList contains only the test credential, so real database credentials are not involved
 					PrfResult assertion = WebAuthnHelper.GetPrfSecret(this.Handle, new[] { credentialId });
 					prfSecret = assertion.PrfSecret;
 
 					if (prfSecret != null && prfSecret.Length > 0)
 					{
-						Log($"✓✓✓ УСПЕХ! PRF secret получен!");
-						Log($"  Длина: {prfSecret.Length} байт");
+						Log($"✓✓✓ SUCCESS! PRF secret received!");
+						Log($"  Length: {prfSecret.Length} bytes");
 						if (creationSecret != null)
 						{
 							bool same = creationSecret.Length == prfSecret.Length
 								&& System.Linq.Enumerable.SequenceEqual(creationSecret, prfSecret);
 							Log(same
-								? "  ✓ Секрет совпадает с полученным при создании (PRF детерминирован)"
-								: "  ❌ Секрет НЕ совпадает с полученным при создании — ключ будет ненадёжен!");
+								? "  ✓ Secret matches the one received at creation (PRF is deterministic)"
+								: "  ❌ Secret does NOT match the one received at creation, the key will be unreliable!");
 							Array.Clear(creationSecret, 0, creationSecret.Length);
 						}
 						Log("");
 						Log("╔════════════════════════════════════════════════════════════╗");
-						Log("║  ✓ ВАШ КЛЮЧ ПОДДЕРЖИВАЕТ PRF!                             ║");
-						Log("║  ✓ Можно использовать для KeePass мастер-ключа           ║");
+						Log("║  ✓ YOUR KEY SUPPORTS PRF!                                 ║");
+						Log("║  ✓ It can be used for the KeePass master key             ║");
 						Log("╚════════════════════════════════════════════════════════════╝");
 						
-						// Очищаем секрет из памяти
+						// Clear the secret from memory
 						Array.Clear(prfSecret, 0, prfSecret.Length);
 					}
 					else
 					{
-						Log($"❌ PRF secret получен, но пустой!");
-						Log("  Ваш ключ может не поддерживать PRF.");
+						Log($"❌ PRF secret received but empty!");
+						Log("  Your key may not support PRF.");
 					}
 				}
 				catch (WebAuthnException ex)
 				{
-					Log($"❌ ОШИБКА при получении PRF secret: {ex.Message}");
+					Log($"❌ ERROR getting PRF secret: {ex.Message}");
 					Log("");
 					Log("╔════════════════════════════════════════════════════════════╗");
-					Log("║  ❌ ВАШ КЛЮЧ НЕ ПОДДЕРЖИВАЕТ PRF                          ║");
-					Log("║     или Windows WebAuthn API не передал расширение        ║");
+					Log("║  ❌ YOUR KEY DOES NOT SUPPORT PRF                         ║");
+					Log("║     or Windows WebAuthn API did not pass the extension    ║");
 					Log("╚════════════════════════════════════════════════════════════╝");
 					Log("");
-					Log("Возможные причины:");
-					Log("  1. Ключ не поддерживает расширение PRF (WebAuthn Level 3)");
-					Log("  2. Credential не был создан с PRF (ошибка в коде)");
-					Log("  3. Проблемы с Windows WebAuthn API");
+					Log("Possible causes:");
+					Log("  1. The key does not support the PRF extension (WebAuthn Level 3)");
+					Log("  2. The credential was not created with PRF (bug in the code)");
+					Log("  3. Problems with the Windows WebAuthn API");
 					Log("");
-					Log("Рекомендации:");
-					Log("  - Используйте современный FIDO2 ключ (YubiKey 5, Google Titan и др.)");
-					Log("  - Обновите прошивку вашего ключа");
-					Log("  - Проверьте обновления Windows 11");
-					Log("  - Убедитесь, что используется Windows 11 или Windows 10 22H2+");
+					Log("Recommendations:");
+					Log("  - Use a modern FIDO2 security key (YubiKey 5, Google Titan, etc.)");
+					Log("  - Update your key's firmware");
+					Log("  - Check for Windows 11 updates");
+					Log("  - Make sure you are running Windows 11 or Windows 10 22H2+");
 				}
 
-				// Отключаем логирование
+				// Disable logging
 				WebAuthnHelper.Logger = null;
 
 				Log("");
-				Log("Тест завершён.");
+				Log("Test finished.");
 				Log("----------------------------------------");
 				Log("");
 			}
 			catch (Exception ex)
 			{
-				Log($"❌ НЕПРЕДВИДЕННАЯ ОШИБКА: {ex.Message}");
-				Log($"   Тип: {ex.GetType().Name}");
+				Log($"❌ UNEXPECTED ERROR: {ex.Message}");
+				Log($"   Type: {ex.GetType().Name}");
 				Log($"   Stack Trace: {ex.StackTrace}");
 				Log("----------------------------------------");
 				Log("");
@@ -312,7 +312,7 @@ namespace KeePassPasskeyKeyProvider
 			txtLog.Text = logBuilder.ToString();
 			txtLog.SelectionStart = txtLog.Text.Length;
 			txtLog.ScrollToCaret();
-			Application.DoEvents(); // Обновляем UI
+			Application.DoEvents(); // Refresh the UI
 		}
 	}
 }

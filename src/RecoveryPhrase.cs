@@ -8,20 +8,20 @@ using KeePassLib.Utility;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Фраза восстановления: 128 бит случайной энтропии в виде 12 слов BIP39 (английский словарь,
-	/// 4 бита SHA‑256 — контрольная сумма от опечаток). Секрет фразы R = HMAC‑SHA256(энтропия, метка);
-	/// в заголовке базы хранится K ⊕ R — так же, как обёртка устройства (см. <see cref="DeviceKeyStore"/>).
+	/// Recovery phrase: 128 bits of random entropy as 12 BIP39 words (English wordlist,
+	/// 4 bits of SHA‑256 as a checksum against typos). Phrase secret R = HMAC‑SHA256(entropy, label);
+	/// the database header stores K ⊕ R, like a device wrapped key (see <see cref="DeviceKeyStore"/>).
 	/// </summary>
 	public static class RecoveryPhrase
 	{
-		// ВАЖНО: метка и схема вывода — часть «формата» базы: их изменение делает выданные фразы недействительными
+		// IMPORTANT: the label and derivation scheme are part of the database "format": changing them invalidates issued phrases
 		private static readonly byte[] DerivationLabel = Encoding.ASCII.GetBytes("KeePassFIDO2 recovery phrase v1");
 		private const string WordListResource = "KeePassPasskeyKeyProvider.bip39-english.txt";
 
 		private const int EntropyLength = 16;
 		public const int WordCount = 12;
 		private const int BitsPerWord = 11;
-		private const int UniquePrefixLength = 4; // в словаре BIP39 слова различимы по первым 4 буквам
+		private const int UniquePrefixLength = 4; // BIP39 words are distinguishable by their first 4 letters
 
 		private static string[] wordList;
 
@@ -36,7 +36,7 @@ namespace KeePassPasskeyKeyProvider
 				{
 					string[] words = reader.ReadToEnd().Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 					if (words.Length != 1 << BitsPerWord)
-						throw new InvalidDataException("Повреждён словарь BIP39");
+						throw new InvalidDataException("BIP39 wordlist is corrupted");
 					return wordList = words;
 				}
 			}
@@ -50,11 +50,11 @@ namespace KeePassPasskeyKeyProvider
 			return entropy;
 		}
 
-		/// <summary>Энтропия → 12 слов</summary>
+		/// <summary>Entropy → 12 words</summary>
 		public static string[] ToWords(byte[] entropy)
 		{
 			if (entropy == null || entropy.Length != EntropyLength)
-				throw new ArgumentException($"Ожидается {EntropyLength} байт энтропии");
+				throw new ArgumentException($"Expected {EntropyLength} bytes of entropy");
 
 			byte[] bits = AppendChecksum(entropy);
 			try
@@ -76,15 +76,15 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Текст фразы → энтропия. Регистр и разделители не важны, слово можно сократить до первых 4 букв.
+		/// Phrase text → entropy. Case and separators don't matter; a word can be shortened to its first 4 letters.
 		/// </summary>
-		/// <exception cref="FormatException">Сообщение для пользователя: число слов, неизвестное слово, контрольная сумма</exception>
+		/// <exception cref="FormatException">User-facing message: word count, unknown word, checksum</exception>
 		public static byte[] FromText(string text)
 		{
 			string[] words = (text ?? string.Empty).ToLowerInvariant()
 				.Split(new[] { ' ', '\t', '\r', '\n', ',', ';', '.' }, StringSplitOptions.RemoveEmptyEntries);
 			if (words.Length != WordCount)
-				throw new FormatException($"Фраза должна состоять из {WordCount} слов (введено: {words.Length}).");
+				throw new FormatException($"The phrase must consist of {WordCount} words (entered: {words.Length}).");
 
 			byte[] bits = new byte[EntropyLength + 1];
 			try
@@ -93,7 +93,7 @@ namespace KeePassPasskeyKeyProvider
 				{
 					int index = FindWord(words[w]);
 					if (index < 0)
-						throw new FormatException($"Слово №{w + 1} «{words[w]}» не из словаря фразы восстановления.");
+						throw new FormatException($"Word #{w + 1} \"{words[w]}\" is not in the recovery phrase wordlist.");
 					for (int b = 0; b < BitsPerWord; b++)
 						SetBit(bits, w * BitsPerWord + b, (index >> (BitsPerWord - 1 - b)) & 1);
 				}
@@ -106,8 +106,8 @@ namespace KeePassPasskeyKeyProvider
 				if (!valid)
 				{
 					MemUtil.ZeroByteArray(entropy);
-					throw new FormatException("Фраза введена с ошибкой: не сходится контрольная сумма. " +
-					                          "Проверьте слова и их порядок.");
+					throw new FormatException("The phrase contains an error: checksum mismatch. " +
+					                          "Check the words and their order.");
 				}
 				return entropy;
 			}
@@ -117,7 +117,7 @@ namespace KeePassPasskeyKeyProvider
 			}
 		}
 
-		/// <summary>Секрет фразы R (32 байта), которым оборачивается ключ базы</summary>
+		/// <summary>Phrase secret R (32 bytes) used to wrap the database key</summary>
 		public static byte[] DeriveSecret(byte[] entropy)
 		{
 			using (var hmac = new HMACSHA256(entropy))
@@ -131,7 +131,7 @@ namespace KeePassPasskeyKeyProvider
 			return Array.FindIndex(WordList, w => w.StartsWith(word, StringComparison.Ordinal));
 		}
 
-		/// <summary>Энтропия + первые 4 бита SHA‑256 от неё (в старших битах последнего байта)</summary>
+		/// <summary>Entropy + first 4 bits of its SHA‑256 (in the high bits of the last byte)</summary>
 		private static byte[] AppendChecksum(byte[] entropy)
 		{
 			byte[] result = new byte[EntropyLength + 1];
@@ -151,7 +151,7 @@ namespace KeePassPasskeyKeyProvider
 			if (value != 0) data[bit >> 3] |= (byte)(0x80 >> (bit & 7));
 		}
 
-		/// <summary>Нумерованная раскладка слов в 3 столбца (для показа и печати)</summary>
+		/// <summary>Numbered word layout in 3 columns (for display and printing)</summary>
 		public static string Format(IList<string> words)
 		{
 			const int columns = 3;

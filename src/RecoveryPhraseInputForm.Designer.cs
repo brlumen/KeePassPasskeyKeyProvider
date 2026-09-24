@@ -91,7 +91,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonCancel.Name = "buttonCancel";
 			this.buttonCancel.Size = new System.Drawing.Size(90, 25);
 			this.buttonCancel.TabIndex = 2;
-			this.buttonCancel.Text = "Отмена";
+			this.buttonCancel.Text = "Cancel";
 			this.buttonCancel.UseVisualStyleBackColor = true;
 			//
 			// buttonOK
@@ -99,7 +99,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonOK.Name = "buttonOK";
 			this.buttonOK.Size = new System.Drawing.Size(90, 25);
 			this.buttonOK.TabIndex = 1;
-			this.buttonOK.Text = "Открыть";
+			this.buttonOK.Text = "Open";
 			this.buttonOK.UseVisualStyleBackColor = true;
 			this.buttonOK.Click += new System.EventHandler(this.OkButtonClick);
 			//
@@ -119,7 +119,7 @@ namespace KeePassPasskeyKeyProvider
 			this.Name = "RecoveryPhraseInputForm";
 			this.ShowInTaskbar = false;
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-			this.Text = "Открытие базы фразой восстановления";
+			this.Text = "Open Database with Recovery Phrase";
 			this.layout.ResumeLayout(false);
 			this.layout.PerformLayout();
 			this.buttons.ResumeLayout(false);

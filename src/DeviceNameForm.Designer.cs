@@ -68,7 +68,7 @@ namespace KeePassPasskeyKeyProvider
 			this.labelDeviceName.AutoSize = true;
 			this.labelDeviceName.Margin = new System.Windows.Forms.Padding(3, 3, 3, 3);
 			this.labelDeviceName.Name = "labelDeviceName";
-			this.labelDeviceName.Text = "Название устройства:";
+			this.labelDeviceName.Text = "Device name:";
 			//
 			// textBoxDeviceName
 			//
@@ -84,7 +84,7 @@ namespace KeePassPasskeyKeyProvider
 			this.checkBoxKeepDevices.Margin = new System.Windows.Forms.Padding(3, 0, 3, 3);
 			this.checkBoxKeepDevices.Name = "checkBoxKeepDevices";
 			this.checkBoxKeepDevices.TabIndex = 1;
-			this.checkBoxKeepDevices.Text = "Сохранить доступ устройствам, уже зарегистрированным в базе";
+			this.checkBoxKeepDevices.Text = "Keep access for devices already registered in the database";
 			this.checkBoxKeepDevices.UseVisualStyleBackColor = true;
 			//
 			// labelKeepDevices
@@ -111,7 +111,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonCancel.Name = "buttonCancel";
 			this.buttonCancel.Size = new System.Drawing.Size(90, 25);
 			this.buttonCancel.TabIndex = 3;
-			this.buttonCancel.Text = "Отмена";
+			this.buttonCancel.Text = "Cancel";
 			this.buttonCancel.UseVisualStyleBackColor = true;
 			//
 			// buttonOK
@@ -120,7 +120,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonOK.Name = "buttonOK";
 			this.buttonOK.Size = new System.Drawing.Size(90, 25);
 			this.buttonOK.TabIndex = 2;
-			this.buttonOK.Text = "Продолжить";
+			this.buttonOK.Text = "Continue";
 			this.buttonOK.UseVisualStyleBackColor = true;
 			//
 			// DeviceNameForm
@@ -139,7 +139,7 @@ namespace KeePassPasskeyKeyProvider
 			this.Name = "DeviceNameForm";
 			this.ShowInTaskbar = false;
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-			this.Text = "Создание FIDO2 Credential";
+			this.Text = "Create FIDO2 Credential";
 			this.layout.ResumeLayout(false);
 			this.layout.PerformLayout();
 			this.buttons.ResumeLayout(false);

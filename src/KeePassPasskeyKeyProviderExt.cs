@@ -30,8 +30,8 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Новая база с нашим ключом: устройство уже записано при показе параметров базы (иначе — сейчас).
-		/// KeePass новую базу сам не сохраняет, а без файла с записями её нельзя открыть — сохраняем.
+		/// New database with our key: the device was already written when database settings were shown (otherwise now).
+		/// KeePass does not save a new database itself, and without a file with records it cannot be opened, so we save it.
 		/// </summary>
 		private void OnFileCreated(object sender, FileCreatedEventArgs e)
 		{
@@ -43,15 +43,15 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Смена мастер‑ключа. Если пользователь выбрал сохранить устройства — их обёртки перешифровываются
-		/// на новый ключ. Иначе (или новый мастер‑ключ без FIDO2) записи шифруют недействительный ключ — удаляем их.
+		/// Master key change. If the user chose to keep devices, their wrapped keys are re-wrapped
+		/// for the new key. Otherwise (or if the new master key has no FIDO2) the records wrap an invalid key, so we remove them.
 		/// </summary>
 		private void OnMasterKeyChanged(object sender, MasterKeyChangedEventArgs e)
 		{
 			PwDatabase db = e?.Database;
 			if (db == null) return;
 
-			// Credential Windows Hello не удаляем: они могут понадобиться для старых копий базы
+			// Windows Hello credentials are not deleted: they may be needed for old copies of the database
 			if (!FIDO2KeyProvider.PendingKeepsDevices(db))
 				DeviceKeyStore.Clear(db);
 
@@ -60,9 +60,9 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Добавляет вкладку «FIDO2» в диалог параметров базы (новой и существующей).
-		/// Мастер‑ключ к этому моменту уже задан (KeyCreationForm идёт раньше), поэтому для новой базы
-		/// устройство, которым он создан, записывается здесь — до «OK», чтобы сразу быть в списке.
+		/// Adds the "FIDO2" tab to the database settings dialog (new and existing).
+		/// The master key is already set by now (KeyCreationForm comes first), so for a new database
+		/// the device it was created with is written here, before "OK", so it appears in the list right away.
 		/// </summary>
 		private void OnWindowAdded(object sender, GwmWindowEventArgs e)
 		{
@@ -77,12 +77,12 @@ namespace KeePassPasskeyKeyProvider
 			page.Controls.Add(control);
 			tabs.TabPages.Add(page);
 
-			// База доступна после InitEx — к моменту Shown она уже присвоена
+			// The database is available after InitEx; by Shown it is already assigned
 			settingsForm.Shown += (s, args) =>
 			{
 				PwDatabase db = settingsForm.DatabaseEx;
-				// Записано устройство только что созданного мастер‑ключа — это новая база с FIDO2:
-				// сразу показываем вкладку, чтобы можно было добавить остальные устройства
+				// The device of a just-created master key was written, so this is a new FIDO2 database:
+				// show the tab right away so the other devices can be added
 				if (FIDO2KeyProvider.RegisterPendingDevice(db))
 					tabs.SelectedTab = page;
 				control.Initialize(PluginHost, db);
@@ -127,7 +127,7 @@ namespace KeePassPasskeyKeyProvider
 			return menuItem;
 		}
 
-		// Стандартная иконка «ключ» KeePass (16×16)
+		// Standard KeePass "key" icon (16×16)
 		public override Image SmallIcon => PluginHost?.MainWindow.ClientIcons.Images[(int)PwIcon.Key];
 		public override string UpdateUrl => "https://raw.githubusercontent.com/brlumen/KeePassPasskeyKeyProvider/master/keepass.version";
 	}

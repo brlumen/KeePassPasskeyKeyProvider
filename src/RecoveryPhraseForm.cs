@@ -6,8 +6,8 @@ using System.Windows.Forms;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Показ новой фразы восстановления и проверка, что пользователь её записал:
-	/// шаг 1 — слова, шаг 2 — ввод трёх случайных слов по номерам (сами слова скрыты)
+	/// Shows a new recovery phrase and verifies that the user wrote it down:
+	/// step 1 — the words, step 2 — entering three random words by number (the words are hidden)
 	/// </summary>
 	public partial class RecoveryPhraseForm : Form
 	{
@@ -28,12 +28,12 @@ namespace KeePassPasskeyKeyProvider
 
 			textBoxWords.Text = RecoveryPhrase.Format(words);
 			for (int i = 0; i < CheckedWordCount; i++)
-				checkLabels[i].Text = $"Слово №{checkedPositions[i] + 1}:";
+				checkLabels[i].Text = $"Word #{checkedPositions[i] + 1}:";
 
 			ShowWords();
 		}
 
-		/// <summary>Три разных номера слов по возрастанию</summary>
+		/// <summary>Three distinct word numbers in ascending order</summary>
 		private int[] PickPositions()
 		{
 			var positions = Enumerable.Range(0, words.Length).ToList();
@@ -55,25 +55,25 @@ namespace KeePassPasskeyKeyProvider
 		private void ShowWords()
 		{
 			labelDescription.Text =
-				"Запишите фразу восстановления на бумаге и храните её в надёжном месте.\n\n" +
-				"Фраза открывает базу без FIDO2‑устройства (если в мастер‑ключе есть пароль — вместе с ним). " +
-				"Не храните её в файлах, облаке или фотографиях. Потерянную или скомпрометированную фразу " +
-				"удалите на вкладке «FIDO2» — мастер‑ключ базы будет заменён.\n\n" +
-				"Фраза показывается только сейчас: посмотреть её позже будет невозможно.";
+				"Write the recovery phrase down on paper and keep it in a safe place.\n\n" +
+				"The phrase opens the database without a FIDO2 device (together with the password, if the master key has one). " +
+				"Do not store it in files, the cloud or photos. Remove a lost or compromised phrase " +
+				"on the \"FIDO2\" tab — the database master key will be replaced.\n\n" +
+				"The phrase is shown only now: you will not be able to view it later.";
 			textBoxWords.Visible = true;
 			panelCheck.Visible = false;
 			labelError.Text = string.Empty;
 			buttonBack.Visible = false;
-			buttonNext.Text = "Я записал фразу";
+			buttonNext.Text = "I wrote it down";
 		}
 
 		private void ShowCheck()
 		{
-			labelDescription.Text = "Для проверки введите слова фразы с указанными номерами.";
+			labelDescription.Text = "To verify, enter the phrase words with the given numbers.";
 			textBoxWords.Visible = false;
 			panelCheck.Visible = true;
 			buttonBack.Visible = true;
-			buttonNext.Text = "Готово";
+			buttonNext.Text = "Done";
 			foreach (TextBox box in checkBoxes)
 				box.Clear();
 			checkBoxes[0].Focus();
@@ -91,7 +91,7 @@ namespace KeePassPasskeyKeyProvider
 			{
 				if (!string.Equals(checkBoxes[i].Text.Trim(), words[checkedPositions[i]], StringComparison.OrdinalIgnoreCase))
 				{
-					labelError.Text = $"Слово №{checkedPositions[i] + 1} не совпадает. Нажмите «Назад», чтобы посмотреть фразу ещё раз.";
+					labelError.Text = $"Word #{checkedPositions[i] + 1} does not match. Click \"Back\" to view the phrase again.";
 					checkBoxes[i].Focus();
 					checkBoxes[i].SelectAll();
 					return;

@@ -4,14 +4,14 @@ using System.Runtime.InteropServices;
 namespace KeePassPasskeyKeyProvider.WebAuthn
 {
 	/// <summary>
-	/// P/Invoke wrapper для Windows WebAuthn API (webauthn.dll)
-	/// Доступен в Windows 10 1903+ и Windows 11
+	/// P/Invoke wrapper for the Windows WebAuthn API (webauthn.dll)
+	/// Available on Windows 10 1903+ and Windows 11
 	/// </summary>
 	public static class WebAuthnApi
 	{
 		private const string DllName = "webauthn.dll";
 
-		#region Константы
+		#region Constants
 
 		public const uint WEBAUTHN_API_VERSION_1 = 1;
 		public const uint WEBAUTHN_API_VERSION_2 = 2;
@@ -32,15 +32,15 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		public const uint WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_5 = 5;
 		public const uint WEBAUTHN_CREDENTIAL_ATTESTATION_VERSION_7 = 7;
 
-		// dwUsedTransport (CREDENTIAL_ATTESTATION v3+, ASSERTION v4+): каким транспортом ответил аутентификатор
+		// dwUsedTransport (CREDENTIAL_ATTESTATION v3+, ASSERTION v4+): transport the authenticator responded over
 		public const uint WEBAUTHN_CTAP_TRANSPORT_USB = 0x00000001;
 		public const uint WEBAUTHN_CTAP_TRANSPORT_NFC = 0x00000002;
 		public const uint WEBAUTHN_CTAP_TRANSPORT_BLE = 0x00000004;
 		public const uint WEBAUTHN_CTAP_TRANSPORT_INTERNAL = 0x00000010;
 		public const uint WEBAUTHN_CTAP_TRANSPORT_HYBRID = 0x00000020;
 
-		// dwFlags для GET_ASSERTION_OPTIONS: передавать соли в hmac-secret «как есть»,
-		// без PRF-преобразования SHA-256("WebAuthn PRF" || 0x00 || salt)
+		// dwFlags for GET_ASSERTION_OPTIONS: pass salts to hmac-secret as is,
+		// without the PRF transform SHA-256("WebAuthn PRF" || 0x00 || salt)
 		public const uint WEBAUTHN_AUTHENTICATOR_HMAC_SECRET_VALUES_FLAG = 0x00100000;
 
 		public const uint WEBAUTHN_AUTHENTICATOR_ATTACHMENT_ANY = 0;
@@ -78,7 +78,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 
 		#endregion
 
-		#region Структуры
+		#region Structures
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct WEBAUTHN_RP_ENTITY_INFORMATION
@@ -182,20 +182,20 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			public uint dwEnterpriseAttestation;
 			public uint dwLargeBlobSupport;
 			public bool bPreferResidentKey;
-			// Поля для версии 5+
+			// Fields for version 5+
 			public bool bBrowserInPrivateMode;
-			// Поля для версии 6+
+			// Fields for version 6+
 			public bool bEnablePrf;
-			// Поля для версии 7+
+			// Fields for version 7+
 			public IntPtr pLinkedDevice;
 			public uint cbJsonExt;
 			public IntPtr pbJsonExt;
-			// Поля для версии 8+
-			public IntPtr pPRFGlobalEval; // PWEBAUTHN_HMAC_SECRET_SALT — PRF eval при создании
+			// Fields for version 8+
+			public IntPtr pPRFGlobalEval; // PWEBAUTHN_HMAC_SECRET_SALT — PRF eval at creation
 			public uint cCredentialHints;
 			public IntPtr ppwszCredentialHints;
 			public bool bThirdPartyPayment;
-			// Поля для версии 9+
+			// Fields for version 9+
 			public IntPtr pwszRemoteWebOrigin;
 			public uint cbPublicKeyCredentialCreationOptionsJSON;
 			public IntPtr pbPublicKeyCredentialCreationOptionsJSON;
@@ -217,14 +217,14 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			public IntPtr pbU2fAppId;
 			public IntPtr pCancellationId;
 			public IntPtr pAllowCredentialList;
-			// Поля для версии 5+
+			// Fields for version 5+
 			public uint dwCredLargeBlobOperation;
 			public uint cbCredLargeBlob;
 			public IntPtr pbCredLargeBlob;
-			// Поля для версии 6+
+			// Fields for version 6+
 			public IntPtr pHmacSecretSaltValues; // PWEBAUTHN_HMAC_SECRET_SALT_VALUES
 			public bool bBrowserInPrivateMode;
-			// Поля для версии 7+
+			// Fields for version 7+
 			public IntPtr pLinkedDevice;
 			public bool bAutoFill;
 			public uint cbJsonExt;
@@ -249,7 +249,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Входная структура для pHmacSecretSaltValues: глобальная соль и/или соли по credential ID
+		/// Input structure for pHmacSecretSaltValues: global salt and/or per-credential-ID salts
 		/// </summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct WEBAUTHN_HMAC_SECRET_SALT_VALUES
@@ -275,22 +275,22 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			public IntPtr pbAttestationObject;
 			public uint cbCredentialId;
 			public IntPtr pbCredentialId;
-			// Версия 2+ (inline-структура, НЕ указатель!)
+			// Version 2+ (inline structure, NOT a pointer!)
 			public WEBAUTHN_EXTENSIONS Extensions;
-			// Версия 3+
+			// Version 3+
 			public uint dwUsedTransport;
-			// Версия 4+
+			// Version 4+
 			public bool bEpAtt;
 			public bool bLargeBlobSupported;
 			public bool bResidentKey;
-			// Версия 5+
+			// Version 5+
 			public bool bPrfEnabled;
-			// Версия 6+
+			// Version 6+
 			public uint cbUnsignedExtensionOutputs;
 			public IntPtr pbUnsignedExtensionOutputs;
-			// Версия 7+
-			public IntPtr pHmacSecret; // PWEBAUTHN_HMAC_SECRET_SALT — результат pPRFGlobalEval
-			// Версия 8+
+			// Version 7+
+			public IntPtr pHmacSecret; // PWEBAUTHN_HMAC_SECRET_SALT — result of pPRFGlobalEval
+			// Version 8+
 			public bool bThirdPartyPayment;
 			public uint dwTransports;
 			public uint cbClientDataJSON;
@@ -310,21 +310,21 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			public WEBAUTHN_CREDENTIAL Credential;
 			public uint cbUserId;
 			public IntPtr pbUserId;
-			// Версия 2+ (inline-структура, НЕ указатель!)
+			// Version 2+ (inline structure, NOT a pointer!)
 			public WEBAUTHN_EXTENSIONS Extensions;
 			public uint cbCredLargeBlob;
 			public IntPtr pbCredLargeBlob;
 			public uint dwCredLargeBlobStatus;
-			// Версия 3+
+			// Version 3+
 			public IntPtr pHmacSecret; // PWEBAUTHN_HMAC_SECRET_SALT
-			// Версия 4+
+			// Version 4+
 			public uint dwUsedTransport;
-			// Версия 5+
+			// Version 5+
 			public uint cbUnsignedExtensionOutputs;
 			public IntPtr pbUnsignedExtensionOutputs;
 		}
 
-		// ---- Список credential платформенного аутентификатора (Windows Hello), API 4+ ----
+		// ---- Platform authenticator (Windows Hello) credential list, API 4+ ----
 
 		public const uint WEBAUTHN_GET_CREDENTIALS_OPTIONS_VERSION_1 = 1;
 
@@ -333,7 +333,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		{
 			public uint dwVersion;
 			[MarshalAs(UnmanagedType.LPWStr)]
-			public string pwszRpId; // null — все RP
+			public string pwszRpId; // null means all RPs
 			public bool bBrowserInPrivateMode;
 		}
 
@@ -346,7 +346,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			public IntPtr pRpInformation;   // PWEBAUTHN_RP_ENTITY_INFORMATION
 			public IntPtr pUserInformation; // PWEBAUTHN_USER_ENTITY_INFORMATION
 			public bool bRemovable;
-			// Версия 2+
+			// Version 2+
 			public bool bBackedUp;
 		}
 
@@ -354,28 +354,28 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		public struct WEBAUTHN_CREDENTIAL_DETAILS_LIST
 		{
 			public uint cCredentialDetails;
-			public IntPtr ppCredentialDetails; // массив указателей PWEBAUTHN_CREDENTIAL_DETAILS
+			public IntPtr ppCredentialDetails; // array of PWEBAUTHN_CREDENTIAL_DETAILS pointers
 		}
 
 		#endregion
 
-		#region Функции API
+		#region API functions
 
 		/// <summary>
-		/// Получает версию WebAuthn API
+		/// Gets the WebAuthn API version
 		/// </summary>
 		[DllImport(DllName)]
 		public static extern uint WebAuthNGetApiVersionNumber();
 
 		/// <summary>
-		/// Проверяет доступность пользовательской верификации на платформе
+		/// Checks whether a user-verifying platform authenticator is available
 		/// </summary>
 		[DllImport(DllName)]
 		public static extern int WebAuthNIsUserVerifyingPlatformAuthenticatorAvailable(
 			[MarshalAs(UnmanagedType.Bool)] out bool pbIsUserVerifyingPlatformAuthenticatorAvailable);
 
 		/// <summary>
-		/// Создает новый credential на аутентификаторе
+		/// Creates a new credential on the authenticator
 		/// </summary>
 		[DllImport(DllName)]
 		public static extern int WebAuthNAuthenticatorMakeCredential(
@@ -388,7 +388,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			out IntPtr ppWebAuthNCredentialAttestation);
 
 		/// <summary>
-		/// Получает assertion от аутентификатора
+		/// Gets an assertion from the authenticator
 		/// </summary>
 		[DllImport(DllName)]
 		public static extern int WebAuthNAuthenticatorGetAssertion(
@@ -399,19 +399,19 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			out IntPtr ppWebAuthNAssertion);
 
 		/// <summary>
-		/// Освобождает память, выделенную для credential attestation
+		/// Frees memory allocated for a credential attestation
 		/// </summary>
 		[DllImport(DllName)]
 		public static extern void WebAuthNFreeCredentialAttestation(IntPtr pWebAuthNCredentialAttestation);
 
 		/// <summary>
-		/// Освобождает память, выделенную для assertion
+		/// Frees memory allocated for an assertion
 		/// </summary>
 		[DllImport(DllName)]
 		public static extern void WebAuthNFreeAssertion(IntPtr pWebAuthNAssertion);
 
 		/// <summary>
-		/// Список discoverable credential Windows Hello (API 4+). NTE_NOT_FOUND, если пусто.
+		/// Lists Windows Hello discoverable credentials (API 4+). NTE_NOT_FOUND if empty.
 		/// </summary>
 		[DllImport(DllName)]
 		public static extern int WebAuthNGetPlatformCredentialList(
@@ -422,16 +422,16 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		public static extern void WebAuthNFreePlatformCredentialList(IntPtr pCredentialDetailsList);
 
 		/// <summary>
-		/// Удаляет credential Windows Hello по ID (API 4+). Для credential на внешних ключах — ошибка.
+		/// Deletes a Windows Hello credential by ID (API 4+). Fails for credentials on external security keys.
 		/// </summary>
 		[DllImport(DllName)]
 		public static extern int WebAuthNDeletePlatformCredential(uint cbCredentialId, byte[] pbCredentialId);
 
 		/// <summary>
-		/// Получает сообщение об ошибке
+		/// Gets the error message
 		/// </summary>
-		// Возвращает статическую строку webauthn.dll: освобождать нельзя, поэтому IntPtr, а не string
-		// (маршалинг в string вызывает CoTaskMemFree → порча кучи → аварийное завершение KeePass)
+		// Returns a static webauthn.dll string that must not be freed, hence IntPtr rather than string
+		// (marshaling to string calls CoTaskMemFree → heap corruption → KeePass crash)
 		[DllImport(DllName, EntryPoint = "WebAuthNGetErrorName")]
 		private static extern IntPtr WebAuthNGetErrorNameRaw(int hr);
 

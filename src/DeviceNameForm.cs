@@ -5,44 +5,44 @@ using System.Windows.Forms;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Диалог перед созданием credential для мастер‑ключа: пояснение, название устройства и — при смене
-	/// мастер‑ключа базы с устройствами — выбор, сохранить ли их
+	/// Dialog shown before creating a credential for the master key: explanation, device name and — when changing
+	/// the master key of a database with devices — the choice whether to keep them
 	/// </summary>
 	public partial class DeviceNameForm : Form
 	{
 		private readonly string deviceList;
 		private readonly bool changingKey;
 
-		/// <param name="existingDevices">Подписи устройств базы, мастер‑ключ которой меняется; пусто для новой базы</param>
+		/// <param name="existingDevices">Labels of the devices of the database whose master key is being changed; empty for a new database</param>
 		public DeviceNameForm(IList<string> existingDevices)
 		{
 			InitializeComponent();
 			labelDescription.Text =
-				"Сейчас будет создан новый FIDO2 credential для этой базы данных.\n" +
-				"Введите ниже название устройства, которым создаётся ключ — оно отличает его от других " +
-				"в списке устройств базы. Если оставить пустым, подпись будет составлена из типа устройства и даты.\n\n" +
-				"Вам потребуется:\n" +
-				"1. FIDO2‑ключ с поддержкой hmac-secret/PRF (YubiKey 5 и др.), Windows Hello или телефон\n" +
-				"2. Ввести PIN‑код ключа\n" +
-				"3. Подтвердить создание credential (обычно нажатием кнопки на ключе)\n\n" +
-				"Credential сохраняется на самом устройстве — файлы рядом с базой не нужны.\n" +
-				"Другие устройства: Файл → Параметры базы → вкладка «FIDO2».";
+				"A new FIDO2 credential will now be created for this database.\n" +
+				"Enter below the name of the device used to create the key — it distinguishes it from others " +
+				"in the database device list. If left empty, the label will be made from the device type and date.\n\n" +
+				"You will need to:\n" +
+				"1. Have a FIDO2 key with hmac-secret/PRF support (YubiKey 5, etc.), Windows Hello or a phone\n" +
+				"2. Enter the key PIN\n" +
+				"3. Confirm credential creation (usually by touching the key)\n\n" +
+				"The credential is stored on the device itself — no files next to the database are needed.\n" +
+				"Other devices: File → Database Settings → \"FIDO2\" tab.";
 
 			changingKey = existingDevices != null && existingDevices.Count > 0;
 			checkBoxKeepDevices.Visible = changingKey;
 			labelKeepDevices.Visible = changingKey;
 			if (changingKey)
 			{
-				deviceList = "«" + string.Join("», «", existingDevices) + "»";
+				deviceList = "\"" + string.Join("\", \"", existingDevices) + "\"";
 				checkBoxKeepDevices.CheckedChanged += (s, e) => UpdateKeepDevicesText();
 				UpdateKeepDevicesText();
 			}
 		}
 
-		/// <summary>Введённое название без пробелов по краям; пусто, если не указано. Доступно и после закрытия формы</summary>
+		/// <summary>Entered name trimmed of surrounding spaces; empty if not specified. Available after the form is closed as well</summary>
 		public string DeviceName { get; private set; } = string.Empty;
 
-		/// <summary>Сохранить остальные устройства базы (перешифровать их обёртки на новый ключ)</summary>
+		/// <summary>Keep the other database devices (re-encrypt their wrapped keys for the new key)</summary>
 		public bool KeepDevices { get; private set; }
 
 		private void UpdateKeepDevicesText()
@@ -50,13 +50,13 @@ namespace KeePassPasskeyKeyProvider
 			if (checkBoxKeepDevices.Checked)
 			{
 				labelKeepDevices.ForeColor = SystemColors.GrayText;
-				labelKeepDevices.Text = $"Устройства {deviceList} продолжат открывать базу без повторной регистрации.";
+				labelKeepDevices.Text = $"Devices {deviceList} will keep opening the database without re-registration.";
 			}
 			else
 			{
 				labelKeepDevices.ForeColor = Color.Firebrick;
-				labelKeepDevices.Text = $"Устройства {deviceList} будут удалены из базы. " +
-				                        "Открыть базу можно будет только новым устройством.";
+				labelKeepDevices.Text = $"Devices {deviceList} will be removed from the database. " +
+				                        "Only the new device will be able to open the database.";
 			}
 		}
 

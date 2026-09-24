@@ -8,8 +8,8 @@ using KeePassPasskeyKeyProvider.WebAuthn;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Форма плагина KeePassPasskeyKeyProvider: информация о WebAuthn API, очистка credential Windows Hello
-	/// и диагностика PRF. Устройства базы — вкладка «FIDO2» в «Файл → Параметры базы».
+	/// KeePassPasskeyKeyProvider plugin form: WebAuthn API info, Windows Hello credential cleanup
+	/// and PRF diagnostics. Database devices are on the "FIDO2" tab in "File → Database Settings".
 	/// </summary>
 	public partial class FIDO2OptionsForm : Form
 	{
@@ -23,8 +23,8 @@ namespace KeePassPasskeyKeyProvider
 
 			if (!WebAuthnHelper.IsWebAuthnAvailable())
 			{
-				ShowError("Windows WebAuthn API недоступен.\n\n" +
-				          "Требуется Windows 10 22H2 или Windows 11 (WebAuthn API v4+).");
+				ShowError("Windows WebAuthn API is not available.\n\n" +
+				          "Requires Windows 10 22H2 or Windows 11 (WebAuthn API v4+).");
 				checkedListCredentials.Enabled = false;
 				buttonDeleteChecked.Enabled = false;
 				buttonRefresh.Enabled = false;
@@ -32,16 +32,16 @@ namespace KeePassPasskeyKeyProvider
 			}
 
 			uint apiVersion = WebAuthnHelper.GetApiVersion();
-			ShowInfo($"Windows WebAuthn API доступен (версия {apiVersion}).\n" +
-			         "Credential хранится на устройстве (discoverable), файлы рядом с базой не нужны.\n" +
-			         "Устройства базы: Файл → Параметры базы → вкладка «FIDO2».");
+			ShowInfo($"Windows WebAuthn API is available (version {apiVersion}).\n" +
+			         "The credential is stored on the device (discoverable); no files next to the database are needed.\n" +
+			         "Database devices: File → Database Settings → \"FIDO2\" tab.");
 
-			groupBoxHello.Text = $"Credential Windows Hello для {WebAuthnHelper.RpId}";
+			groupBoxHello.Text = $"Windows Hello credentials for {WebAuthnHelper.RpId}";
 			RefreshCredentials();
 		}
 
 		/// <summary>
-		/// Перечитывает credential Hello. Используемые не показываются; безопасные к удалению (база не найдена) отмечаются сразу
+		/// Re-reads Hello credentials. Used ones are not shown; ones safe to delete (database not found) are checked right away
 		/// </summary>
 		private void RefreshCredentials()
 		{
@@ -54,7 +54,7 @@ namespace KeePassPasskeyKeyProvider
 			catch (Exception ex)
 			{
 				credentials = new List<HelloCredentialInfo>();
-				labelHelloStatus.Text = $"Не удалось получить список: {ex.Message}";
+				labelHelloStatus.Text = $"Failed to get the list: {ex.Message}";
 				return;
 			}
 
@@ -65,9 +65,9 @@ namespace KeePassPasskeyKeyProvider
 			}
 
 			labelHelloStatus.Text = credentials.Count == 0
-				? "Неиспользуемых credential нет."
-				: "Показаны только credential, не привязанные к существующим базам. Отмечены те, чьи файлы\n" +
-				  "не найдены; остальные удаляйте осознанно — без credential базу открыть будет нельзя.";
+				? "No unused credentials."
+				: "Only credentials not linked to existing databases are shown. Checked: those whose files\n" +
+				  "were not found; delete others deliberately — without its credential a database can't be opened.";
 			UpdateDeleteButton();
 		}
 
@@ -85,12 +85,12 @@ namespace KeePassPasskeyKeyProvider
 
 			bool risky = toDelete.Exists(c => !c.IsSafeToDelete);
 			var result = MessageBox.Show(this,
-				$"Удалить {toDelete.Count} credential Windows Hello?\n\n" +
-				(risky ? "Среди отмеченных есть credential, для которых нельзя подтвердить, что они не используются\n" +
-				         "(база существует, но в её заголовке credential нет, либо путь к базе неизвестен).\n" +
-				         "Если такой credential — единственный ключ базы, открыть её будет невозможно.\n\n" : "") +
-				"Действие необратимо.",
-				"Удаление credential", MessageBoxButtons.YesNo,
+				$"Delete {toDelete.Count} Windows Hello credential(s)?\n\n" +
+				(risky ? "Some of the checked credentials cannot be confirmed as unused\n" +
+				         "(the database exists but its header does not contain the credential, or the database path is unknown).\n" +
+				         "If such a credential is the only key of a database, that database cannot be opened.\n\n" : "") +
+				"This action cannot be undone.",
+				"Delete credentials", MessageBoxButtons.YesNo,
 				risky ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
 			if (result != DialogResult.Yes) return;
 
@@ -98,8 +98,8 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// WebAuthNDeletePlatformCredential блокирует поток на десятки секунд — удаляем в фоне,
-		/// показывая прогресс; UI на это время блокируется.
+		/// WebAuthNDeletePlatformCredential blocks the thread for tens of seconds — delete in the background,
+		/// showing progress; the UI is blocked meanwhile.
 		/// </summary>
 		private void DeleteInBackground(List<HelloCredentialInfo> toDelete)
 		{
@@ -119,7 +119,7 @@ namespace KeePassPasskeyKeyProvider
 			{
 				SetBusy(false, 0);
 				if (t.Result < toDelete.Count)
-					MessageBox.Show(this, $"Удалено {t.Result} из {toDelete.Count}.", "KeePassPasskeyKeyProvider",
+					MessageBox.Show(this, $"Deleted {t.Result} of {toDelete.Count}.", "KeePassPasskeyKeyProvider",
 					                MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				RefreshCredentials();
 			}, TaskScheduler.FromCurrentSynchronizationContext());
@@ -128,7 +128,7 @@ namespace KeePassPasskeyKeyProvider
 		private void ReportProgress(int current, int total)
 		{
 			progressBar.Value = current - 1;
-			labelHelloStatus.Text = $"Удаление credential {current} из {total}…";
+			labelHelloStatus.Text = $"Deleting credential {current} of {total}…";
 		}
 
 		private void SetBusy(bool busy, int total)
@@ -151,7 +151,7 @@ namespace KeePassPasskeyKeyProvider
 
 		private void CredentialsItemCheck(object sender, ItemCheckEventArgs e)
 		{
-			// Событие приходит до изменения состояния — пересчитываем после него
+			// The event fires before the state changes — recalculate after it
 			BeginInvoke(new Action(UpdateDeleteButton));
 		}
 
@@ -168,7 +168,7 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Обработчик кнопки диагностики
+		/// Diagnostics button handler
 		/// </summary>
 		private void DiagnosticsButtonClick(object sender, EventArgs e)
 		{
