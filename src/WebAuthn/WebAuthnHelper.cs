@@ -211,7 +211,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				{
 					string errorName = WebAuthnApi.WebAuthNGetErrorName(hr);
 					Log($"ERROR MakeCredential: {errorName} (HRESULT: 0x{hr:X8})");
-					throw new WebAuthnException($"Failed to create credential: {errorName} (HRESULT: 0x{hr:X8})");
+					throw new WebAuthnException(string.Format(Strings.CreateCredentialFailed, errorName, hr));
 				}
 
 				var attestation = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_CREDENTIAL_ATTESTATION>(pAttestation);
@@ -234,10 +234,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				if (!hmacSecretEnabled && !prfEnabled && prfSecret == null)
 				{
 					Log("❌ Authenticator did NOT enable hmac-secret/PRF for the credential");
-					throw new WebAuthnException(
-						"The authenticator does not support hmac-secret/PRF. " +
-						"Use a FIDO2 security key with hmac-secret support (YubiKey 5, SoloKey, etc.) " +
-						"or a phone with a password manager that supports PRF.");
+					throw new WebAuthnException(Strings.AuthenticatorNoPrf);
 				}
 
 				return new PrfResult
@@ -384,7 +381,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				{
 					string errorName = WebAuthnApi.WebAuthNGetErrorName(hr);
 					Log($"ERROR GetAssertion: {errorName} (HRESULT: 0x{hr:X8})");
-					throw new WebAuthnException($"Failed to get assertion: {errorName} (HRESULT: 0x{hr:X8})");
+					throw new WebAuthnException(string.Format(Strings.GetAssertionFailed, errorName, hr));
 				}
 
 				var assertion = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_ASSERTION>(pAssertion);
@@ -399,9 +396,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				if (prfSecret == null)
 				{
 					Log("❌ Authenticator did not return hmac-secret");
-					throw new WebAuthnException(
-						"hmac-secret not returned by authenticator. " +
-						"Make sure the credential was created with hmac-secret/PRF and the authenticator supports it.");
+					throw new WebAuthnException(Strings.HmacSecretNotReturned);
 				}
 
 				if (assertion.Credential.cbId == 0 || assertion.Credential.pbId == IntPtr.Zero)
@@ -438,11 +433,11 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		public static string TransportName(uint transport)
 		{
 			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_INTERNAL) != 0) return "Windows Hello";
-			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_HYBRID) != 0) return "Phone";
-			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_USB) != 0) return "USB security key";
-			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_NFC) != 0) return "NFC security key";
-			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_BLE) != 0) return "Bluetooth security key";
-			return "FIDO2 device";
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_HYBRID) != 0) return Strings.TransportPhone;
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_USB) != 0) return Strings.TransportUsb;
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_NFC) != 0) return Strings.TransportNfc;
+			if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_BLE) != 0) return Strings.TransportBluetooth;
+			return Strings.TransportDefault;
 		}
 
 		/// <summary>

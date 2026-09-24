@@ -130,9 +130,9 @@ namespace KeePassPasskeyKeyProvider
 				{
 					byte id = br.ReadByte();
 					int size = kdbx4 ? br.ReadInt32() : br.ReadUInt16();
-					if (size < 0 || size > MaxHeaderFieldSize) throw new InvalidDataException("Corrupted KDBX header");
+					if (size < 0 || size > MaxHeaderFieldSize) throw new InvalidDataException(Strings.CorruptedKdbxHeader);
 					byte[] data = br.ReadBytes(size);
-					if (data.Length != size) throw new InvalidDataException("Corrupted KDBX header");
+					if (data.Length != size) throw new InvalidDataException(Strings.CorruptedKdbxHeader);
 
 					if (id == HeaderEndOfHeader)
 						return null;
@@ -219,7 +219,7 @@ namespace KeePassPasskeyKeyProvider
 			{
 				byte version = br.ReadByte();
 				if (version != FormatVersion)
-					throw new InvalidDataException($"Unsupported device records version: {version}");
+					throw new InvalidDataException(string.Format(Strings.UnsupportedDeviceRecordsVersion, version));
 
 				int count = br.ReadUInt16();
 				for (int i = 0; i < count; i++)
@@ -231,7 +231,7 @@ namespace KeePassPasskeyKeyProvider
 						Label = Encoding.UTF8.GetString(ReadBlock(br))
 					};
 					if (record.CredentialId.Length == 0 || record.WrappedKey.Length != KeyLength)
-						throw new InvalidDataException("Corrupted device record in the database header");
+						throw new InvalidDataException(Strings.CorruptedDeviceRecord);
 					records.Add(record);
 				}
 			}
@@ -242,9 +242,9 @@ namespace KeePassPasskeyKeyProvider
 		{
 			if (data == null || data.Length == 0) return null;
 			if (data[0] != RecoveryFormatVersion)
-				throw new InvalidDataException($"Unsupported recovery phrase record version: {data[0]}");
+				throw new InvalidDataException(string.Format(Strings.UnsupportedRecoveryRecordVersion, data[0]));
 			if (data.Length != KeyLength + 1)
-				throw new InvalidDataException("Corrupted recovery phrase record in the database header");
+				throw new InvalidDataException(Strings.CorruptedRecoveryRecord);
 
 			byte[] wrappedKey = new byte[KeyLength];
 			Array.Copy(data, 1, wrappedKey, 0, KeyLength);

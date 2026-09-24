@@ -76,7 +76,7 @@ namespace KeePassPasskeyKeyProvider
 			this.labelDevices.AutoSize = true;
 			this.labelDevices.Margin = new System.Windows.Forms.Padding(3, 3, 3, 6);
 			this.labelDevices.Name = "labelDevices";
-			this.labelDevices.Text = "Additional devices for opening the database:";
+			this.labelDevices.Text = Strings.AdditionalDevicesLabel;
 			//
 			// listBoxDevices
 			//
@@ -94,7 +94,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonRemoveDevice.Name = "buttonRemoveDevice";
 			this.buttonRemoveDevice.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
 			this.buttonRemoveDevice.TabIndex = 1;
-			this.buttonRemoveDevice.Text = "Remove selected device";
+			this.buttonRemoveDevice.Text = Strings.RemoveSelectedDevice;
 			this.buttonRemoveDevice.UseVisualStyleBackColor = true;
 			this.buttonRemoveDevice.Click += new System.EventHandler(this.RemoveDeviceButtonClick);
 			//
@@ -106,7 +106,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonHelloCleanup.Name = "buttonHelloCleanup";
 			this.buttonHelloCleanup.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
 			this.buttonHelloCleanup.TabIndex = 6;
-			this.buttonHelloCleanup.Text = "Windows Hello cleanup…";
+			this.buttonHelloCleanup.Text = Strings.HelloCleanupButton;
 			this.buttonHelloCleanup.UseVisualStyleBackColor = true;
 			this.buttonHelloCleanup.Click += new System.EventHandler(this.HelloCleanupButtonClick);
 			//
@@ -115,7 +115,7 @@ namespace KeePassPasskeyKeyProvider
 			this.labelDeviceName.AutoSize = true;
 			this.labelDeviceName.Margin = new System.Windows.Forms.Padding(3, 3, 3, 6);
 			this.labelDeviceName.Name = "labelDeviceName";
-			this.labelDeviceName.Text = "New device name:";
+			this.labelDeviceName.Text = Strings.NewDeviceNameLabel;
 			//
 			// textBoxDeviceName
 			//
@@ -129,7 +129,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonAddDevice.Name = "buttonAddDevice";
 			this.buttonAddDevice.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
 			this.buttonAddDevice.TabIndex = 3;
-			this.buttonAddDevice.Text = "Add device";
+			this.buttonAddDevice.Text = Strings.AddDevice;
 			this.buttonAddDevice.UseVisualStyleBackColor = true;
 			this.buttonAddDevice.Click += new System.EventHandler(this.AddDeviceButtonClick);
 			//
@@ -164,7 +164,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonRemoveRecovery.Name = "buttonRemoveRecovery";
 			this.buttonRemoveRecovery.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
 			this.buttonRemoveRecovery.TabIndex = 5;
-			this.buttonRemoveRecovery.Text = "Remove phrase";
+			this.buttonRemoveRecovery.Text = Strings.RemovePhrase;
 			this.buttonRemoveRecovery.UseVisualStyleBackColor = true;
 			this.buttonRemoveRecovery.Click += new System.EventHandler(this.RemoveRecoveryButtonClick);
 			//

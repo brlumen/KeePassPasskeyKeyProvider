@@ -45,11 +45,6 @@ namespace KeePassPasskeyKeyProvider
 			this.host = host;
 		}
 
-		private const string WebAuthnUnavailableMessage =
-			"Windows WebAuthn API is not available.\n\n" +
-			"This plugin requires Windows 10 22H2 or Windows 11 (WebAuthn API v4+).\n" +
-			"Make sure your system meets the minimum requirements.";
-
 		public override byte[] GetKey(KeyProviderQueryContext ctx)
 		{
 			try
@@ -59,22 +54,25 @@ namespace KeePassPasskeyKeyProvider
 
 				if (!WebAuthnHelper.IsWebAuthnAvailable())
 				{
-					MessageService.ShowWarning(WebAuthnUnavailableMessage);
+					MessageService.ShowWarning(Strings.WebAuthnUnavailable);
 					return null;
 				}
 				return CreateNewCredential(ctx);
 			}
 			catch (WebAuthnException ex)
 			{
-				MessageService.ShowWarning($"FIDO2 authentication error:\n{ex.Message}");
+				MessageService.ShowWarning(AuthenticationError(ex));
 				return null;
 			}
 			catch (Exception ex)
 			{
-				MessageService.ShowWarning($"Unexpected error:\n{ex.Message}\n\nType: {ex.GetType().Name}");
+				MessageService.ShowWarning(string.Format(Strings.UnexpectedError, ex.Message, ex.GetType().Name));
 				return null;
 			}
 		}
+
+		private static string AuthenticationError(WebAuthnException ex) =>
+			string.Format(Strings.AuthenticationError, ex.Message);
 
 		/// <summary>
 		/// Creates a new credential and a random database key K; the wrapped key K ⊕ PRF awaits writing to the database.
@@ -216,7 +214,7 @@ namespace KeePassPasskeyKeyProvider
 		{
 			byte[] oldKey = GetDatabaseKey(db);
 			if (oldKey == null)
-				throw new InvalidOperationException("The database master key does not use FIDO2");
+				throw new InvalidOperationException(Strings.MasterKeyNotFido2);
 
 			byte[] newKey = GenerateKey();
 			try
@@ -336,7 +334,7 @@ namespace KeePassPasskeyKeyProvider
 
 			string problem;
 			if (!WebAuthnHelper.IsWebAuthnAvailable())
-				problem = WebAuthnUnavailableMessage;
+				problem = Strings.WebAuthnUnavailable;
 			else
 			{
 				try
@@ -345,7 +343,7 @@ namespace KeePassPasskeyKeyProvider
 				}
 				catch (WebAuthnException ex)
 				{
-					problem = $"FIDO2 authentication error:\n{ex.Message}";
+					problem = AuthenticationError(ex);
 				}
 			}
 			return UnlockWithRecoveryPhrase(ctx, problem);
@@ -364,7 +362,7 @@ namespace KeePassPasskeyKeyProvider
 				return null;
 			}
 
-			if (!MessageService.AskYesNo(problem + "\n\nOpen the database with the recovery phrase?", "KeePassPasskeyKeyProvider"))
+			if (!MessageService.AskYesNo(problem + "\n\n" + Strings.OpenWithRecoveryPhrase, "KeePassPasskeyKeyProvider"))
 				return null;
 
 			var form = new RecoveryPhraseInputForm();
@@ -393,7 +391,7 @@ namespace KeePassPasskeyKeyProvider
 			{
 				DeviceRecord record = DeviceKeyStore.Find(records, assertion.CredentialId);
 				if (record == null)
-					throw new WebAuthnException("The authenticator presented a credential not registered in this database");
+					throw new WebAuthnException(Strings.UnknownCredential);
 
 				return DeviceKeyStore.Wrap(record.WrappedKey, assertion.PrfSecret);
 			}
@@ -418,15 +416,14 @@ namespace KeePassPasskeyKeyProvider
 					: DeviceKeyStore.LoadFromFile(ctx.DatabaseIOInfo);
 				if (records.Count > 0)
 					return records;
-				problem = "The database header has no FIDO2 device records (the database was not saved after creating the key " +
-				          "or was created by an incompatible plugin version).";
+				problem = Strings.NoDeviceRecords;
 			}
 			catch (Exception ex)
 			{
-				problem = "Failed to read device records from the database header:\n" + ex.Message;
+				problem = string.Format(Strings.ReadHeaderRecordsFailed, ex.Message);
 			}
 
-			MessageService.ShowWarning(problem, "This plugin cannot open the database.");
+			MessageService.ShowWarning(problem, Strings.CannotOpenDatabase);
 			return null;
 		}
 

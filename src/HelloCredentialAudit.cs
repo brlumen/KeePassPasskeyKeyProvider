@@ -35,10 +35,10 @@ namespace KeePassPasskeyKeyProvider
 			{
 				switch (Status)
 				{
-					case HelloCredentialStatus.InUse: return "in use";
-					case HelloCredentialStatus.DatabaseMissing: return "database not found";
-					case HelloCredentialStatus.NotInDatabase: return "missing from database header";
-					default: return "path unknown";
+					case HelloCredentialStatus.InUse: return Strings.StatusInUse;
+					case HelloCredentialStatus.DatabaseMissing: return Strings.StatusDatabaseMissing;
+					case HelloCredentialStatus.NotInDatabase: return Strings.StatusNotInDatabase;
+					default: return Strings.StatusPathUnknown;
 				}
 			}
 		}

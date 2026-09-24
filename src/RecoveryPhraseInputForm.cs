@@ -11,10 +11,7 @@ namespace KeePassPasskeyKeyProvider
 		public RecoveryPhraseInputForm()
 		{
 			InitializeComponent();
-			labelDescription.Text =
-				$"Enter the {RecoveryPhrase.WordCount} recovery phrase words separated by spaces in the original order. " +
-				"Case does not matter; words can be shortened to their first 4 letters.\n\n" +
-				"After opening the database, add a new device: File → Database Settings → \"FIDO2\" tab.";
+			labelDescription.Text = string.Format(Strings.RecoveryInputDescription, RecoveryPhrase.WordCount);
 		}
 
 		/// <summary>Entropy of the verified phrase (after "OK"); the caller zeroes it after use</summary>

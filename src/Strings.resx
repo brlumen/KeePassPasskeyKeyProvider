@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+	<xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+		<xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+		<xsd:element name="root" msdata:IsDataSet="true">
+			<xsd:complexType>
+				<xsd:choice maxOccurs="unbounded">
+					<xsd:element name="data">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+								<xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+							</xsd:sequence>
+							<xsd:attribute name="name" use="required" type="xsd:string" msdata:Ordinal="1" />
+							<xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+							<xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+							<xsd:attribute ref="xml:space" />
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="resheader">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+							</xsd:sequence>
+							<xsd:attribute name="name" type="xsd:string" use="required" />
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:choice>
+			</xsd:complexType>
+		</xsd:element>
+	</xsd:schema>
+	<resheader name="resmimetype">
+		<value>text/microsoft-resx</value>
+	</resheader>
+	<resheader name="version">
+		<value>2.0</value>
+	</resheader>
+	<resheader name="reader">
+		<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
+	<resheader name="writer">
+		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+	</resheader>
+	<data name="ActionIrreversible" xml:space="preserve">
+		<value>This action cannot be undone.</value>
+	</data>
+	<data name="AddDevice" xml:space="preserve">
+		<value>Add device</value>
+	</data>
+	<data name="AddDeviceFailed" xml:space="preserve">
+		<value>Failed to add the device:
+{0}</value>
+	</data>
+	<data name="AdditionalDevicesLabel" xml:space="preserve">
+		<value>Additional devices for opening the database:</value>
+	</data>
+	<data name="AuthenticationError" xml:space="preserve">
+		<value>FIDO2 authentication error:
+{0}</value>
+	</data>
+	<data name="AuthenticatorNoPrf" xml:space="preserve">
+		<value>The authenticator does not support hmac-secret/PRF. Use a FIDO2 security key with hmac-secret support (YubiKey 5, SoloKey, etc.) or a phone with a password manager that supports PRF.</value>
+	</data>
+	<data name="Back" xml:space="preserve">
+		<value>Back</value>
+	</data>
+	<data name="Bytes" xml:space="preserve">
+		<value>bytes</value>
+	</data>
+	<data name="Cancel" xml:space="preserve">
+		<value>Cancel</value>
+	</data>
+	<data name="CannotOpenDatabase" xml:space="preserve">
+		<value>This plugin cannot open the database.</value>
+	</data>
+	<data name="CheckApi" xml:space="preserve">
+		<value>Check API</value>
+	</data>
+	<data name="Close" xml:space="preserve">
+		<value>Close</value>
+	</data>
+	<data name="Continue" xml:space="preserve">
+		<value>Continue</value>
+	</data>
+	<data name="CorruptedDeviceRecord" xml:space="preserve">
+		<value>Corrupted device record in the database header</value>
+	</data>
+	<data name="CorruptedKdbxHeader" xml:space="preserve">
+		<value>Corrupted KDBX header</value>
+	</data>
+	<data name="CorruptedRecoveryRecord" xml:space="preserve">
+		<value>Corrupted recovery phrase record in the database header</value>
+	</data>
+	<data name="CreateCredentialDescription" xml:space="preserve">
+		<value>A new FIDO2 credential will now be created for this database.
+Enter below the name of the device used to create the key — it distinguishes it from others in the database device list. If left empty, the label will be made from the device type and date.
+
+You will need to:
+1. Have a FIDO2 key with hmac-secret/PRF support (YubiKey 5, etc.), Windows Hello or a phone
+2. Enter the key PIN
+3. Confirm credential creation (usually by touching the key)
+
+The credential is stored on the device itself — no files next to the database are needed.
+Other devices: File → Database Settings → "FIDO2" tab.</value>
+	</data>
+	<data name="CreateCredentialFailed" xml:space="preserve">
+		<value>Failed to create credential: {0} (HRESULT: 0x{1:X8})</value>
+	</data>
+	<data name="CreateCredentialTitle" xml:space="preserve">
+		<value>Create FIDO2 Credential</value>
+	</data>
+	<data name="CreateRecoveryPhrase" xml:space="preserve">
+		<value>Create recovery phrase</value>
+	</data>
+	<data name="DeleteChecked" xml:space="preserve">
+		<value>Delete checked</value>
+	</data>
+	<data name="DeleteCredentialsConfirm" xml:space="preserve">
+		<value>Delete {0} Windows Hello credential(s)?</value>
+	</data>
+	<data name="DeleteCredentialsRisk" xml:space="preserve">
+		<value>Some of the checked credentials cannot be confirmed as unused
+(the database exists but its header does not contain the credential, or the database path is unknown).
+If such a credential is the only key of a database, that database cannot be opened.
+
+</value>
+	</data>
+	<data name="DeleteCredentialsTitle" xml:space="preserve">
+		<value>Delete credentials</value>
+	</data>
+	<data name="DeletedCount" xml:space="preserve">
+		<value>Deleted {0} of {1}.</value>
+	</data>
+	<data name="DeletingCredential" xml:space="preserve">
+		<value>Deleting credential {0} of {1}…</value>
+	</data>
+	<data name="DeviceNameLabel" xml:space="preserve">
+		<value>Device name:</value>
+	</data>
+	<data name="DevicesTabInfo" xml:space="preserve">
+		<value>Records are stored in the database header and saved automatically (a new database — when you click "OK"). Removing a device or the phrase replaces the database master key: the removed one will not open its new versions. The last device cannot be removed.</value>
+	</data>
+	<data name="DevicesWillBeKept" xml:space="preserve">
+		<value>Devices {0} will keep opening the database without re-registration.</value>
+	</data>
+	<data name="DevicesWillBeRemoved" xml:space="preserve">
+		<value>Devices {0} will be removed from the database. Only the new device will be able to open the database.</value>
+	</data>
+	<data name="DiagApiAvailable" xml:space="preserve">
+		<value>✓ WebAuthn API is available</value>
+	</data>
+	<data name="DiagApiRequirement" xml:space="preserve">
+		<value>   Windows 10 22H2 or Windows 11 (WebAuthn API v4+) is required</value>
+	</data>
+	<data name="DiagApiUnavailable" xml:space="preserve">
+		<value>❌ ERROR: WebAuthn API is unavailable!</value>
+	</data>
+	<data name="DiagApiVersion" xml:space="preserve">
+		<value>✓ API version: {0}</value>
+	</data>
+	<data name="DiagCause1" xml:space="preserve">
+		<value>  1. The key does not support the PRF extension (WebAuthn Level 3)</value>
+	</data>
+	<data name="DiagCause2" xml:space="preserve">
+		<value>  2. The credential was not created with PRF (bug in the code)</value>
+	</data>
+	<data name="DiagCause3" xml:space="preserve">
+		<value>  3. Problems with the Windows WebAuthn API</value>
+	</data>
+	<data name="DiagCheckingApi" xml:space="preserve">
+		<value>&gt;&gt;&gt; Checking Windows WebAuthn API...</value>
+	</data>
+	<data name="DiagCreateFailed" xml:space="preserve">
+		<value>❌ ERROR creating credential: {0}</value>
+	</data>
+	<data name="DiagCreationSecret" xml:space="preserve">
+		<value>  PRF secret at creation: received ({0} bytes)</value>
+	</data>
+	<data name="DiagCredentialCreated" xml:space="preserve">
+		<value>✓ Credential created successfully!</value>
+	</data>
+	<data name="DiagError" xml:space="preserve">
+		<value>❌ ERROR: {0}</value>
+	</data>
+	<data name="DiagErrorType" xml:space="preserve">
+		<value>   Type: {0}</value>
+	</data>
+	<data name="DiagGetSecretFailed" xml:space="preserve">
+		<value>❌ ERROR getting PRF secret: {0}</value>
+	</data>
+	<data name="DiagHeader" xml:space="preserve">
+		<value>=== FIDO2 Diagnostics - PRF Extension ===</value>
+	</data>
+	<data name="DiagIntro1" xml:space="preserve">
+		<value>This utility helps determine whether your FIDO2 security key supports</value>
+	</data>
+	<data name="DiagIntro2" xml:space="preserve">
+		<value>the PRF (Pseudo-Random Function) extension - WebAuthn Level 3.</value>
+	</data>
+	<data name="DiagIntro3" xml:space="preserve">
+		<value>PRF is the modern replacement for hmac-secret, supported by newer keys.</value>
+	</data>
+	<data name="DiagKeyMayNotSupport" xml:space="preserve">
+		<value>  Your key may not support PRF.</value>
+	</data>
+	<data name="DiagKeyNoPrf" xml:space="preserve">
+		<value>║  ❌ YOUR KEY DOES NOT SUPPORT PRF                         ║</value>
+	</data>
+	<data name="DiagKeyNoPrfReason" xml:space="preserve">
+		<value>║     or Windows WebAuthn API did not pass the extension    ║</value>
+	</data>
+	<data name="DiagKeySupportsPrf" xml:space="preserve">
+		<value>║  ✓ YOUR KEY SUPPORTS PRF!                                 ║</value>
+	</data>
+	<data name="DiagKeyUsable" xml:space="preserve">
+		<value>║  ✓ It can be used for the KeePass master key             ║</value>
+	</data>
+	<data name="DiagPinAgain" xml:space="preserve">
+		<value>  (PIN and confirmation on the key will be required again)</value>
+	</data>
+	<data name="DiagPlatformAvailable" xml:space="preserve">
+		<value>Available (Windows Hello)</value>
+	</data>
+	<data name="DiagPlatformCheckFailed" xml:space="preserve">
+		<value>⚠ Failed to check Platform Authenticator (HRESULT: 0x{0:X8})</value>
+	</data>
+	<data name="DiagPlatformUnavailable" xml:space="preserve">
+		<value>Unavailable</value>
+	</data>
+	<data name="DiagPossibleCauses" xml:space="preserve">
+		<value>Possible causes:</value>
+	</data>
+	<data name="DiagPrfEmpty" xml:space="preserve">
+		<value>❌ PRF secret received but empty!</value>
+	</data>
+	<data name="DiagPrfSuccess" xml:space="preserve">
+		<value>✓✓✓ SUCCESS! PRF secret received!</value>
+	</data>
+	<data name="DiagPrfTestConfirm" xml:space="preserve">
+		<value>A TEST credential will now be created on your FIDO2 security key.
+
+You will need to:
+1. Insert/connect the FIDO2 security key
+2. Enter the key PIN
+3. Confirm creation (touch the button on the key)
+
+This test will NOT affect your existing databases,
+but the test credential will remain on the key (discoverable). You can delete it
+in Windows Settings → Accounts → Sign-in options → Security Key.
+
+Continue the test?</value>
+	</data>
+	<data name="DiagReady" xml:space="preserve">
+		<value>Ready for testing.</value>
+	</data>
+	<data name="DiagRecommendation1" xml:space="preserve">
+		<value>  - Use a modern FIDO2 security key (YubiKey 5, Google Titan, etc.)</value>
+	</data>
+	<data name="DiagRecommendation2" xml:space="preserve">
+		<value>  - Update your key's firmware</value>
+	</data>
+	<data name="DiagRecommendation3" xml:space="preserve">
+		<value>  - Check for Windows 11 updates</value>
+	</data>
+	<data name="DiagRecommendation4" xml:space="preserve">
+		<value>  - Make sure you are running Windows 11 or Windows 10 22H2+</value>
+	</data>
+	<data name="DiagRecommendations" xml:space="preserve">
+		<value>Recommendations:</value>
+	</data>
+	<data name="DiagSecretLength" xml:space="preserve">
+		<value>  Length: {0} bytes</value>
+	</data>
+	<data name="DiagSecretMatches" xml:space="preserve">
+		<value>  ✓ Secret matches the one received at creation (PRF is deterministic)</value>
+	</data>
+	<data name="DiagSecretMismatch" xml:space="preserve">
+		<value>  ❌ Secret does NOT match the one received at creation, the key will be unreliable!</value>
+	</data>
+	<data name="DiagStartingPrfTest" xml:space="preserve">
+		<value>&gt;&gt;&gt; Starting PRF (Pseudo-Random Function) test...</value>
+	</data>
+	<data name="DiagStep1" xml:space="preserve">
+		<value>1. Click 'Check API' to check WebAuthn API availability</value>
+	</data>
+	<data name="DiagStep1Creating" xml:space="preserve">
+		<value>Step 1: Creating a test credential with the PRF extension...</value>
+	</data>
+	<data name="DiagStep2" xml:space="preserve">
+		<value>2. Click 'PRF test' to create a test credential and check PRF</value>
+	</data>
+	<data name="DiagStep2Getting" xml:space="preserve">
+		<value>Step 2: Getting the PRF secret from the authenticator...</value>
+	</data>
+	<data name="DiagSteps" xml:space="preserve">
+		<value>Steps:</value>
+	</data>
+	<data name="DiagSystemReady" xml:space="preserve">
+		<value>The system is ready to work with FIDO2 security keys.</value>
+	</data>
+	<data name="DiagTestCancelled" xml:space="preserve">
+		<value>Test cancelled by the user.</value>
+	</data>
+	<data name="DiagTestFinished" xml:space="preserve">
+		<value>Test finished.</value>
+	</data>
+	<data name="DiagUnexpectedError" xml:space="preserve">
+		<value>❌ UNEXPECTED ERROR: {0}</value>
+	</data>
+	<data name="DiagnosticsTitle" xml:space="preserve">
+		<value>FIDO2 Diagnostics - PRF Support Check</value>
+	</data>
+	<data name="Done" xml:space="preserve">
+		<value>Done</value>
+	</data>
+	<data name="EnterDeviceName" xml:space="preserve">
+		<value>Enter a device name.</value>
+	</data>
+	<data name="GetAssertionFailed" xml:space="preserve">
+		<value>Failed to get assertion: {0} (HRESULT: 0x{1:X8})</value>
+	</data>
+	<data name="GetListFailed" xml:space="preserve">
+		<value>Failed to get the list: {0}</value>
+	</data>
+	<data name="HelloCleanupButton" xml:space="preserve">
+		<value>Windows Hello cleanup…</value>
+	</data>
+	<data name="HelloCredentialsGroup" xml:space="preserve">
+		<value>Windows Hello credentials for {0}</value>
+	</data>
+	<data name="HmacSecretNotReturned" xml:space="preserve">
+		<value>hmac-secret not returned by authenticator. Make sure the credential was created with hmac-secret/PRF and the authenticator supports it.</value>
+	</data>
+	<data name="IWroteItDown" xml:space="preserve">
+		<value>I wrote it down</value>
+	</data>
+	<data name="KeepDevicesCheckBox" xml:space="preserve">
+		<value>Keep access for devices already registered in the database</value>
+	</data>
+	<data name="MasterKeyNotFido2" xml:space="preserve">
+		<value>The database master key does not use FIDO2</value>
+	</data>
+	<data name="MasterKeyNotFido2Hint" xml:space="preserve">
+		<value>The master key of this database does not use FIDO2.
+File → Change Master Key → "{0}".</value>
+	</data>
+	<data name="NewDeviceNameLabel" xml:space="preserve">
+		<value>New device name:</value>
+	</data>
+	<data name="NoDeviceRecords" xml:space="preserve">
+		<value>The database header has no FIDO2 device records (the database was not saved after creating the key or was created by an incompatible plugin version).</value>
+	</data>
+	<data name="NoRecoveryPhrase" xml:space="preserve">
+		<value>No recovery phrase has been created.</value>
+	</data>
+	<data name="NoUnusedCredentials" xml:space="preserve">
+		<value>No unused credentials.</value>
+	</data>
+	<data name="Open" xml:space="preserve">
+		<value>Open</value>
+	</data>
+	<data name="OpenWithRecoveryPhrase" xml:space="preserve">
+		<value>Open the database with the recovery phrase?</value>
+	</data>
+	<data name="PhraseChecksumMismatch" xml:space="preserve">
+		<value>The phrase contains an error: checksum mismatch. Check the words and their order.</value>
+	</data>
+	<data name="PhraseUnknownWord" xml:space="preserve">
+		<value>Word #{0} "{1}" is not in the recovery phrase wordlist.</value>
+	</data>
+	<data name="PhraseWordCount" xml:space="preserve">
+		<value>The phrase must consist of {0} words (entered: {1}).</value>
+	</data>
+	<data name="PrfDiagnosticsButton" xml:space="preserve">
+		<value>🔍 PRF diagnostics</value>
+	</data>
+	<data name="PrfTest" xml:space="preserve">
+		<value>PRF test</value>
+	</data>
+	<data name="ReadDeviceRecordsFailed" xml:space="preserve">
+		<value>Failed to read device records:
+{0}</value>
+	</data>
+	<data name="ReadHeaderRecordsFailed" xml:space="preserve">
+		<value>Failed to read device records from the database header:
+{0}</value>
+	</data>
+	<data name="RecoveryInputDescription" xml:space="preserve">
+		<value>Enter the {0} recovery phrase words separated by spaces in the original order. Case does not matter; words can be shortened to their first 4 letters.
+
+After opening the database, add a new device: File → Database Settings → "FIDO2" tab.</value>
+	</data>
+	<data name="RecoveryInputTitle" xml:space="preserve">
+		<value>Open Database with Recovery Phrase</value>
+	</data>
+	<data name="RecoveryPhraseCreated" xml:space="preserve">
+		<value>A recovery phrase has been created: it opens the database without a device.</value>
+	</data>
+	<data name="RecoveryPhraseInstructions" xml:space="preserve">
+		<value>Write the recovery phrase down on paper and keep it in a safe place.
+
+The phrase opens the database without a FIDO2 device (together with the password, if the master key has one). Do not store it in files, the cloud or photos. Remove a lost or compromised phrase on the "FIDO2" tab — the database master key will be replaced.
+
+The phrase is shown only now: you will not be able to view it later.</value>
+	</data>
+	<data name="RecoveryPhraseTitle" xml:space="preserve">
+		<value>Recovery Phrase</value>
+	</data>
+	<data name="Refresh" xml:space="preserve">
+		<value>Refresh</value>
+	</data>
+	<data name="RemoveDeviceConfirm" xml:space="preserve">
+		<value>Remove device "{0}"?
+
+The database master key will be replaced with a new one and the database saved. The removed device will not be able to open this database or any of its later versions; the other devices will keep opening it without re-registration.
+
+Copies of the database made before the removal (backups, version history in the cloud) can still be opened by this device: if the database contains secrets it should not have access to, change them.</value>
+	</data>
+	<data name="RemoveDeviceFailed" xml:space="preserve">
+		<value>Failed to remove the device</value>
+	</data>
+	<data name="RemoveDeviceTitle" xml:space="preserve">
+		<value>Remove device</value>
+	</data>
+	<data name="RemovePhrase" xml:space="preserve">
+		<value>Remove phrase</value>
+	</data>
+	<data name="RemovePhraseConfirm" xml:space="preserve">
+		<value>Remove the recovery phrase?
+
+The database master key will be replaced and the database saved. The phrase will not open this database or its later versions; copies made earlier — it will.</value>
+	</data>
+	<data name="RemovePhraseFailed" xml:space="preserve">
+		<value>Failed to remove the recovery phrase</value>
+	</data>
+	<data name="RemovePhraseTitle" xml:space="preserve">
+		<value>Remove recovery phrase</value>
+	</data>
+	<data name="RemoveSelectedDevice" xml:space="preserve">
+		<value>Remove selected device</value>
+	</data>
+	<data name="RemovingDevice" xml:space="preserve">
+		<value>Removing the device and replacing the database master key…</value>
+	</data>
+	<data name="RemovingPhrase" xml:space="preserve">
+		<value>Removing the phrase and replacing the database master key…</value>
+	</data>
+	<data name="ReplacePhrase" xml:space="preserve">
+		<value>Replace phrase</value>
+	</data>
+	<data name="ReplacePhraseConfirm" xml:space="preserve">
+		<value>Replace the recovery phrase?
+
+The database master key will be replaced and the database saved. The old phrase will not open this database or its later versions (copies made earlier — it will).</value>
+	</data>
+	<data name="ReplacePhraseTitle" xml:space="preserve">
+		<value>Replace recovery phrase</value>
+	</data>
+	<data name="SavePhraseFailed" xml:space="preserve">
+		<value>Failed to save the recovery phrase</value>
+	</data>
+	<data name="SavingPhrase" xml:space="preserve">
+		<value>Saving the recovery phrase…</value>
+	</data>
+	<data name="SingleDeviceWarning" xml:space="preserve">
+		<value>Only one device and no recovery phrase: if the device is lost or broken, the database will become inaccessible. Add a second device or create a recovery phrase.</value>
+	</data>
+	<data name="StatusDatabaseMissing" xml:space="preserve">
+		<value>database not found</value>
+	</data>
+	<data name="StatusInUse" xml:space="preserve">
+		<value>in use</value>
+	</data>
+	<data name="StatusNotInDatabase" xml:space="preserve">
+		<value>missing from database header</value>
+	</data>
+	<data name="StatusPathUnknown" xml:space="preserve">
+		<value>path unknown</value>
+	</data>
+	<data name="TransportBluetooth" xml:space="preserve">
+		<value>Bluetooth security key</value>
+	</data>
+	<data name="TransportDefault" xml:space="preserve">
+		<value>FIDO2 device</value>
+	</data>
+	<data name="TransportNfc" xml:space="preserve">
+		<value>NFC security key</value>
+	</data>
+	<data name="TransportPhone" xml:space="preserve">
+		<value>Phone</value>
+	</data>
+	<data name="TransportUsb" xml:space="preserve">
+		<value>USB security key</value>
+	</data>
+	<data name="UnexpectedError" xml:space="preserve">
+		<value>Unexpected error:
+{0}
+
+Type: {1}</value>
+	</data>
+	<data name="UnknownCredential" xml:space="preserve">
+		<value>The authenticator presented a credential not registered in this database</value>
+	</data>
+	<data name="Unnamed" xml:space="preserve">
+		<value>(unnamed)</value>
+	</data>
+	<data name="UnsupportedDeviceRecordsVersion" xml:space="preserve">
+		<value>Unsupported device records version: {0}</value>
+	</data>
+	<data name="UnsupportedRecoveryRecordVersion" xml:space="preserve">
+		<value>Unsupported recovery phrase record version: {0}</value>
+	</data>
+	<data name="UnusedCredentialsHint" xml:space="preserve">
+		<value>Only credentials not linked to existing databases are shown. Checked: those whose files
+were not found; delete others deliberately — without its credential a database can't be opened.</value>
+	</data>
+	<data name="VerifyPhraseDescription" xml:space="preserve">
+		<value>To verify, enter the phrase words with the given numbers.</value>
+	</data>
+	<data name="WebAuthnAvailableInfo" xml:space="preserve">
+		<value>Windows WebAuthn API is available (version {0}).
+The credential is stored on the device (discoverable); no files next to the database are needed.
+Database devices: File → Database Settings → "FIDO2" tab.</value>
+	</data>
+	<data name="WebAuthnUnavailable" xml:space="preserve">
+		<value>Windows WebAuthn API is not available.
+
+This plugin requires Windows 10 22H2 or Windows 11 (WebAuthn API v4+).
+Make sure your system meets the minimum requirements.</value>
+	</data>
+	<data name="WebAuthnUnavailableRequires" xml:space="preserve">
+		<value>Windows WebAuthn API is not available.
+
+Requires Windows 10 22H2 or Windows 11 (WebAuthn API v4+).</value>
+	</data>
+	<data name="WebAuthnUnavailableShort" xml:space="preserve">
+		<value>Windows WebAuthn API is not available (requires Windows 10 22H2 / Windows 11).</value>
+	</data>
+	<data name="WordMismatch" xml:space="preserve">
+		<value>Word #{0} does not match. Click "Back" to view the phrase again.</value>
+	</data>
+	<data name="WordNumber" xml:space="preserve">
+		<value>Word #{0}:</value>
+	</data>
+</root>

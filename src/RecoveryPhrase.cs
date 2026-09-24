@@ -84,7 +84,7 @@ namespace KeePassPasskeyKeyProvider
 			string[] words = (text ?? string.Empty).ToLowerInvariant()
 				.Split(new[] { ' ', '\t', '\r', '\n', ',', ';', '.' }, StringSplitOptions.RemoveEmptyEntries);
 			if (words.Length != WordCount)
-				throw new FormatException($"The phrase must consist of {WordCount} words (entered: {words.Length}).");
+				throw new FormatException(string.Format(Strings.PhraseWordCount, WordCount, words.Length));
 
 			byte[] bits = new byte[EntropyLength + 1];
 			try
@@ -93,7 +93,7 @@ namespace KeePassPasskeyKeyProvider
 				{
 					int index = FindWord(words[w]);
 					if (index < 0)
-						throw new FormatException($"Word #{w + 1} \"{words[w]}\" is not in the recovery phrase wordlist.");
+						throw new FormatException(string.Format(Strings.PhraseUnknownWord, w + 1, words[w]));
 					for (int b = 0; b < BitsPerWord; b++)
 						SetBit(bits, w * BitsPerWord + b, (index >> (BitsPerWord - 1 - b)) & 1);
 				}
@@ -106,8 +106,7 @@ namespace KeePassPasskeyKeyProvider
 				if (!valid)
 				{
 					MemUtil.ZeroByteArray(entropy);
-					throw new FormatException("The phrase contains an error: checksum mismatch. " +
-					                          "Check the words and their order.");
+					throw new FormatException(Strings.PhraseChecksumMismatch);
 				}
 				return entropy;
 			}

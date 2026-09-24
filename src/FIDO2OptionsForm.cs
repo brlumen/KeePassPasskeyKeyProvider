@@ -23,8 +23,7 @@ namespace KeePassPasskeyKeyProvider
 
 			if (!WebAuthnHelper.IsWebAuthnAvailable())
 			{
-				ShowError("Windows WebAuthn API is not available.\n\n" +
-				          "Requires Windows 10 22H2 or Windows 11 (WebAuthn API v4+).");
+				ShowError(Strings.WebAuthnUnavailableRequires);
 				checkedListCredentials.Enabled = false;
 				buttonDeleteChecked.Enabled = false;
 				buttonRefresh.Enabled = false;
@@ -32,11 +31,9 @@ namespace KeePassPasskeyKeyProvider
 			}
 
 			uint apiVersion = WebAuthnHelper.GetApiVersion();
-			ShowInfo($"Windows WebAuthn API is available (version {apiVersion}).\n" +
-			         "The credential is stored on the device (discoverable); no files next to the database are needed.\n" +
-			         "Database devices: File → Database Settings → \"FIDO2\" tab.");
+			ShowInfo(string.Format(Strings.WebAuthnAvailableInfo, apiVersion));
 
-			groupBoxHello.Text = $"Windows Hello credentials for {WebAuthnHelper.RpId}";
+			groupBoxHello.Text = string.Format(Strings.HelloCredentialsGroup, WebAuthnHelper.RpId);
 			RefreshCredentials();
 		}
 
@@ -54,7 +51,7 @@ namespace KeePassPasskeyKeyProvider
 			catch (Exception ex)
 			{
 				credentials = new List<HelloCredentialInfo>();
-				labelHelloStatus.Text = $"Failed to get the list: {ex.Message}";
+				labelHelloStatus.Text = string.Format(Strings.GetListFailed, ex.Message);
 				return;
 			}
 
@@ -65,9 +62,8 @@ namespace KeePassPasskeyKeyProvider
 			}
 
 			labelHelloStatus.Text = credentials.Count == 0
-				? "No unused credentials."
-				: "Only credentials not linked to existing databases are shown. Checked: those whose files\n" +
-				  "were not found; delete others deliberately — without its credential a database can't be opened.";
+				? Strings.NoUnusedCredentials
+				: Strings.UnusedCredentialsHint;
 			UpdateDeleteButton();
 		}
 
@@ -85,12 +81,10 @@ namespace KeePassPasskeyKeyProvider
 
 			bool risky = toDelete.Exists(c => !c.IsSafeToDelete);
 			var result = MessageBox.Show(this,
-				$"Delete {toDelete.Count} Windows Hello credential(s)?\n\n" +
-				(risky ? "Some of the checked credentials cannot be confirmed as unused\n" +
-				         "(the database exists but its header does not contain the credential, or the database path is unknown).\n" +
-				         "If such a credential is the only key of a database, that database cannot be opened.\n\n" : "") +
-				"This action cannot be undone.",
-				"Delete credentials", MessageBoxButtons.YesNo,
+				string.Format(Strings.DeleteCredentialsConfirm, toDelete.Count) + "\n\n" +
+				(risky ? Strings.DeleteCredentialsRisk : "") +
+				Strings.ActionIrreversible,
+				Strings.DeleteCredentialsTitle, MessageBoxButtons.YesNo,
 				risky ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
 			if (result != DialogResult.Yes) return;
 
@@ -119,7 +113,7 @@ namespace KeePassPasskeyKeyProvider
 			{
 				SetBusy(false, 0);
 				if (t.Result < toDelete.Count)
-					MessageBox.Show(this, $"Deleted {t.Result} of {toDelete.Count}.", "KeePassPasskeyKeyProvider",
+					MessageBox.Show(this, string.Format(Strings.DeletedCount, t.Result, toDelete.Count), "KeePassPasskeyKeyProvider",
 					                MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				RefreshCredentials();
 			}, TaskScheduler.FromCurrentSynchronizationContext());
@@ -128,7 +122,7 @@ namespace KeePassPasskeyKeyProvider
 		private void ReportProgress(int current, int total)
 		{
 			progressBar.Value = current - 1;
-			labelHelloStatus.Text = $"Deleting credential {current} of {total}…";
+			labelHelloStatus.Text = string.Format(Strings.DeletingCredential, current, total);
 		}
 
 		private void SetBusy(bool busy, int total)

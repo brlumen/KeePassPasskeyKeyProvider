@@ -17,16 +17,7 @@ namespace KeePassPasskeyKeyProvider
 		public DeviceNameForm(IList<string> existingDevices)
 		{
 			InitializeComponent();
-			labelDescription.Text =
-				"A new FIDO2 credential will now be created for this database.\n" +
-				"Enter below the name of the device used to create the key — it distinguishes it from others " +
-				"in the database device list. If left empty, the label will be made from the device type and date.\n\n" +
-				"You will need to:\n" +
-				"1. Have a FIDO2 key with hmac-secret/PRF support (YubiKey 5, etc.), Windows Hello or a phone\n" +
-				"2. Enter the key PIN\n" +
-				"3. Confirm credential creation (usually by touching the key)\n\n" +
-				"The credential is stored on the device itself — no files next to the database are needed.\n" +
-				"Other devices: File → Database Settings → \"FIDO2\" tab.";
+			labelDescription.Text = Strings.CreateCredentialDescription;
 
 			changingKey = existingDevices != null && existingDevices.Count > 0;
 			checkBoxKeepDevices.Visible = changingKey;
@@ -50,13 +41,12 @@ namespace KeePassPasskeyKeyProvider
 			if (checkBoxKeepDevices.Checked)
 			{
 				labelKeepDevices.ForeColor = SystemColors.GrayText;
-				labelKeepDevices.Text = $"Devices {deviceList} will keep opening the database without re-registration.";
+				labelKeepDevices.Text = string.Format(Strings.DevicesWillBeKept, deviceList);
 			}
 			else
 			{
 				labelKeepDevices.ForeColor = Color.Firebrick;
-				labelKeepDevices.Text = $"Devices {deviceList} will be removed from the database. " +
-				                        "Only the new device will be able to open the database.";
+				labelKeepDevices.Text = string.Format(Strings.DevicesWillBeRemoved, deviceList);
 			}
 		}
 

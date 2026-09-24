@@ -76,6 +76,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\KeePassPasskeyKeyProviderExt.cs" />
+    <Compile Include="src\EmbeddedResourceManager.cs" />
     <Compile Include="src\RecoveryPhrase.cs" />
     <Compile Include="src\RecoveryPhraseForm.cs">
       <SubType>Form</SubType>
@@ -89,6 +90,7 @@
     <Compile Include="src\RecoveryPhraseInputForm.Designer.cs">
       <DependentUpon>RecoveryPhraseInputForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="src\Strings.cs" />
     <Compile Include="src\WebAuthn\WebAuthnApi.cs" />
     <Compile Include="src\WebAuthn\WebAuthnHelper.cs" />
     <Compile Include="src\Properties\AssemblyInfo.cs" />
@@ -104,6 +106,14 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\FIDO2OptionsForm.resx">
       <DependentUpon>FIDO2OptionsForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\Strings.resx">
+      <LogicalName>KeePassPasskeyKeyProvider.Strings.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\Strings.ru.resx">
+      <DependentUpon>Strings.resx</DependentUpon>
+      <LogicalName>KeePassPasskeyKeyProvider.Strings.ru.resources</LogicalName>
+      <WithCulture>false</WithCulture>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

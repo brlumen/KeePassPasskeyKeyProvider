@@ -28,7 +28,7 @@ namespace KeePassPasskeyKeyProvider
 
 			textBoxWords.Text = RecoveryPhrase.Format(words);
 			for (int i = 0; i < CheckedWordCount; i++)
-				checkLabels[i].Text = $"Word #{checkedPositions[i] + 1}:";
+				checkLabels[i].Text = string.Format(Strings.WordNumber, checkedPositions[i] + 1);
 
 			ShowWords();
 		}
@@ -54,26 +54,21 @@ namespace KeePassPasskeyKeyProvider
 
 		private void ShowWords()
 		{
-			labelDescription.Text =
-				"Write the recovery phrase down on paper and keep it in a safe place.\n\n" +
-				"The phrase opens the database without a FIDO2 device (together with the password, if the master key has one). " +
-				"Do not store it in files, the cloud or photos. Remove a lost or compromised phrase " +
-				"on the \"FIDO2\" tab — the database master key will be replaced.\n\n" +
-				"The phrase is shown only now: you will not be able to view it later.";
+			labelDescription.Text = Strings.RecoveryPhraseInstructions;
 			textBoxWords.Visible = true;
 			panelCheck.Visible = false;
 			labelError.Text = string.Empty;
 			buttonBack.Visible = false;
-			buttonNext.Text = "I wrote it down";
+			buttonNext.Text = Strings.IWroteItDown;
 		}
 
 		private void ShowCheck()
 		{
-			labelDescription.Text = "To verify, enter the phrase words with the given numbers.";
+			labelDescription.Text = Strings.VerifyPhraseDescription;
 			textBoxWords.Visible = false;
 			panelCheck.Visible = true;
 			buttonBack.Visible = true;
-			buttonNext.Text = "Done";
+			buttonNext.Text = Strings.Done;
 			foreach (TextBox box in checkBoxes)
 				box.Clear();
 			checkBoxes[0].Focus();
@@ -91,7 +86,7 @@ namespace KeePassPasskeyKeyProvider
 			{
 				if (!string.Equals(checkBoxes[i].Text.Trim(), words[checkedPositions[i]], StringComparison.OrdinalIgnoreCase))
 				{
-					labelError.Text = $"Word #{checkedPositions[i] + 1} does not match. Click \"Back\" to view the phrase again.";
+					labelError.Text = string.Format(Strings.WordMismatch, checkedPositions[i] + 1);
 					checkBoxes[i].Focus();
 					checkBoxes[i].SelectAll();
 					return;

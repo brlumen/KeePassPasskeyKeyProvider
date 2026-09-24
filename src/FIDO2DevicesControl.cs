@@ -43,7 +43,7 @@ namespace KeePassPasskeyKeyProvider
 
 			if (!WebAuthnHelper.IsWebAuthnAvailable())
 			{
-				ShowStatus("Windows WebAuthn API is not available (requires Windows 10 22H2 / Windows 11).");
+				ShowStatus(Strings.WebAuthnUnavailableShort);
 				SetEnabled(false);
 				return;
 			}
@@ -51,8 +51,7 @@ namespace KeePassPasskeyKeyProvider
 			byte[] key = FIDO2KeyProvider.GetDatabaseKey(database);
 			if (key == null)
 			{
-				ShowStatus("The master key of this database does not use FIDO2.\n" +
-				           "File → Change Master Key → \"FIDO2 Key Provider (Windows WebAuthn)\".");
+				ShowStatus(string.Format(Strings.MasterKeyNotFido2Hint, FIDO2KeyProvider.ProviderName));
 				SetEnabled(false);
 				return;
 			}
@@ -65,40 +64,37 @@ namespace KeePassPasskeyKeyProvider
 			}
 			catch (Exception ex)
 			{
-				ShowStatus($"Failed to read device records:\n{ex.Message}");
+				ShowStatus(string.Format(Strings.ReadDeviceRecordsFailed, ex.Message));
 				SetEnabled(false);
 				return;
 			}
 
 			foreach (DeviceRecord r in records)
-				listBoxDevices.Items.Add(string.IsNullOrEmpty(r.Label) ? "(unnamed)" : r.Label);
+				listBoxDevices.Items.Add(string.IsNullOrEmpty(r.Label) ? Strings.Unnamed : r.Label);
 
 			UpdateRecoveryStatus();
-			ShowStatus("Records are stored in the database header and saved automatically (a new database — when you click \"OK\"). " +
-			           "Removing a device or the phrase replaces the database master key: the removed one will not open its new versions. " +
-			           "The last device cannot be removed.");
+			ShowStatus(Strings.DevicesTabInfo);
 			SetEnabled(true);
 		}
 
 		/// <summary>Phrase status; a single device without a phrase shows a warning about the risk of losing access</summary>
 		private void UpdateRecoveryStatus()
 		{
-			buttonRecovery.Text = hasRecovery ? "Replace phrase" : "Create recovery phrase";
+			buttonRecovery.Text = hasRecovery ? Strings.ReplacePhrase : Strings.CreateRecoveryPhrase;
 			if (hasRecovery)
 			{
 				labelRecovery.ForeColor = SystemColors.ControlText;
-				labelRecovery.Text = "A recovery phrase has been created: it opens the database without a device.";
+				labelRecovery.Text = Strings.RecoveryPhraseCreated;
 			}
 			else if (records.Count == 1)
 			{
 				labelRecovery.ForeColor = Color.Firebrick;
-				labelRecovery.Text = "Only one device and no recovery phrase: if the device is lost or broken, the database will become " +
-				                     "inaccessible. Add a second device or create a recovery phrase.";
+				labelRecovery.Text = Strings.SingleDeviceWarning;
 			}
 			else
 			{
 				labelRecovery.ForeColor = SystemColors.ControlText;
-				labelRecovery.Text = "No recovery phrase has been created.";
+				labelRecovery.Text = Strings.NoRecoveryPhrase;
 			}
 		}
 
@@ -132,7 +128,7 @@ namespace KeePassPasskeyKeyProvider
 			string label = textBoxDeviceName.Text.Trim();
 			if (label.Length == 0)
 			{
-				MessageBox.Show(this, "Enter a device name.", "KeePassPasskeyKeyProvider",
+				MessageBox.Show(this, Strings.EnterDeviceName, "KeePassPasskeyKeyProvider",
 				                MessageBoxButtons.OK, MessageBoxIcon.Information);
 				textBoxDeviceName.Focus();
 				return;
@@ -168,7 +164,7 @@ namespace KeePassPasskeyKeyProvider
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this, $"Failed to add the device:\n{ex.Message}", "KeePassPasskeyKeyProvider",
+				MessageBox.Show(this, string.Format(Strings.AddDeviceFailed, ex.Message), "KeePassPasskeyKeyProvider",
 				                MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 			finally
@@ -187,18 +183,13 @@ namespace KeePassPasskeyKeyProvider
 			int index = listBoxDevices.SelectedIndex;
 
 			var result = MessageBox.Show(this,
-				$"Remove device \"{listBoxDevices.Items[index]}\"?\n\n" +
-				"The database master key will be replaced with a new one and the database saved. The removed device will not be able to " +
-				"open this database or any of its later versions; the other devices will keep opening it " +
-				"without re-registration.\n\n" +
-				"Copies of the database made before the removal (backups, version history in the cloud) can still be opened " +
-				"by this device: if the database contains secrets it should not have access to, change them.",
-				"Remove device", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+				string.Format(Strings.RemoveDeviceConfirm, listBoxDevices.Items[index]),
+				Strings.RemoveDeviceTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 			if (result != DialogResult.Yes) return;
 
 			// The credential on the device is left untouched: it may be needed for old copies of the database.
 			// Unneeded Windows Hello credentials are removed deliberately — with the "Windows Hello cleanup" button.
-			RunBusy("Removing the device and replacing the database master key…", "Failed to remove the device", () =>
+			RunBusy(Strings.RemovingDevice, Strings.RemoveDeviceFailed, () =>
 			{
 				records.RemoveAt(index);
 				FIDO2KeyProvider.RotateDatabaseKey(database, records);
@@ -218,9 +209,8 @@ namespace KeePassPasskeyKeyProvider
 		private void RecoveryButtonClick(object sender, EventArgs e)
 		{
 			if (hasRecovery && MessageBox.Show(this,
-				    "Replace the recovery phrase?\n\nThe database master key will be replaced and the database saved. " +
-				    "The old phrase will not open this database or its later versions (copies made earlier — it will).",
-				    "Replace recovery phrase", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+				    Strings.ReplacePhraseConfirm,
+				    Strings.ReplacePhraseTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
 				return;
 
 			byte[] entropy = RecoveryPhrase.GenerateEntropy();
@@ -229,7 +219,7 @@ namespace KeePassPasskeyKeyProvider
 				if (UIUtil.ShowDialogAndDestroy(new RecoveryPhraseForm(RecoveryPhrase.ToWords(entropy))) != DialogResult.OK)
 					return;
 
-				RunBusy("Saving the recovery phrase…", "Failed to save the recovery phrase", () =>
+				RunBusy(Strings.SavingPhrase, Strings.SavePhraseFailed, () =>
 				{
 					if (hasRecovery)
 					{
@@ -263,12 +253,11 @@ namespace KeePassPasskeyKeyProvider
 			if (!hasRecovery) return;
 
 			if (MessageBox.Show(this,
-				    "Remove the recovery phrase?\n\nThe database master key will be replaced and the database saved. " +
-				    "The phrase will not open this database or its later versions; copies made earlier — it will.",
-				    "Remove recovery phrase", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+				    Strings.RemovePhraseConfirm,
+				    Strings.RemovePhraseTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
 				return;
 
-			RunBusy("Removing the phrase and replacing the database master key…", "Failed to remove the recovery phrase", () =>
+			RunBusy(Strings.RemovingPhrase, Strings.RemovePhraseFailed, () =>
 			{
 				DeviceKeyStore.SaveRecovery(database, null);
 				FIDO2KeyProvider.RotateDatabaseKey(database, records);
