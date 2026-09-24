@@ -1,8 +1,10 @@
 /.local/
-/bin/
 /KeePass/
-/obj/
 /packages/
+bin/
+obj/
+.vs/
+.idea/
 
 # User-specific files
 *.rsuser

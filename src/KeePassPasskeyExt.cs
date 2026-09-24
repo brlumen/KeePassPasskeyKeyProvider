@@ -129,6 +129,6 @@ namespace KeePassPasskey
 
 		// Стандартная иконка «ключ» KeePass (16×16)
 		public override Image SmallIcon => PluginHost?.MainWindow.ClientIcons.Images[(int)PwIcon.Key];
-		public override string UpdateUrl => "https://raw.githubusercontent.com/brlumen/KeePassPasskey/master/KeePassPlugin/keepass.version";
+		public override string UpdateUrl => "https://raw.githubusercontent.com/brlumen/KeePassPasskey/master/keepass.version";
 	}
 }
