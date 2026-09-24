@@ -151,8 +151,11 @@ namespace KeePassPasskeyKeyProvider
 
 		private void CredentialsItemCheck(object sender, ItemCheckEventArgs e)
 		{
-			// The event fires before the state changes — recalculate after it
-			BeginInvoke(new Action(UpdateDeleteButton));
+			// The event fires before the state changes (also from Items.Add before the handle exists) — account for NewValue
+			int count = checkedListCredentials.CheckedItems.Count
+				+ (e.NewValue == CheckState.Checked ? 1 : 0)
+				- (e.CurrentValue == CheckState.Checked ? 1 : 0);
+			buttonDeleteChecked.Enabled = count > 0;
 		}
 
 		private void ShowInfo(string message)

@@ -20,7 +20,7 @@ namespace KeePassPasskeyKeyProvider
 	/// </summary>
 	public class FIDO2KeyProvider : KeyProvider
 	{
-		public const string ProviderName = "FIDO2 Key Provider (Windows WebAuthn)";
+		public const string ProviderName = "Passkey Key Provider (Windows WebAuthn)";
 
 		/// <summary>
 		/// Device created by the last GetKey(CreatingNewKey) call: credential ID, wrapped key K ⊕ PRF,
