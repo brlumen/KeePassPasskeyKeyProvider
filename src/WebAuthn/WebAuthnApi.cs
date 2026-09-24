@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace KeePassPasskey.WebAuthn
+namespace KeePassPasskeyKeyProvider.WebAuthn
 {
 	/// <summary>
 	/// P/Invoke wrapper для Windows WebAuthn API (webauthn.dll)

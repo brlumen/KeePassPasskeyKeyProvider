@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeePassPasskey", "KeePassPasskey.csproj", "{4938357E-DC8E-4A1D-B112-3432E1E1CD8D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeePassPasskeyKeyProvider", "KeePassPasskeyKeyProvider.csproj", "{4938357E-DC8E-4A1D-B112-3432E1E1CD8D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

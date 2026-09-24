@@ -1,4 +1,4 @@
-# KeePassPasskey
+# KeePassPasskeyKeyProvider
 
 Плагин для KeePass 2.x: открывает базу паролей с помощью passkey — аппаратного FIDO2‑ключа, Android‑телефона или Windows Hello. Работает через встроенный в Windows **WebAuthn API** и расширение **hmac-secret / PRF**. Без драйверов, сторонних библиотек и прав администратора.
 
@@ -24,8 +24,8 @@
 
 ## Установка
 
-1. Скачайте `KeePassPasskey.dll` из [Releases](https://github.com/brlumen/KeePassPasskey/releases).
-2. Положите его в папку `Plugins` KeePass (например, `C:\Program Files\KeePass Password Safe 2\Plugins\KeePassPasskey\`).
+1. Скачайте `KeePassPasskeyKeyProvider.dll` из [Releases](https://github.com/brlumen/KeePassPasskeyKeyProvider/releases).
+2. Положите его в папку `Plugins` KeePass (например, `C:\Program Files\KeePass Password Safe 2\Plugins\KeePassPasskeyKeyProvider\`).
 3. Перезапустите KeePass.
 
 ## Использование
@@ -56,7 +56,7 @@
 - **Создать / заменить / удалить фразу восстановления.** Фраза показывается один раз, её нужно записать и подтвердить. Замена и удаление тоже заменяют ключ базы.
 - **Очистка Windows Hello…** — открывает окно очистки (см. ниже).
 
-### Окно `Сервис → KeePassPasskey`
+### Окно `Сервис → KeePassPasskeyKeyProvider`
 
 - версия Windows WebAuthn API;
 - **credential Windows Hello, не привязанные к существующим базам.** Плагин сам их не удаляет: credential удалённого из базы устройства может понадобиться, чтобы открыть старую резервную копию. Отмечены только те, чья база не найдена по пути; остальные удаляйте осознанно;
@@ -100,32 +100,32 @@
 
 **Окно «Безопасность Windows» не появляется** — проверьте, не спряталось ли оно за другими окнами; для телефона нужен Bluetooth на компьютере.
 
-Проверить аутентификатор можно в `Сервис → KeePassPasskey → Диагностика PRF`: там видно, включил ли он PRF (`bPrfEnabled`), вернул ли секрет (`pHmacSecret`) и совпадает ли секрет при повторе.
+Проверить аутентификатор можно в `Сервис → KeePassPasskeyKeyProvider → Диагностика PRF`: там видно, включил ли он PRF (`bPrfEnabled`), вернул ли секрет (`pHmacSecret`) и совпадает ли секрет при повторе.
 
 ## Сборка
 
 ```powershell
-git clone https://github.com/brlumen/KeePassPasskey.git
-cd KeePassPasskey
-nuget restore KeePassPasskey.sln
-dotnet build KeePassPasskey.csproj -c Release   # → bin\Release\KeePassPasskey.dll
+git clone https://github.com/brlumen/KeePassPasskeyKeyProvider.git
+cd KeePassPasskeyKeyProvider
+nuget restore KeePassPasskeyKeyProvider.sln
+dotnet build KeePassPasskeyKeyProvider.csproj -c Release   # → bin\Release\KeePassPasskeyKeyProvider.dll
 ```
 
 - .NET Framework 4.7.2, Visual Studio 2019+ или `dotnet` SDK.
 - Нужен установленный KeePass: `KeePass.exe` подключён из `C:\Program Files\KeePass Password Safe 2\`.
-- Конфигурация Debug собирает DLL сразу в `Plugins\KeePassPasskey\` KeePass (нужны права на запись в эту папку).
+- Конфигурация Debug собирает DLL сразу в `Plugins\KeePassPasskeyKeyProvider\` KeePass (нужны права на запись в эту папку).
 
 ## Структура кода
 
 ```
 src/
-├── KeePassPasskeyExt.cs        — точка входа плагина: провайдер, меню, вкладка FIDO2, события KeePass
+├── KeePassPasskeyKeyProviderExt.cs        — точка входа плагина: провайдер, меню, вкладка FIDO2, события KeePass
 ├── FIDO2KeyProvider.cs         — Key Provider: создание ключа, открытие, ротация
 ├── DeviceKeyStore.cs           — записи устройств и фразы в заголовке KDBX
 ├── RecoveryPhrase.cs           — фраза восстановления BIP39
 ├── HelloCredentialAudit.cs     — поиск неиспользуемых credential Windows Hello
 ├── FIDO2DevicesControl.cs      — вкладка «FIDO2» в параметрах базы
-├── FIDO2OptionsForm.cs         — окно «Сервис → KeePassPasskey»
+├── FIDO2OptionsForm.cs         — окно «Сервис → KeePassPasskeyKeyProvider»
 ├── FIDO2DiagnosticsForm.cs     — диагностика PRF
 ├── DeviceNameForm.cs, RecoveryPhrase*Form.cs, BusyIndicator.cs — диалоги
 └── WebAuthn/

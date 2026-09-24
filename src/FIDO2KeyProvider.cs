@@ -4,12 +4,12 @@ using System.Security.Cryptography;
 using System.Windows.Forms;
 using KeePass.Plugins;
 using KeePass.UI;
-using KeePassPasskey.WebAuthn;
+using KeePassPasskeyKeyProvider.WebAuthn;
 using KeePassLib;
 using KeePassLib.Keys;
 using KeePassLib.Utility;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
 	/// Key Provider для KeePass, использующий FIDO2 аутентификацию через Windows WebAuthn API
@@ -307,7 +307,7 @@ namespace KeePassPasskey
 
 			try
 			{
-				// displayName = полный путь: по нему очистка в Tools → KeePassPasskey находит credential удалённых баз
+				// displayName = полный путь: по нему очистка в Tools → KeePassPasskeyKeyProvider находит credential удалённых баз
 				PrfResult created = WebAuthnHelper.CreateCredential(windowHandle, userId, $"KeePass: {dbName}", databasePath);
 
 				// PRF secret: на API 8+ уже получен при создании, иначе — отдельный GetAssertion
@@ -364,7 +364,7 @@ namespace KeePassPasskey
 				return null;
 			}
 
-			if (!MessageService.AskYesNo(problem + "\n\nОткрыть базу фразой восстановления?", "KeePassPasskey"))
+			if (!MessageService.AskYesNo(problem + "\n\nОткрыть базу фразой восстановления?", "KeePassPasskeyKeyProvider"))
 				return null;
 
 			var form = new RecoveryPhraseInputForm();

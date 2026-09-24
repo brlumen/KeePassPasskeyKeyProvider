@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
 	/// Диалог перед созданием credential для мастер‑ключа: пояснение, название устройства и — при смене

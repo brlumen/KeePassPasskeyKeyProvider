@@ -4,12 +4,12 @@ using System.Drawing;
 using System.Windows.Forms;
 using KeePass.Plugins;
 using KeePass.UI;
-using KeePassPasskey.WebAuthn;
+using KeePassPasskeyKeyProvider.WebAuthn;
 using KeePassLib;
 using KeePassLib.Serialization;
 using KeePassLib.Utility;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
 	/// Управление дополнительными устройствами и фразой восстановления базы (записи в PublicCustomData).
@@ -132,7 +132,7 @@ namespace KeePassPasskey
 			string label = textBoxDeviceName.Text.Trim();
 			if (label.Length == 0)
 			{
-				MessageBox.Show(this, "Укажите название устройства.", "KeePassPasskey",
+				MessageBox.Show(this, "Укажите название устройства.", "KeePassPasskeyKeyProvider",
 				                MessageBoxButtons.OK, MessageBoxIcon.Information);
 				textBoxDeviceName.Focus();
 				return;
@@ -168,7 +168,7 @@ namespace KeePassPasskey
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this, $"Не удалось добавить устройство:\n{ex.Message}", "KeePassPasskey",
+				MessageBox.Show(this, $"Не удалось добавить устройство:\n{ex.Message}", "KeePassPasskeyKeyProvider",
 				                MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 			finally
@@ -296,7 +296,7 @@ namespace KeePassPasskey
 
 			if (error != null)
 			{
-				MessageBox.Show(this, $"{errorText}:\n{error.Message}", "KeePassPasskey",
+				MessageBox.Show(this, $"{errorText}:\n{error.Message}", "KeePassPasskeyKeyProvider",
 				                MessageBoxButtons.OK, MessageBoxIcon.Error);
 				UpdateDeviceList();
 			}

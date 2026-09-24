@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using KeePass.Plugins;
 using KeePass.UI;
-using KeePassPasskey.WebAuthn;
+using KeePassPasskeyKeyProvider.WebAuthn;
 using KeePassLib;
 using KeePassLib.Serialization;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	public enum HelloCredentialStatus
 	{

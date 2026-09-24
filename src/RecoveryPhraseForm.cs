@@ -3,7 +3,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Windows.Forms;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
 	/// Показ новой фразы восстановления и проверка, что пользователь её записал:

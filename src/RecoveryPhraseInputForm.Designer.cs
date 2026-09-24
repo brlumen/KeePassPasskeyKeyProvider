@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	partial class RecoveryPhraseInputForm
 	{

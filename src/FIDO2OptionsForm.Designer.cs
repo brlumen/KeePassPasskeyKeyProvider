@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	partial class FIDO2OptionsForm
 	{
@@ -139,7 +139,7 @@ namespace KeePassPasskey
 			this.ShowIcon = false;
 			this.ShowInTaskbar = false;
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-			this.Text = "KeePassPasskey";
+			this.Text = "KeePassPasskeyKeyProvider";
 			this.groupBoxHello.ResumeLayout(false);
 			this.ResumeLayout(false);
 			this.PerformLayout();

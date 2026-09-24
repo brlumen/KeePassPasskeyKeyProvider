@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Text;
 using System.Windows.Forms;
-using KeePassPasskey.WebAuthn;
+using KeePassPasskeyKeyProvider.WebAuthn;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
 	/// Форма для диагностики FIDO2 ключей и проверки поддержки PRF (Pseudo-Random Function)

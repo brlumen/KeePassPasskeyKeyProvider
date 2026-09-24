@@ -6,9 +6,9 @@ using KeePass.Plugins;
 using KeePass.UI;
 using KeePassLib;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
-	public class KeePassPasskeyExt : Plugin
+	public class KeePassPasskeyKeyProviderExt : Plugin
 	{
 		public IPluginHost PluginHost;
 		private FIDO2KeyProvider keyProvider;
@@ -121,7 +121,7 @@ namespace KeePassPasskey
 				return null;
 			}
 
-			var menuItem = new ToolStripMenuItem("KeePassPasskey", SmallIcon);
+			var menuItem = new ToolStripMenuItem("KeePassPasskeyKeyProvider", SmallIcon);
 			menuItem.Click += OnMenuItemClick;
 
 			return menuItem;
@@ -129,6 +129,6 @@ namespace KeePassPasskey
 
 		// Стандартная иконка «ключ» KeePass (16×16)
 		public override Image SmallIcon => PluginHost?.MainWindow.ClientIcons.Images[(int)PwIcon.Key];
-		public override string UpdateUrl => "https://raw.githubusercontent.com/brlumen/KeePassPasskey/master/keepass.version";
+		public override string UpdateUrl => "https://raw.githubusercontent.com/brlumen/KeePassPasskeyKeyProvider/master/keepass.version";
 	}
 }

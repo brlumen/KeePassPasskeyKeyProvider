@@ -7,7 +7,7 @@ using KeePassLib.Collections;
 using KeePassLib.Serialization;
 using KeePassLib.Utility;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
 	/// Запись об устройстве: ключ базы K, «обёрнутый» PRF‑секретом этого устройства

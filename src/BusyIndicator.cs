@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace KeePassPasskey
+namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
 	/// Модальная плашка «идёт операция» со спиннером поверх окна‑владельца.
@@ -20,7 +20,7 @@ namespace KeePassPasskey
 
 		private BusyIndicator(Rectangle ownerBounds, string message)
 		{
-			thread = new Thread(() => RunForm(ownerBounds, message)) { IsBackground = true, Name = "KeePassPasskey busy" };
+			thread = new Thread(() => RunForm(ownerBounds, message)) { IsBackground = true, Name = "KeePassPasskeyKeyProvider busy" };
 			thread.SetApartmentState(ApartmentState.STA);
 			thread.Start();
 			shown.WaitOne(2000); // не ждём вечно, если окно не удалось показать
@@ -71,7 +71,7 @@ namespace KeePassPasskey
 				AutoSizeMode = AutoSizeMode.GrowAndShrink,
 				BackColor = SystemColors.Window,
 				Font = SystemFonts.MessageBoxFont,
-				Text = "KeePassPasskey"
+				Text = "KeePassPasskeyKeyProvider"
 			};
 			form.Controls.Add(layout);
 			form.Load += (s, e) => form.Location = new Point(
