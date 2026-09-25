@@ -43,12 +43,12 @@ namespace KeePassPasskeyKeyProvider
 		public static string Bytes => Get();
 		public static string Cancel => Get();
 		public static string CannotOpenDatabase => Get();
+		public static string ChangeNotSaved => Get();
 		public static string CheckApi => Get();
 		public static string Close => Get();
 		public static string Continue => Get();
 		public static string CorruptedDeviceRecord => Get();
 		public static string CorruptedKdbxHeader => Get();
-		public static string CorruptedRecoveryRecord => Get();
 		public static string CreateCredentialDescription => Get();
 		public static string CreateCredentialFailed => Get();
 		public static string CreateCredentialTitle => Get();
@@ -138,11 +138,12 @@ namespace KeePassPasskeyKeyProvider
 		public static string PrfTest => Get();
 		public static string ReadDeviceRecordsFailed => Get();
 		public static string ReadHeaderRecordsFailed => Get();
+		public static string RecordsNotAuthentic => Get();
 		public static string RecoveryInputDescription => Get();
 		public static string RecoveryInputTitle => Get();
 		public static string RecoveryPhraseCreated => Get();
-		public static string RecoveryPhraseMismatch => Get();
 		public static string RecoveryPhraseInstructions => Get();
+		public static string RecoveryPhraseMismatch => Get();
 		public static string RecoveryPhraseTitle => Get();
 		public static string Refresh => Get();
 		public static string RemoveDeviceConfirm => Get();
@@ -160,6 +161,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string ReplacePhraseTitle => Get();
 		public static string SavePhraseFailed => Get();
 		public static string SavingPhrase => Get();
+		public static string SigningKeyInvalid => Get();
 		public static string SingleDeviceWarning => Get();
 		public static string StatusDatabaseMissing => Get();
 		public static string StatusInUse => Get();
@@ -175,7 +177,6 @@ namespace KeePassPasskeyKeyProvider
 		public static string UnknownCredential => Get();
 		public static string Unnamed => Get();
 		public static string UnsupportedDeviceRecordsVersion => Get();
-		public static string UnsupportedRecoveryRecordVersion => Get();
 		public static string UnusedCredentialsHint => Get();
 		public static string VerifyPhraseDescription => Get();
 		public static string WebAuthnAvailableInfo => Get();

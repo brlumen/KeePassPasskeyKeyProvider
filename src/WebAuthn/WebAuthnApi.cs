@@ -15,13 +15,23 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 
 		public const uint WEBAUTHN_API_VERSION_1 = 1;
 		public const uint WEBAUTHN_API_VERSION_2 = 2;
+		/// <summary>MAKE_CREDENTIAL_OPTIONS v4, GET_ASSERTION_OPTIONS v5, CREDENTIAL_ATTESTATION v4, ASSERTION v2</summary>
 		public const uint WEBAUTHN_API_VERSION_3 = 3;
-		/// <summary>GET_ASSERTION_OPTIONS v6 (pHmacSecretSaltValues), ASSERTION v3 (pHmacSecret)</summary>
+		/// <summary>MAKE_CREDENTIAL_OPTIONS v5, GET_ASSERTION_OPTIONS v6 (pHmacSecretSaltValues), ASSERTION v3 (pHmacSecret),
+		/// CREDENTIAL_DETAILS v1 and the platform credential list APIs</summary>
 		public const uint WEBAUTHN_API_VERSION_4 = 4;
-		/// <summary>MAKE_CREDENTIAL_OPTIONS v6 (bEnablePrf), CREDENTIAL_ATTESTATION v5 (bPrfEnabled)</summary>
+		/// <summary>CREDENTIAL_DETAILS v2 (bBackedUp)</summary>
 		public const uint WEBAUTHN_API_VERSION_5 = 5;
-		/// <summary>MAKE_CREDENTIAL_OPTIONS v8 (pPRFGlobalEval), CREDENTIAL_ATTESTATION v7 (pHmacSecret)</summary>
+		/// <summary>MAKE_CREDENTIAL_OPTIONS v6 (bEnablePrf), CREDENTIAL_ATTESTATION v5 (bPrfEnabled), ASSERTION v4</summary>
+		public const uint WEBAUTHN_API_VERSION_6 = 6;
+		/// <summary>MAKE_CREDENTIAL_OPTIONS v7, GET_ASSERTION_OPTIONS v7, CREDENTIAL_ATTESTATION v6, ASSERTION v5</summary>
+		public const uint WEBAUTHN_API_VERSION_7 = 7;
+		/// <summary>MAKE_CREDENTIAL_OPTIONS v8 (pPRFGlobalEval), GET_ASSERTION_OPTIONS v8,
+		/// CREDENTIAL_ATTESTATION v7 (pHmacSecret), CREDENTIAL_DETAILS v3</summary>
 		public const uint WEBAUTHN_API_VERSION_8 = 8;
+		/// <summary>MAKE_CREDENTIAL_OPTIONS v9, GET_ASSERTION_OPTIONS v9, CREDENTIAL_ATTESTATION v8, ASSERTION v6,
+		/// CREDENTIAL_DETAILS v4</summary>
+		public const uint WEBAUTHN_API_VERSION_9 = 9;
 
 		public const uint WEBAUTHN_AUTHENTICATOR_MAKE_CREDENTIAL_OPTIONS_VERSION_5 = 5;
 		public const uint WEBAUTHN_AUTHENTICATOR_MAKE_CREDENTIAL_OPTIONS_VERSION_6 = 6;
@@ -229,6 +239,15 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			public bool bAutoFill;
 			public uint cbJsonExt;
 			public IntPtr pbJsonExt;
+			// Fields for version 8+
+			public uint cCredentialHints;
+			public IntPtr ppwszCredentialHints;
+			// Fields for version 9+
+			public IntPtr pwszRemoteWebOrigin;
+			public uint cbPublicKeyCredentialRequestOptionsJSON;
+			public IntPtr pbPublicKeyCredentialRequestOptionsJSON;
+			public uint cbAuthenticatorId;
+			public IntPtr pbAuthenticatorId;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -290,8 +309,8 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			public IntPtr pbUnsignedExtensionOutputs;
 			// Version 7+
 			public IntPtr pHmacSecret; // PWEBAUTHN_HMAC_SECRET_SALT — result of pPRFGlobalEval
-			// Version 8+
 			public bool bThirdPartyPayment;
+			// Version 8+
 			public uint dwTransports;
 			public uint cbClientDataJSON;
 			public IntPtr pbClientDataJSON;
@@ -322,6 +341,11 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			// Version 5+
 			public uint cbUnsignedExtensionOutputs;
 			public IntPtr pbUnsignedExtensionOutputs;
+			// Version 6+
+			public uint cbClientDataJSON;
+			public IntPtr pbClientDataJSON;
+			public uint cbAuthenticationResponseJSON;
+			public IntPtr pbAuthenticationResponseJSON;
 		}
 
 		// ---- Platform authenticator (Windows Hello) credential list, API 4+ ----
@@ -348,6 +372,13 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			public bool bRemovable;
 			// Version 2+
 			public bool bBackedUp;
+			// Version 3+
+			public IntPtr pwszAuthenticatorName;
+			public uint cbAuthenticatorLogo;
+			public IntPtr pbAuthenticatorLogo;
+			public bool bThirdPartyPayment;
+			// Version 4+
+			public uint dwTransports;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -359,17 +390,72 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 
 		#endregion
 
+		#region Version-safe reads of returned structures
+
+		// First field added in each version starting from 2: element [i] is the first field of version i + 2.
+		// A block of version v ends where the first field of version v + 1 begins.
+		private static readonly string[] CredentialAttestationVersionFields =
+			{ "Extensions", "dwUsedTransport", "bEpAtt", "bPrfEnabled", "cbUnsignedExtensionOutputs", "pHmacSecret", "dwTransports" };
+
+		private static readonly string[] AssertionVersionFields =
+			{ "Extensions", "pHmacSecret", "dwUsedTransport", "cbUnsignedExtensionOutputs", "cbClientDataJSON" };
+
+		private static readonly string[] CredentialDetailsVersionFields =
+			{ "bBackedUp", "pwszAuthenticatorName", "dwTransports" };
+
+		public static WEBAUTHN_CREDENTIAL_ATTESTATION ReadCredentialAttestation(IntPtr ptr) =>
+			PtrToVersionedStructure<WEBAUTHN_CREDENTIAL_ATTESTATION>(ptr, CredentialAttestationVersionFields);
+
+		public static WEBAUTHN_ASSERTION ReadAssertion(IntPtr ptr) =>
+			PtrToVersionedStructure<WEBAUTHN_ASSERTION>(ptr, AssertionVersionFields);
+
+		public static WEBAUTHN_CREDENTIAL_DETAILS ReadCredentialDetails(IntPtr ptr) =>
+			PtrToVersionedStructure<WEBAUTHN_CREDENTIAL_DETAILS>(ptr, CredentialDetailsVersionFields);
+
+		/// <summary>
+		/// Reads a structure that starts with dwVersion and grows with each version. The native block of an older
+		/// version is shorter than the managed declaration, so only the bytes valid for its version are copied
+		/// into a zeroed buffer of full size; fields of newer versions stay zero.
+		/// </summary>
+		private static T PtrToVersionedStructure<T>(IntPtr ptr, string[] versionFields) where T : struct
+		{
+			int fullSize = Marshal.SizeOf(typeof(T));
+			uint version = (uint)Marshal.ReadInt32(ptr);
+			int validSize = version <= versionFields.Length
+				? Marshal.OffsetOf(typeof(T), versionFields[Math.Max(version, 1) - 1]).ToInt32()
+				: fullSize;
+
+			byte[] data = new byte[fullSize];
+			Marshal.Copy(ptr, data, 0, validSize);
+			IntPtr buffer = Marshal.AllocHGlobal(fullSize);
+			try
+			{
+				Marshal.Copy(data, 0, buffer, fullSize);
+				// Strings are copied into managed memory; the buffer is freed without DestroyStructure,
+				// because the pointers inside it belong to webauthn.dll
+				return Marshal.PtrToStructure<T>(buffer);
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(buffer);
+			}
+		}
+
+		#endregion
+
 		#region API functions
 
 		/// <summary>
 		/// Gets the WebAuthn API version
 		/// </summary>
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName)]
 		public static extern uint WebAuthNGetApiVersionNumber();
 
 		/// <summary>
 		/// Checks whether a user-verifying platform authenticator is available
 		/// </summary>
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName)]
 		public static extern int WebAuthNIsUserVerifyingPlatformAuthenticatorAvailable(
 			[MarshalAs(UnmanagedType.Bool)] out bool pbIsUserVerifyingPlatformAuthenticatorAvailable);
@@ -377,6 +463,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		/// <summary>
 		/// Creates a new credential on the authenticator
 		/// </summary>
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName)]
 		public static extern int WebAuthNAuthenticatorMakeCredential(
 			IntPtr hWnd,
@@ -390,6 +477,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		/// <summary>
 		/// Gets an assertion from the authenticator
 		/// </summary>
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName)]
 		public static extern int WebAuthNAuthenticatorGetAssertion(
 			IntPtr hWnd,
@@ -401,29 +489,34 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		/// <summary>
 		/// Frees memory allocated for a credential attestation
 		/// </summary>
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName)]
 		public static extern void WebAuthNFreeCredentialAttestation(IntPtr pWebAuthNCredentialAttestation);
 
 		/// <summary>
 		/// Frees memory allocated for an assertion
 		/// </summary>
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName)]
 		public static extern void WebAuthNFreeAssertion(IntPtr pWebAuthNAssertion);
 
 		/// <summary>
 		/// Lists Windows Hello discoverable credentials (API 4+). NTE_NOT_FOUND if empty.
 		/// </summary>
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName)]
 		public static extern int WebAuthNGetPlatformCredentialList(
 			ref WEBAUTHN_GET_CREDENTIALS_OPTIONS pGetCredentialsOptions,
 			out IntPtr ppCredentialDetailsList);
 
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName)]
 		public static extern void WebAuthNFreePlatformCredentialList(IntPtr pCredentialDetailsList);
 
 		/// <summary>
 		/// Deletes a Windows Hello credential by ID (API 4+). Fails for credentials on external security keys.
 		/// </summary>
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName)]
 		public static extern int WebAuthNDeletePlatformCredential(uint cbCredentialId, byte[] pbCredentialId);
 
@@ -432,6 +525,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		/// </summary>
 		// Returns a static webauthn.dll string that must not be freed, hence IntPtr rather than string
 		// (marshaling to string calls CoTaskMemFree → heap corruption → KeePass crash)
+		[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 		[DllImport(DllName, EntryPoint = "WebAuthNGetErrorName")]
 		private static extern IntPtr WebAuthNGetErrorNameRaw(int hr);
 

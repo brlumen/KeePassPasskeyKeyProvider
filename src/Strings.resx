@@ -52,7 +52,7 @@
 {0}</value>
 	</data>
 	<data name="AdditionalDevicesLabel" xml:space="preserve">
-		<value>Additional devices for opening the database:</value>
+		<value>Devices that open the database:</value>
 	</data>
 	<data name="AuthenticationError" xml:space="preserve">
 		<value>FIDO2 authentication error:
@@ -73,6 +73,9 @@
 	<data name="CannotOpenDatabase" xml:space="preserve">
 		<value>This plugin cannot open the database.</value>
 	</data>
+	<data name="ChangeNotSaved" xml:space="preserve">
+		<value>The change is not saved to the file yet. Until the database is saved, the file on disk (and any older copies) still accepts the removed device or recovery phrase. Save the database.</value>
+	</data>
 	<data name="CheckApi" xml:space="preserve">
 		<value>Check API</value>
 	</data>
@@ -88,17 +91,14 @@
 	<data name="CorruptedKdbxHeader" xml:space="preserve">
 		<value>Corrupted KDBX header</value>
 	</data>
-	<data name="CorruptedRecoveryRecord" xml:space="preserve">
-		<value>Corrupted recovery phrase record in the database header</value>
-	</data>
 	<data name="CreateCredentialDescription" xml:space="preserve">
-		<value>A new FIDO2 credential will now be created for this database.
+		<value>A new passkey (FIDO2 credential) will now be created for this database.
 Enter below the name of the device used to create the key — it distinguishes it from others in the database device list. If left empty, the label will be made from the device type, computer name and date.
 
-You will need to:
-1. Have a FIDO2 key with hmac-secret/PRF support (YubiKey 5, etc.), Windows Hello or a phone
-2. Enter the key PIN
-3. Confirm credential creation (usually by touching the key)
+In the "Windows Security" window, choose:
+• a FIDO2 security key with hmac-secret/PRF support (YubiKey 5, etc.) — enter its PIN and touch it;
+• Windows Hello — PIN, face or fingerprint;
+• a phone or tablet — scan the QR code and confirm on the phone.
 
 Other devices: File → Database Settings → "FIDO2" tab.</value>
 	</data>
@@ -118,11 +118,8 @@ Other devices: File → Database Settings → "FIDO2" tab.</value>
 		<value>Delete {0} Windows Hello credential(s)?</value>
 	</data>
 	<data name="DeleteCredentialsRisk" xml:space="preserve">
-		<value>Some of the checked credentials cannot be confirmed as unused
-(the database exists but its header does not contain the credential, or the database path is unknown or unavailable).
-If such a credential is the only key of a database, that database cannot be opened.
-
-</value>
+		<value>The plugin checks only the saved path, open databases and recently used files. A database that was moved, renamed or saved elsewhere is not detected.
+If a deleted credential is the only device of such a database and it has no recovery phrase, the database can no longer be opened.</value>
 	</data>
 	<data name="DeleteCredentialsTitle" xml:space="preserve">
 		<value>Delete credentials</value>
@@ -140,16 +137,16 @@ If such a credential is the only key of a database, that database cannot be open
 		<value>Records are stored in the database header and saved automatically (a new database — when you click "OK"). Removing a device or the phrase replaces the database master key: the removed one will not open its new versions. The last device cannot be removed.</value>
 	</data>
 	<data name="DevicesWillBeKept" xml:space="preserve">
-		<value>Devices {0} will keep opening the database without re-registration.</value>
+		<value>Devices {0} and the recovery phrase (if any) will keep opening the database without re-registration.</value>
 	</data>
 	<data name="DevicesWillBeRemoved" xml:space="preserve">
-		<value>Devices {0} will be removed from the database. Only the new device will be able to open the database.</value>
+		<value>Devices {0} and the recovery phrase (if any) will be removed from the database. Only the new device will be able to open it.</value>
 	</data>
 	<data name="DiagApiAvailable" xml:space="preserve">
 		<value>✓ WebAuthn API is available</value>
 	</data>
 	<data name="DiagApiRequirement" xml:space="preserve">
-		<value>   Windows 10 22H2 or Windows 11 (WebAuthn API v4+) is required</value>
+		<value>   WebAuthn API v4 or later is required (Windows 11 22H2 or later)</value>
 	</data>
 	<data name="DiagApiUnavailable" xml:space="preserve">
 		<value>❌ ERROR: WebAuthn API is unavailable!</value>
@@ -158,10 +155,10 @@ If such a credential is the only key of a database, that database cannot be open
 		<value>✓ API version: {0}</value>
 	</data>
 	<data name="DiagCause1" xml:space="preserve">
-		<value>  1. The key does not support the PRF extension (WebAuthn Level 3)</value>
+		<value>  1. The authenticator does not support the PRF / hmac-secret extension</value>
 	</data>
 	<data name="DiagCause2" xml:space="preserve">
-		<value>  2. The credential was not created with PRF (bug in the code)</value>
+		<value>  2. The authenticator or Windows did not enable PRF when creating the credential</value>
 	</data>
 	<data name="DiagCause3" xml:space="preserve">
 		<value>  3. Problems with the Windows WebAuthn API</value>
@@ -191,31 +188,31 @@ If such a credential is the only key of a database, that database cannot be open
 		<value>=== FIDO2 Diagnostics - PRF Extension ===</value>
 	</data>
 	<data name="DiagIntro1" xml:space="preserve">
-		<value>This utility helps determine whether your FIDO2 security key supports</value>
+		<value>This utility checks whether your authenticator (security key, Windows Hello, phone) supports</value>
 	</data>
 	<data name="DiagIntro2" xml:space="preserve">
 		<value>the PRF (Pseudo-Random Function) extension - WebAuthn Level 3.</value>
 	</data>
 	<data name="DiagIntro3" xml:space="preserve">
-		<value>PRF is the modern replacement for hmac-secret, supported by newer keys.</value>
+		<value>PRF is the WebAuthn extension built on the CTAP hmac-secret extension of FIDO2 authenticators.</value>
 	</data>
 	<data name="DiagKeyMayNotSupport" xml:space="preserve">
-		<value>  Your key may not support PRF.</value>
+		<value>  The authenticator may not support PRF.</value>
 	</data>
 	<data name="DiagKeyNoPrf" xml:space="preserve">
-		<value>║  ❌ YOUR KEY DOES NOT SUPPORT PRF                         ║</value>
+		<value>║  ❌ THE AUTHENTICATOR DOES NOT SUPPORT PRF                ║</value>
 	</data>
 	<data name="DiagKeyNoPrfReason" xml:space="preserve">
 		<value>║     or Windows WebAuthn API did not pass the extension    ║</value>
 	</data>
 	<data name="DiagKeySupportsPrf" xml:space="preserve">
-		<value>║  ✓ YOUR KEY SUPPORTS PRF!                                 ║</value>
+		<value>║  ✓ THE AUTHENTICATOR SUPPORTS PRF!                        ║</value>
 	</data>
 	<data name="DiagKeyUsable" xml:space="preserve">
 		<value>║  ✓ It can be used for the KeePass master key             ║</value>
 	</data>
 	<data name="DiagPinAgain" xml:space="preserve">
-		<value>  (PIN and confirmation on the key will be required again)</value>
+		<value>  (confirmation on the authenticator will be required again)</value>
 	</data>
 	<data name="DiagPlatformAvailable" xml:space="preserve">
 		<value>Available (Windows Hello)</value>
@@ -236,16 +233,16 @@ If such a credential is the only key of a database, that database cannot be open
 		<value>✓✓✓ SUCCESS! PRF secret received!</value>
 	</data>
 	<data name="DiagPrfTestConfirm" xml:space="preserve">
-		<value>A TEST credential will now be created on your FIDO2 security key.
+		<value>A TEST credential will now be created. Depending on your choice in the "Windows Security" window, it is created on a FIDO2 security key, in Windows Hello or on a phone (a passkey on a phone is synced to the provider account, e.g. Google).
 
-You will need to:
-1. Insert/connect the FIDO2 security key
-2. Enter the key PIN
-3. Confirm creation (touch the button on the key)
+You will need to confirm the creation and then the use of the credential (PIN, touch, biometrics).
 
-This test will NOT affect your existing databases,
-but the test credential will remain on the key (discoverable). You can delete it
-in Windows Settings → Accounts → Sign-in options → Security Key.
+The test does NOT affect your databases, but the test credential stays on the authenticator and takes a discoverable credential slot. To remove it:
+• Windows Hello — in the Windows Hello list of the "Tools → KeePassPasskeyKeyProvider" window or in Settings → Accounts → Passkeys;
+• security key — with the manufacturer's tool (e.g. Yubico Authenticator, ykman) or in a browser's security key settings;
+• phone — in the password manager of the passkey provider.
+
+Do NOT reset the security key in Windows Settings: a reset deletes all its credentials, including those that open your databases.
 
 Continue the test?</value>
 	</data>
@@ -253,16 +250,16 @@ Continue the test?</value>
 		<value>Ready for testing.</value>
 	</data>
 	<data name="DiagRecommendation1" xml:space="preserve">
-		<value>  - Use a modern FIDO2 security key (YubiKey 5, Google Titan, etc.)</value>
+		<value>  - Use a FIDO2 security key with hmac-secret support (YubiKey 5, Google Titan, etc.)</value>
 	</data>
 	<data name="DiagRecommendation2" xml:space="preserve">
-		<value>  - Update your key's firmware</value>
+		<value>  - For a phone, use a passkey provider with PRF support (e.g. Google Password Manager)</value>
 	</data>
 	<data name="DiagRecommendation3" xml:space="preserve">
-		<value>  - Check for Windows 11 updates</value>
+		<value>  - For Windows Hello, install Windows updates (KB5077181 or later)</value>
 	</data>
 	<data name="DiagRecommendation4" xml:space="preserve">
-		<value>  - Make sure you are running Windows 11 or Windows 10 22H2+</value>
+		<value>  - Update the security key firmware, if the manufacturer supports it</value>
 	</data>
 	<data name="DiagRecommendations" xml:space="preserve">
 		<value>Recommendations:</value>
@@ -274,7 +271,7 @@ Continue the test?</value>
 		<value>  ✓ Secret matches the one received at creation (PRF is deterministic)</value>
 	</data>
 	<data name="DiagSecretMismatch" xml:space="preserve">
-		<value>  ❌ Secret does NOT match the one received at creation, the key will be unreliable!</value>
+		<value>  ❌ Secret does NOT match the one received at creation: this authenticator cannot be used reliably!</value>
 	</data>
 	<data name="DiagStartingPrfTest" xml:space="preserve">
 		<value>&gt;&gt;&gt; Starting PRF (Pseudo-Random Function) test...</value>
@@ -295,7 +292,7 @@ Continue the test?</value>
 		<value>Steps:</value>
 	</data>
 	<data name="DiagSystemReady" xml:space="preserve">
-		<value>The system is ready to work with FIDO2 security keys.</value>
+		<value>The system is ready to work with FIDO2 authenticators.</value>
 	</data>
 	<data name="DiagTestCancelled" xml:space="preserve">
 		<value>Test cancelled by the user.</value>
@@ -384,6 +381,9 @@ File → Change Master Key → "{0}".</value>
 		<value>Failed to read device records from the database header:
 {0}</value>
 	</data>
+	<data name="RecordsNotAuthentic" xml:space="preserve">
+		<value>The device records of this database are not authentic: they were not created with your device or recovery phrase, or they were modified. The database was not opened.</value>
+	</data>
 	<data name="RecoveryInputDescription" xml:space="preserve">
 		<value>Enter the {0} recovery phrase words separated by spaces in the original order. Case does not matter; words can be shortened to their first 4 letters.
 
@@ -392,18 +392,18 @@ After opening the database, add a new device: File → Database Settings → "FI
 	<data name="RecoveryInputTitle" xml:space="preserve">
 		<value>Open Database with Recovery Phrase</value>
 	</data>
-	<data name="RecoveryPhraseMismatch" xml:space="preserve">
-		<value>This recovery phrase does not belong to the database.</value>
-	</data>
 	<data name="RecoveryPhraseCreated" xml:space="preserve">
 		<value>A recovery phrase has been created: it opens the database without a device.</value>
 	</data>
 	<data name="RecoveryPhraseInstructions" xml:space="preserve">
 		<value>Write the recovery phrase down on paper and keep it in a safe place.
 
-The phrase opens the database without a FIDO2 device (together with the password, if the master key has one). Do not store it in files, the cloud or photos. Remove a lost or compromised phrase on the "FIDO2" tab — the database master key will be replaced.
+The phrase opens the database without a FIDO2 device (together with the password or key file, if the master key has them). Do not store it in files, the cloud or photos. Remove a lost or compromised phrase on the "FIDO2" tab — the database master key will be replaced.
 
 The phrase is shown only now: you will not be able to view it later.</value>
+	</data>
+	<data name="RecoveryPhraseMismatch" xml:space="preserve">
+		<value>This recovery phrase does not belong to the database.</value>
 	</data>
 	<data name="RecoveryPhraseTitle" xml:space="preserve">
 		<value>Recovery Phrase</value>
@@ -464,20 +464,23 @@ The database master key will be replaced and the database saved. The old phrase 
 	<data name="SavingPhrase" xml:space="preserve">
 		<value>Saving the recovery phrase…</value>
 	</data>
+	<data name="SigningKeyInvalid" xml:space="preserve">
+		<value>The database signing key is missing or does not match the device records. Change the master key to create new records.</value>
+	</data>
 	<data name="SingleDeviceWarning" xml:space="preserve">
 		<value>Only one device and no recovery phrase: if the device is lost or broken, the database will become inaccessible. Add a second device or create a recovery phrase.</value>
 	</data>
 	<data name="StatusDatabaseMissing" xml:space="preserve">
-		<value>database not found</value>
+		<value>not found at the saved path</value>
 	</data>
 	<data name="StatusInUse" xml:space="preserve">
 		<value>in use</value>
 	</data>
 	<data name="StatusLocationUnavailable" xml:space="preserve">
-		<value>database location unavailable</value>
+		<value>not found; the drive or network location may be disconnected</value>
 	</data>
 	<data name="StatusNotInDatabase" xml:space="preserve">
-		<value>missing from database header</value>
+		<value>not in the database at the saved path</value>
 	</data>
 	<data name="StatusPathUnknown" xml:space="preserve">
 		<value>path unknown</value>
@@ -512,12 +515,8 @@ Type: {1}</value>
 	<data name="UnsupportedDeviceRecordsVersion" xml:space="preserve">
 		<value>Unsupported device records version: {0}</value>
 	</data>
-	<data name="UnsupportedRecoveryRecordVersion" xml:space="preserve">
-		<value>Unsupported recovery phrase record version: {0}</value>
-	</data>
 	<data name="UnusedCredentialsHint" xml:space="preserve">
-		<value>Only credentials not linked to existing databases are shown. Checked: those whose files
-were not found; delete others deliberately — without its credential a database can't be opened.</value>
+		<value>Not found in open or recently used databases or at the saved path. A moved or renamed database is not detected: delete only credentials you are sure are unused.</value>
 	</data>
 	<data name="VerifyPhraseDescription" xml:space="preserve">
 		<value>To verify, enter the phrase words with the given numbers.</value>
@@ -529,16 +528,15 @@ Database devices: File → Database Settings → "FIDO2" tab.</value>
 	<data name="WebAuthnUnavailable" xml:space="preserve">
 		<value>Windows WebAuthn API is not available.
 
-This plugin requires Windows 10 22H2 or Windows 11 (WebAuthn API v4+).
-Make sure your system meets the minimum requirements.</value>
+This plugin requires WebAuthn API v4 or later (Windows 11 22H2 or later).</value>
 	</data>
 	<data name="WebAuthnUnavailableRequires" xml:space="preserve">
 		<value>Windows WebAuthn API is not available.
 
-Requires Windows 10 22H2 or Windows 11 (WebAuthn API v4+).</value>
+Requires WebAuthn API v4 or later (Windows 11 22H2 or later).</value>
 	</data>
 	<data name="WebAuthnUnavailableShort" xml:space="preserve">
-		<value>Windows WebAuthn API is not available (requires Windows 10 22H2 / Windows 11).</value>
+		<value>Windows WebAuthn API is not available (requires API v4+, Windows 11 22H2 or later).</value>
 	</data>
 	<data name="WordMismatch" xml:space="preserve">
 		<value>Word #{0} does not match. Click "Back" to view the phrase again.</value>

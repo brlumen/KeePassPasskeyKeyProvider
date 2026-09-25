@@ -162,7 +162,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				};
 
 				// hmac-secret extension (BOOL TRUE) is the universal way to request hmac-secret at creation.
-				// Additionally bEnablePrf (options v6, API 5+) for authenticators/transports with PRF semantics.
+				// Additionally bEnablePrf (options v6, API 6+) for authenticators/transports with PRF semantics.
 				pHmacSecretFlag = AllocStruct(1); // BOOL TRUE
 				pExtension = AllocStruct(new WebAuthnApi.WEBAUTHN_EXTENSION
 				{
@@ -173,7 +173,8 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 
 				// API 8+: pPRFGlobalEval performs PRF eval right at creation (as Chrome 147+ does;
 				// without it Windows Hello returns bPrfEnabled=false). The secret arrives in attestation.pHmacSecret.
-				bool usePrfFlag = apiVersion >= WebAuthnApi.WEBAUTHN_API_VERSION_5;
+				// Options version must be supported by the running API: v5 = API 4, v6 = API 6, v8 = API 8.
+				bool usePrfFlag = apiVersion >= WebAuthnApi.WEBAUTHN_API_VERSION_6;
 				bool usePrfEval = apiVersion >= WebAuthnApi.WEBAUTHN_API_VERSION_8;
 				if (usePrfEval)
 				{
@@ -214,7 +215,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 					throw new WebAuthnException(string.Format(Strings.CreateCredentialFailed, errorName, hr));
 				}
 
-				var attestation = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_CREDENTIAL_ATTESTATION>(pAttestation);
+				var attestation = WebAuthnApi.ReadCredentialAttestation(pAttestation);
 				Log($"MakeCredential OK: attestation v{attestation.dwVersion}, format={attestation.pwszFormatType}, " +
 				    $"transport={attestation.dwUsedTransport}, credId {attestation.cbCredentialId} bytes");
 				Log($"  Credential ID: {DumpBytes(attestation.pbCredentialId, attestation.cbCredentialId)}");
@@ -360,6 +361,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 					pGlobalHmacSalt = pSalt
 				});
 
+				// Options v6 (pHmacSecretSaltValues) came with API 4 = MIN_API_VERSION
 				var options = new WebAuthnApi.WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS
 				{
 					dwVersion = WebAuthnApi.WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS_VERSION_6,
@@ -384,7 +386,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 					throw new WebAuthnException(string.Format(Strings.GetAssertionFailed, errorName, hr));
 				}
 
-				var assertion = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_ASSERTION>(pAssertion);
+				var assertion = WebAuthnApi.ReadAssertion(pAssertion);
 				Log($"GetAssertion OK: assertion v{assertion.dwVersion}, authData {assertion.cbAuthenticatorData} bytes, " +
 				    $"credId {assertion.Credential.cbId} bytes, userId {assertion.cbUserId} bytes, " +
 				    $"extensions={assertion.Extensions.cExtensions}, pHmacSecret=0x{assertion.pHmacSecret.ToString("X")}");
@@ -466,7 +468,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				for (int i = 0; i < list.cCredentialDetails; i++)
 				{
 					IntPtr pDetails = Marshal.ReadIntPtr(list.ppCredentialDetails, i * IntPtr.Size);
-					var details = Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_CREDENTIAL_DETAILS>(pDetails);
+					var details = WebAuthnApi.ReadCredentialDetails(pDetails);
 					var user = details.pUserInformation == IntPtr.Zero
 						? new WebAuthnApi.WEBAUTHN_USER_ENTITY_INFORMATION()
 						: Marshal.PtrToStructure<WebAuthnApi.WEBAUTHN_USER_ENTITY_INFORMATION>(details.pUserInformation);
@@ -631,41 +633,51 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 
 		private static class User32
 		{
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("user32.dll")]
 			public static extern IntPtr GetForegroundWindow();
 
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("user32.dll")]
 			[return: MarshalAs(UnmanagedType.Bool)]
 			public static extern bool SetForegroundWindow(IntPtr hWnd);
 
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("user32.dll")]
 			[return: MarshalAs(UnmanagedType.Bool)]
 			public static extern bool IsIconic(IntPtr hWnd);
 
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("user32.dll")]
 			[return: MarshalAs(UnmanagedType.Bool)]
 			public static extern bool IsWindowVisible(IntPtr hWnd);
 
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("user32.dll")]
 			[return: MarshalAs(UnmanagedType.Bool)]
 			public static extern bool IsWindowEnabled(IntPtr hWnd);
 
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("user32.dll")]
 			[return: MarshalAs(UnmanagedType.Bool)]
 			public static extern bool EnableWindow(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool bEnable);
 
 			public const int ASFW_ANY = -1;
 
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("user32.dll")]
 			[return: MarshalAs(UnmanagedType.Bool)]
 			public static extern bool AllowSetForegroundWindow(int dwProcessId);
 
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("user32.dll", CharSet = CharSet.Unicode)]
 			public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("user32.dll")]
 			public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("kernel32.dll")]
 			public static extern uint GetCurrentProcessId();
 		}

@@ -72,11 +72,14 @@ namespace KeePassPasskeyKeyProvider
 			// textBoxWords
 			//
 			this.textBoxWords.BackColor = System.Drawing.SystemColors.Window;
+			// The phrase must be written down on paper: no copying via shortcuts or the context menu
+			this.textBoxWords.ContextMenu = new System.Windows.Forms.ContextMenu();
 			this.textBoxWords.Font = new System.Drawing.Font("Consolas", 12F);
 			this.textBoxWords.Margin = new System.Windows.Forms.Padding(3, 0, 3, 12);
 			this.textBoxWords.Multiline = true;
 			this.textBoxWords.Name = "textBoxWords";
 			this.textBoxWords.ReadOnly = true;
+			this.textBoxWords.ShortcutsEnabled = false;
 			this.textBoxWords.Size = new System.Drawing.Size(520, 90);
 			this.textBoxWords.TabIndex = 0;
 			this.textBoxWords.TabStop = false;

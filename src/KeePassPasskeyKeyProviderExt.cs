@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 using KeePass.Forms;
 using KeePass.Plugins;
@@ -12,6 +13,9 @@ namespace KeePassPasskeyKeyProvider
 	{
 		public IPluginHost PluginHost;
 		private FIDO2KeyProvider keyProvider;
+
+		/// <summary>Databases that exist as a file: opened or saved at least once (a new database is not until FileCreated)</summary>
+		private static readonly ConditionalWeakTable<PwDatabase, object> persisted = new ConditionalWeakTable<PwDatabase, object>();
 
 		public override bool Initialize(IPluginHost host)
 		{
@@ -26,14 +30,36 @@ namespace KeePassPasskeyKeyProvider
 			PluginHost.MainWindow.FileCreated += OnFileCreated;
 			PluginHost.MainWindow.FileOpened += OnFileOpened;
 			PluginHost.MainWindow.FileSaving += OnFileSaving;
+			PluginHost.MainWindow.FileSaved += OnFileSaved;
 			PluginHost.MainWindow.MasterKeyChanged += OnMasterKeyChanged;
 			GlobalWindowManager.WindowAdded += OnWindowAdded;
 			return true;
 		}
 
+		/// <summary>
+		/// Whether the database has its own file. A new database created over an existing path must not be saved
+		/// by the plugin before KeePass finishes creating it: the file at that path is still another database.
+		/// </summary>
+		public static bool IsPersisted(PwDatabase db)
+		{
+			object marker;
+			return db != null && persisted.TryGetValue(db, out marker);
+		}
+
+		private static void MarkPersisted(PwDatabase db)
+		{
+			if (db != null) persisted.GetValue(db, d => new object());
+		}
+
 		private static void OnFileOpened(object sender, FileOpenedEventArgs e)
 		{
 			DeviceKeyStore.Remember(e?.Database);
+			MarkPersisted(e?.Database);
+		}
+
+		private static void OnFileSaved(object sender, FileSavedEventArgs e)
+		{
+			if (e != null && e.Success) MarkPersisted(e.Database);
 		}
 
 		/// <summary>Merging another database (import, synchronization) must not replace the device records</summary>
@@ -123,6 +149,7 @@ namespace KeePassPasskeyKeyProvider
 		{
 			GlobalWindowManager.WindowAdded -= OnWindowAdded;
 			PluginHost.MainWindow.MasterKeyChanged -= OnMasterKeyChanged;
+			PluginHost.MainWindow.FileSaved -= OnFileSaved;
 			PluginHost.MainWindow.FileSaving -= OnFileSaving;
 			PluginHost.MainWindow.FileOpened -= OnFileOpened;
 			PluginHost.MainWindow.FileCreated -= OnFileCreated;

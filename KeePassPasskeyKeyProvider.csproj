@@ -11,6 +11,7 @@
     <AssemblyName>KeePassPasskeyKeyProvider</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
     <!-- KeePass installation: KeePass.exe reference and the Debug deploy target. Override: -p:KeePassDir=...\ -->
     <KeePassDir Condition=" '$(KeePassDir)' == '' ">C:\Program Files\KeePass Password Safe 2\</KeePassDir>
   </PropertyGroup>
@@ -40,16 +41,11 @@
       <HintPath>$(KeePassDir)KeePass.exe</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\BusyIndicator.cs" />
@@ -81,6 +77,7 @@
     <Compile Include="src\KeyWrap.cs" />
     <Compile Include="src\EmbeddedResourceManager.cs" />
     <Compile Include="src\RecoveryPhrase.cs" />
+    <Compile Include="src\SigningKey.cs" />
     <Compile Include="src\RecoveryPhraseForm.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -8,20 +8,21 @@ Not to be confused with the [KeePassPasskey](https://github.com/yusei36/KeePassP
 
 - **Multiple devices per database.** For example, a YubiKey, a phone and Windows Hello — any of them opens the database.
 - **Adding and removing devices** on the "FIDO2" tab in the database settings. Other devices do not need to be re-registered.
-- **Device revocation.** On removal the database key is replaced, and the removed device will no longer open its new versions.
+- **Device revocation.** On removal the database key is replaced, and the removed device will no longer open its new versions (see "Security model and limitations").
 - **Recovery phrase** of 12 words (BIP39) — a fallback when no devices are at hand.
-- **Master key change that keeps the devices.**
-- **No files next to the database:** everything needed is stored in the `.kdbx` header, the credential — on the device itself.
+- **Master key change that keeps the devices** and the recovery phrase.
+- **No files next to the database:** everything needed is stored in the `.kdbx` file, the credential — on the device itself.
 - **Compatible with a password and a key file:** they can be combined with a device in a composite master key.
+- **Signed device records:** a header forged without the database key is rejected.
 - **Diagnostics:** WebAuthn call log and PRF support check.
 
 ## Requirements
 
-- Windows 10 22H2 or Windows 11 (WebAuthn API v4+).
+- Windows 11 22H2 or later (WebAuthn API v4+). Windows 10 only if its WebAuthn API reports v4+ (check in `Tools → KeePassPasskeyKeyProvider`).
 - KeePass 2.52 or later (tested with 2.58), KDBX 4 database format (KeePass selects it automatically).
 - An authenticator with hmac-secret/PRF support:
   - **hardware FIDO2 security key** — YubiKey 5, SoloKey, Nitrokey 3, Google Titan, etc.;
-  - **phone or tablet (Android, iOS)** via QR code (Windows 11 23H2+), with a passkey provider that supports PRF (e.g. Google Password Manager on Android 14+);
+  - **phone or tablet** via QR code (the computer needs Bluetooth). Tested with Google Password Manager on Android; other passkey providers must support PRF;
   - **Windows Hello** — Windows 11 24H2/25H2 with update KB5077181 (build ≥ 26100.7840 / 26200.7840).
 
 ## Installation
@@ -41,9 +42,9 @@ Not to be confused with the [KeePassPasskey](https://github.com/yusei36/KeePassP
    - **FIDO2 security key** — PIN and a touch of the key;
    - **phone** — "Use another device" → QR code → confirmation on the phone;
    - **Windows Hello** — PIN or biometrics.
-5. The database settings open on the **FIDO2** tab. Add a second device or create a recovery phrase — otherwise, if the only device is lost, the database becomes inaccessible.
+5. For a new database, the database settings open on the **FIDO2** tab; after changing the master key, open `File → Database Settings → FIDO2` yourself. Add a second device or create a recovery phrase — otherwise, if the only device is lost, the database becomes inaccessible.
 
-When changing the master key of a database that already has devices, the plugin asks whether to keep them. If kept, they continue to open the database without re-registration; if not, they are removed from the database, and only the new device will be able to open it.
+When changing the master key of a database that already has devices, the plugin asks whether to keep them. If kept, they and the recovery phrase continue to open the database without re-registration; if not, they and the recovery phrase are removed from the database, and only the new device will be able to open it. Changing to a master key without this provider removes all device records and the recovery phrase.
 
 ### Opening a database
 
@@ -61,35 +62,42 @@ If authentication fails or WebAuthn is unavailable, and the database has a recov
 ### `Tools → KeePassPasskeyKeyProvider` window
 
 - Windows WebAuthn API version;
-- **Windows Hello credentials not linked to existing databases.** The plugin does not delete them on its own: the credential of a device removed from a database may be needed to open an old backup. Only those whose database was not found at its path are checked; delete the others deliberately;
-- **PRF diagnostics** — creates a test credential, checks that the authenticator returns a PRF secret and that it is repeatable, and shows the WebAuthn call log. The secret itself is not written to the log.
+- **Windows Hello credentials not found in any known database.** Each credential is looked up in open databases, in KeePass's recently used files and in the database at the path saved in the credential. A database that was moved, renamed or saved elsewhere is not detected, so nothing is checked in advance: delete only credentials you are sure are unused — a database whose only device was a deleted credential (and that has no recovery phrase) can no longer be opened. The plugin never deletes credentials on its own: the credential of a device removed from a database may be needed to open an old backup;
+- **PRF diagnostics** — creates a test credential, checks that the authenticator returns a PRF secret and that it is repeatable, and shows the WebAuthn call log. The secret itself is not written to the log. The test credential stays on the authenticator (see "Security model and limitations").
 
 ## How it works
 
 - **Database key K** — 32 random bytes; KeePass uses it as a master key component.
-- **Device** — a discoverable credential (passkey) with the hmac-secret/PRF extension. For a fixed salt it returns a secret PRF_i that does not leave the authenticator without user confirmation (user verification is required: PIN, biometrics).
-- **Device record** in the database header (the unencrypted part of the KDBX 4 header, `PublicCustomData`): credential ID, name and K wrapped for the device. Each device has its own P‑256 key pair; its private key d_i is stored as d_i ⊕ PRF_i, and K is encrypted to the public key (ECIES: ephemeral ECDH + SHA‑256). Without the device this record is useless.
-- **Opening:** GetAssertion by the credential IDs from the records → PRF_i → d_i → K.
-- **Removing a device** = rotation: a new K' is encrypted to the public keys of the remaining devices and the phrase — without the devices themselves; the master key is replaced (password and key file are kept); the database is saved. New and old records are unrelated, so a removed device learns nothing about K' even from old copies of the file.
-- **Recovery phrase:** 128 bits of entropy as 12 BIP39 words (English wordlist, with checksum). R = HMAC‑SHA256(entropy, label); the phrase has its own key pair protected by R, like a device.
-- **Import and synchronization:** merging another database into this one does not replace its device records — the plugin restores them before saving.
+- **Device** — a discoverable credential (passkey) with the hmac-secret/PRF extension. For a fixed salt it returns a secret S_i that does not leave the authenticator without user confirmation (user verification is required: PIN, biometrics).
+- **Wrap for an owner** (a device or the recovery phrase): the owner has its own P‑256 key pair; its private key d_i is stored as d_i ⊕ S_i, and K is encrypted to the public key (ECIES: ephemeral ECDH + SHA‑256). Without the owner's secret a wrap is useless.
+- **Database signing key.** Each database has an ECDSA P‑256 key pair. The verification key VK is stored with the records; the signing key SK is stored in the encrypted part of the database (`CustomData`), and every change of the records is signed with it.
+- **Owner tag.** When a device or the phrase is added, its wrap gets a tag HMAC‑SHA256(S_i, label ‖ VK) that binds the owner to this database's VK.
+- **Header record** (`PublicCustomData` of the unencrypted KDBX 4 header, format v4): VK, device records (credential ID, wrap with owner tag, name), the optional recovery phrase wrap and the signature.
+- **Opening:** GetAssertion by the credential IDs from the records → S_i → the owner tag must match VK → d_i → K → the signature of the records must verify with VK. Only then K is passed to KeePass.
+- **Removing a device or the phrase** = rotation: a new K' is encrypted to the public keys of the remaining devices and the phrase — without the devices themselves; the master key is replaced (password and key file are kept); the database is saved. SK and the owner tags stay the same. New and old wraps are unrelated, so a removed device learns nothing about K' from old copies of the file.
+- **Recovery phrase:** 128 bits of entropy as 12 BIP39 words (English wordlist, with checksum). R = HMAC‑SHA256(entropy, label); the phrase is an owner like a device, with R as its secret.
+- **Import and synchronization:** merging another database into this one does not replace its records or signing key — the plugin restores them before saving.
 - **PRF salt and RP ID** (`keepass-fido2.local`) are fixed: the secret depends on them, and changing them would make existing databases impossible to open.
 
 There are no files next to the database: a copy of the `.kdbx` contains everything needed except the devices themselves.
 
 ## Security model and limitations
 
+- **Forged headers.** Anyone with write access to the file can replace its header. Someone who never had the database key cannot build a database that your device or phrase opens: a copied wrap is bound to your VK by the owner tag, and signing for that VK requires SK from inside the database.
+- **A revoked party with an old copy is not stopped.** Anyone who once had K — for example, the holder of a removed device or phrase with a copy of the database from before the removal — can extract SK from that copy, since rotation keeps SK. If they can write the file, they can forge records that your devices accept, or roll the file back to a copy from before the removal — the removed device then regains access to everything saved after that. A password in the composite master key prevents forging by anyone who does not know it: use one for databases in cloud or shared folders.
 - **Revocation only works forward.** A removed device will not open the current database or its later versions, but will open copies made before the removal (backups, version history in the cloud). If it must not have access to the secrets in the database, change them.
+- **The header is readable without the key:** device names (the default name includes the computer name), the number of devices and whether a recovery phrase exists. The credential on a security key or phone stores the database file name and full path.
 - **A single device without a recovery phrase** means a risk of losing the database if the device breaks or is lost. The plugin warns about this on the FIDO2 tab.
-- **The recovery phrase is as strong as the master key:** keep it offline.
+- **The recovery phrase replaces a device:** together with the password or key file, if the master key has them, it opens the database. Keep it offline.
+- **Discoverable credential slots.** Each database and device uses a discoverable credential slot on a security key, and their number is limited. PRF diagnostics leaves a test credential on the authenticator: delete it in `Tools → KeePassPasskeyKeyProvider` or `Settings → Accounts → Passkeys` (Windows Hello), with the manufacturer's tool (e.g. Yubico Authenticator, `ykman`) or in a browser's security key settings. Do not reset the security key in Windows Settings: a reset deletes all its credentials, including those that open your databases.
 - **Windows does not bind the RP ID to an application.** Any program running under your account can request the same PRF secret — but only after your confirmation (PIN, touch, biometrics). Any local program can also list and delete Windows Hello credentials.
 - **Windows Hello** is protected the same way as your Windows account (PIN, TPM).
-- **A passkey on a phone is synced** via the provider account (Google, Apple, etc.): its security equals the security of that account. The credential name contains the full database path — it is synced too.
+- **A passkey on a phone is synced** via the provider account (Google, Apple, etc.): its security equals the security of that account. The database path stored in the credential is synced too.
 - **Attestation is not verified:** any authenticator with PRF support is accepted.
 
 ## Troubleshooting
 
-**"Windows WebAuthn API is not available"** — requires Windows 10 22H2 or Windows 11 (WebAuthn API v4+) and the file `C:\Windows\System32\webauthn.dll`.
+**"Windows WebAuthn API is not available"** — requires WebAuthn API v4+ (Windows 11 22H2 or later) and the file `C:\Windows\System32\webauthn.dll`.
 
 **"The authenticator does not support hmac-secret/PRF" on creation**
 - an old U2F key without hmac-secret — a FIDO2 key is required (YubiKey 5 and newer);
@@ -98,13 +106,15 @@ There are no files next to the database: a copy of the `.kdbx` contains everythi
 
 **"The database header has no FIDO2 device records"** — the database was not saved after the key was created, or its header is corrupted. Open a backup.
 
+**"The device records of this database are not authentic"** — the owner tag or the signature did not match: the header was modified or taken from another database. Open a backup and check who can write the file.
+
 **"The authenticator presented a credential not registered in this database"** — a device removed from the database or created for another database was chosen.
 
 **The plugin is not in the key provider list** — disable `Tools → Options → Security → Enter master key on secure desktop`: WebAuthn dialogs can't be shown there.
 
 **The "Windows Security" window does not appear** — check whether it is hidden behind other windows; for a phone the computer needs Bluetooth.
 
-You can check an authenticator in `Tools → KeePassPasskeyKeyProvider → PRF diagnostics`: it shows whether it enabled PRF (`bPrfEnabled`), returned a secret (`pHmacSecret`) and whether the secret matches on repeat.
+You can check an authenticator in `Tools → KeePassPasskeyKeyProvider → PRF diagnostics`: it shows whether it enabled PRF (`bPrfEnabled`, WebAuthn API v6+), returned a secret (`pHmacSecret`) and whether the secret matches on repeat.
 
 ## Building
 
@@ -114,8 +124,8 @@ cd KeePassPasskeyKeyProvider
 dotnet build KeePassPasskeyKeyProvider.csproj -c Release   # → bin\Release\KeePassPasskeyKeyProvider.dll
 ```
 
-- .NET Framework 4.7.2, Visual Studio 2019+ or the `dotnet` SDK. No NuGet packages.
-- KeePass must be installed: `KeePass.exe` is referenced from `C:\Program Files\KeePass Password Safe 2\`. For another location: `dotnet build ... -p:KeePassDir="D:\KeePass\"` (with a trailing backslash).
+- .NET Framework 4.7.2 Developer Pack (targeting pack) and Visual Studio 2019+ or the `dotnet` SDK. No NuGet packages.
+- KeePass must be installed: `KeePass.exe` is referenced from `C:\Program Files\KeePass Password Safe 2\`. For another location, pass the folder with a trailing backslash: `dotnet build ... -p:KeePassDir=D:\KeePass\`. A backslash before a closing quote escapes the quote, so for a path with spaces double it: `-p:KeePassDir="C:\My Apps\KeePass\\"`.
 - The Debug configuration builds the DLL directly into KeePass's `Plugins\KeePassPasskeyKeyProvider\` (write access to that folder is required, KeePass must be closed).
 
 ## Code structure
@@ -124,10 +134,11 @@ dotnet build KeePassPasskeyKeyProvider.csproj -c Release   # → bin\Release\Kee
 src/
 ├── KeePassPasskeyKeyProviderExt.cs        — plugin entry point: provider, menu, FIDO2 tab, KeePass events
 ├── FIDO2KeyProvider.cs         — Key Provider: key creation, opening, rotation
-├── DeviceKeyStore.cs           — device and phrase records in the KDBX header
-├── KeyWrap.cs                  — wrapping of the database key for a device or the phrase (ECIES)
+├── DeviceKeyStore.cs           — signed device and phrase records in the KDBX header
+├── KeyWrap.cs                  — wrapping of the database key for a device or the phrase (ECIES, owner tag)
+├── SigningKey.cs               — database ECDSA key pair that signs the records
 ├── RecoveryPhrase.cs           — BIP39 recovery phrase
-├── HelloCredentialAudit.cs     — search for unused Windows Hello credentials
+├── HelloCredentialAudit.cs     — matching Windows Hello credentials to databases
 ├── FIDO2DevicesControl.cs      — "FIDO2" tab in the database settings
 ├── FIDO2OptionsForm.cs         — "Tools → KeePassPasskeyKeyProvider" window
 ├── FIDO2DiagnosticsForm.cs     — PRF diagnostics
@@ -143,3 +154,5 @@ API documentation: [Windows WebAuthn](https://learn.microsoft.com/windows/win32/
 ## License
 
 [MIT](LICENSE)
+
+`src/bip39-english.txt` is the BIP-0039 English wordlist from https://github.com/bitcoin/bips.

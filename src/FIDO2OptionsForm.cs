@@ -37,7 +37,8 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Re-reads Hello credentials. Used ones are not shown; ones safe to delete (database not found) are checked right away
+		/// Re-reads Hello credentials. Used ones are not shown, nothing is checked in advance:
+		/// a moved or renamed database is not detected, so every deletion is the user's decision
 		/// </summary>
 		private void RefreshCredentials()
 		{
@@ -57,7 +58,7 @@ namespace KeePassPasskeyKeyProvider
 			foreach (HelloCredentialInfo info in credentials)
 			{
 				string path = info.DatabasePath ?? info.Credential.UserName;
-				checkedListCredentials.Items.Add($"{path} — {info.StatusText}", info.IsSafeToDelete);
+				checkedListCredentials.Items.Add($"{path} — {info.StatusText}", false);
 			}
 
 			labelHelloStatus.Text = credentials.Count == 0
@@ -78,13 +79,12 @@ namespace KeePassPasskeyKeyProvider
 				toDelete.Add(credentials[index]);
 			if (toDelete.Count == 0) return;
 
-			bool risky = toDelete.Exists(c => !c.IsSafeToDelete);
 			var result = MessageBox.Show(this,
 				string.Format(Strings.DeleteCredentialsConfirm, toDelete.Count) + "\n\n" +
-				(risky ? Strings.DeleteCredentialsRisk : "") +
+				Strings.DeleteCredentialsRisk + "\n\n" +
 				Strings.ActionIrreversible,
 				Strings.DeleteCredentialsTitle, MessageBoxButtons.YesNo,
-				risky ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
+				MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
 			if (result != DialogResult.Yes) return;
 
 			DeleteInBackground(toDelete);

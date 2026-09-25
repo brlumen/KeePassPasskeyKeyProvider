@@ -52,7 +52,7 @@
 {0}</value>
 	</data>
 	<data name="AdditionalDevicesLabel" xml:space="preserve">
-		<value>Дополнительные устройства для открытия базы:</value>
+		<value>Устройства, открывающие базу:</value>
 	</data>
 	<data name="AuthenticationError" xml:space="preserve">
 		<value>Ошибка FIDO2 аутентификации:
@@ -73,6 +73,9 @@
 	<data name="CannotOpenDatabase" xml:space="preserve">
 		<value>Открыть базу этим плагином невозможно.</value>
 	</data>
+	<data name="ChangeNotSaved" xml:space="preserve">
+		<value>Изменение ещё не сохранено в файл. Пока база не сохранена, файл на диске (и его старые копии) по‑прежнему принимает удалённое устройство или фразу восстановления. Сохраните базу.</value>
+	</data>
 	<data name="CheckApi" xml:space="preserve">
 		<value>Проверить API</value>
 	</data>
@@ -88,17 +91,14 @@
 	<data name="CorruptedKdbxHeader" xml:space="preserve">
 		<value>Повреждён заголовок KDBX</value>
 	</data>
-	<data name="CorruptedRecoveryRecord" xml:space="preserve">
-		<value>Повреждена запись фразы восстановления в заголовке базы</value>
-	</data>
 	<data name="CreateCredentialDescription" xml:space="preserve">
-		<value>Сейчас будет создан новый FIDO2 credential для этой базы данных.
-Введите ниже название устройства, которым создаётся ключ — оно отличает его от других в списке устройств базы. Если оставить пустым, подпись будет составлена из типа устройства, имени компьютера и даты.
+		<value>Сейчас для этой базы будет создан новый passkey (FIDO2 credential).
+Введите ниже название устройства, которым создаётся ключ, — оно отличает его от других в списке устройств базы. Если оставить поле пустым, название будет составлено из типа устройства, имени компьютера и даты.
 
-Вам потребуется:
-1. FIDO2‑ключ с поддержкой hmac-secret/PRF (YubiKey 5 и др.), Windows Hello или телефон
-2. Ввести PIN‑код ключа
-3. Подтвердить создание credential (обычно нажатием кнопки на ключе)
+В окне «Безопасность Windows» выберите:
+• FIDO2‑ключ с поддержкой hmac-secret/PRF (YubiKey 5 и др.) — введите его PIN‑код и коснитесь ключа;
+• Windows Hello — PIN‑код, распознавание лица или отпечаток пальца;
+• телефон или планшет — отсканируйте QR‑код и подтвердите на телефоне.
 
 Другие устройства: Файл → Параметры базы → вкладка «FIDO2».</value>
 	</data>
@@ -118,11 +118,8 @@
 		<value>Удалить {0} credential Windows Hello?</value>
 	</data>
 	<data name="DeleteCredentialsRisk" xml:space="preserve">
-		<value>Среди отмеченных есть credential, для которых нельзя подтвердить, что они не используются
-(база существует, но в её заголовке credential нет, либо путь к базе неизвестен или недоступен).
-Если такой credential — единственный ключ базы, открыть её будет невозможно.
-
-</value>
+		<value>Плагин проверяет только сохранённый путь, открытые базы и недавно открывавшиеся файлы. Перемещённую, переименованную или сохранённую в другом месте базу он не обнаружит.
+Если удаляемый credential — единственное устройство такой базы и фразы восстановления у неё нет, открыть базу будет невозможно.</value>
 	</data>
 	<data name="DeleteCredentialsTitle" xml:space="preserve">
 		<value>Удаление credential</value>
@@ -140,16 +137,16 @@
 		<value>Записи хранятся в заголовке базы и сохраняются автоматически (новая база — при нажатии «OK»). Удаление устройства или фразы заменяет мастер‑ключ базы: удалённое не откроет её новые версии. Последнее устройство удалить нельзя.</value>
 	</data>
 	<data name="DevicesWillBeKept" xml:space="preserve">
-		<value>Устройства {0} продолжат открывать базу без повторной регистрации.</value>
+		<value>Устройства {0} и фраза восстановления (если есть) продолжат открывать базу без повторной регистрации.</value>
 	</data>
 	<data name="DevicesWillBeRemoved" xml:space="preserve">
-		<value>Устройства {0} будут удалены из базы. Открыть базу можно будет только новым устройством.</value>
+		<value>Устройства {0} и фраза восстановления (если есть) будут удалены из базы. Открыть её можно будет только новым устройством.</value>
 	</data>
 	<data name="DiagApiAvailable" xml:space="preserve">
 		<value>✓ WebAuthn API доступен</value>
 	</data>
 	<data name="DiagApiRequirement" xml:space="preserve">
-		<value>   Требуется Windows 10 22H2 или Windows 11 (WebAuthn API v4+)</value>
+		<value>   Требуется WebAuthn API версии 4 или новее (Windows 11 22H2 и новее)</value>
 	</data>
 	<data name="DiagApiUnavailable" xml:space="preserve">
 		<value>❌ ОШИБКА: WebAuthn API недоступен!</value>
@@ -158,10 +155,10 @@
 		<value>✓ Версия API: {0}</value>
 	</data>
 	<data name="DiagCause1" xml:space="preserve">
-		<value>  1. Ключ не поддерживает расширение PRF (WebAuthn Level 3)</value>
+		<value>  1. Аутентификатор не поддерживает расширение PRF / hmac-secret</value>
 	</data>
 	<data name="DiagCause2" xml:space="preserve">
-		<value>  2. Credential не был создан с PRF (ошибка в коде)</value>
+		<value>  2. Аутентификатор или Windows не включили PRF при создании credential</value>
 	</data>
 	<data name="DiagCause3" xml:space="preserve">
 		<value>  3. Проблемы с Windows WebAuthn API</value>
@@ -191,31 +188,31 @@
 		<value>=== FIDO2 Диагностика - PRF Extension ===</value>
 	</data>
 	<data name="DiagIntro1" xml:space="preserve">
-		<value>Эта утилита поможет определить, поддерживает ли ваш FIDO2 ключ</value>
+		<value>Эта утилита проверяет, поддерживает ли ваш аутентификатор (ключ безопасности, Windows Hello, телефон)</value>
 	</data>
 	<data name="DiagIntro2" xml:space="preserve">
 		<value>расширение PRF (Pseudo-Random Function) - WebAuthn Level 3.</value>
 	</data>
 	<data name="DiagIntro3" xml:space="preserve">
-		<value>PRF - это современная замена hmac-secret, поддерживаемая новыми ключами.</value>
+		<value>PRF — расширение WebAuthn, построенное на расширении CTAP hmac-secret FIDO2‑аутентификаторов.</value>
 	</data>
 	<data name="DiagKeyMayNotSupport" xml:space="preserve">
-		<value>  Ваш ключ может не поддерживать PRF.</value>
+		<value>  Возможно, аутентификатор не поддерживает PRF.</value>
 	</data>
 	<data name="DiagKeyNoPrf" xml:space="preserve">
-		<value>║  ❌ ВАШ КЛЮЧ НЕ ПОДДЕРЖИВАЕТ PRF                          ║</value>
+		<value>║  ❌ АУТЕНТИФИКАТОР НЕ ПОДДЕРЖИВАЕТ PRF                    ║</value>
 	</data>
 	<data name="DiagKeyNoPrfReason" xml:space="preserve">
 		<value>║     или Windows WebAuthn API не передал расширение        ║</value>
 	</data>
 	<data name="DiagKeySupportsPrf" xml:space="preserve">
-		<value>║  ✓ ВАШ КЛЮЧ ПОДДЕРЖИВАЕТ PRF!                             ║</value>
+		<value>║  ✓ АУТЕНТИФИКАТОР ПОДДЕРЖИВАЕТ PRF!                       ║</value>
 	</data>
 	<data name="DiagKeyUsable" xml:space="preserve">
 		<value>║  ✓ Можно использовать для KeePass мастер-ключа           ║</value>
 	</data>
 	<data name="DiagPinAgain" xml:space="preserve">
-		<value>  (Снова потребуется PIN и подтверждение на ключе)</value>
+		<value>  (снова потребуется подтверждение на аутентификаторе)</value>
 	</data>
 	<data name="DiagPlatformAvailable" xml:space="preserve">
 		<value>Доступен (Windows Hello)</value>
@@ -236,16 +233,16 @@
 		<value>✓✓✓ УСПЕХ! PRF secret получен!</value>
 	</data>
 	<data name="DiagPrfTestConfirm" xml:space="preserve">
-		<value>Сейчас будет создан ТЕСТОВЫЙ credential на вашем FIDO2 ключе.
+		<value>Сейчас будет создан ТЕСТОВЫЙ credential. В зависимости от выбора в окне «Безопасность Windows» он создаётся на FIDO2‑ключе, в Windows Hello или на телефоне (passkey на телефоне синхронизируется с аккаунтом провайдера, например Google).
 
-Вам потребуется:
-1. Вставить/подключить FIDO2 ключ
-2. Ввести PIN-код ключа
-3. Подтвердить создание (коснуться кнопки на ключе)
+Потребуется подтвердить создание, а затем использование credential (PIN‑код, касание ключа, биометрия).
 
-Этот тест НЕ повлияет на ваши существующие базы данных,
-но тестовый credential останется на ключе (discoverable) — его можно удалить
-в Параметры Windows → Учётные записи → Варианты входа → Ключ безопасности.
+Тест НЕ затрагивает ваши базы, но тестовый credential останется на аутентификаторе и займёт место для discoverable credential. Как его удалить:
+• Windows Hello — в списке Windows Hello окна «Сервис → KeePassPasskeyKeyProvider» или в Параметры → Учётные записи → Ключи доступа;
+• ключ безопасности — утилитой производителя (например, Yubico Authenticator, ykman) или в настройках ключей безопасности браузера;
+• телефон — в менеджере паролей провайдера passkey.
+
+НЕ сбрасывайте ключ безопасности в Параметрах Windows: сброс удаляет все его credential, в том числе те, которыми открываются ваши базы.
 
 Продолжить тест?</value>
 	</data>
@@ -253,16 +250,16 @@
 		<value>Готов к тестированию.</value>
 	</data>
 	<data name="DiagRecommendation1" xml:space="preserve">
-		<value>  - Используйте современный FIDO2 ключ (YubiKey 5, Google Titan и др.)</value>
+		<value>  - Используйте FIDO2‑ключ с поддержкой hmac-secret (YubiKey 5, Google Titan и др.)</value>
 	</data>
 	<data name="DiagRecommendation2" xml:space="preserve">
-		<value>  - Обновите прошивку вашего ключа</value>
+		<value>  - Для телефона используйте провайдера passkey с поддержкой PRF (например, Google Password Manager)</value>
 	</data>
 	<data name="DiagRecommendation3" xml:space="preserve">
-		<value>  - Проверьте обновления Windows 11</value>
+		<value>  - Для Windows Hello установите обновления Windows (KB5077181 или новее)</value>
 	</data>
 	<data name="DiagRecommendation4" xml:space="preserve">
-		<value>  - Убедитесь, что используется Windows 11 или Windows 10 22H2+</value>
+		<value>  - Обновите прошивку ключа безопасности, если производитель это поддерживает</value>
 	</data>
 	<data name="DiagRecommendations" xml:space="preserve">
 		<value>Рекомендации:</value>
@@ -274,7 +271,7 @@
 		<value>  ✓ Секрет совпадает с полученным при создании (PRF детерминирован)</value>
 	</data>
 	<data name="DiagSecretMismatch" xml:space="preserve">
-		<value>  ❌ Секрет НЕ совпадает с полученным при создании — ключ будет ненадёжен!</value>
+		<value>  ❌ Секрет НЕ совпадает с полученным при создании: на этот аутентификатор нельзя положиться!</value>
 	</data>
 	<data name="DiagStartingPrfTest" xml:space="preserve">
 		<value>&gt;&gt;&gt; Начало теста PRF (Pseudo-Random Function)...</value>
@@ -295,7 +292,7 @@
 		<value>Шаги:</value>
 	</data>
 	<data name="DiagSystemReady" xml:space="preserve">
-		<value>Система готова к работе с FIDO2 ключами.</value>
+		<value>Система готова к работе с FIDO2‑аутентификаторами.</value>
 	</data>
 	<data name="DiagTestCancelled" xml:space="preserve">
 		<value>Тест отменён пользователем.</value>
@@ -331,7 +328,7 @@
 		<value>Аутентификатор не вернул hmac-secret. Убедитесь, что credential был создан с hmac-secret/PRF и аутентификатор его поддерживает.</value>
 	</data>
 	<data name="IWroteItDown" xml:space="preserve">
-		<value>Я записал фразу</value>
+		<value>Фраза записана</value>
 	</data>
 	<data name="KeepDevicesCheckBox" xml:space="preserve">
 		<value>Сохранить доступ устройствам, уже зарегистрированным в базе</value>
@@ -384,6 +381,9 @@
 		<value>Не удалось прочитать записи устройств из заголовка базы:
 {0}</value>
 	</data>
+	<data name="RecordsNotAuthentic" xml:space="preserve">
+		<value>Записи устройств этой базы не подлинные: они созданы не с вашим устройством или фразой восстановления либо изменены. База не открыта.</value>
+	</data>
 	<data name="RecoveryInputDescription" xml:space="preserve">
 		<value>Введите {0} слов фразы восстановления через пробел в исходном порядке. Регистр не важен, слова можно сокращать до первых 4 букв.
 
@@ -392,18 +392,18 @@
 	<data name="RecoveryInputTitle" xml:space="preserve">
 		<value>Открытие базы фразой восстановления</value>
 	</data>
-	<data name="RecoveryPhraseMismatch" xml:space="preserve">
-		<value>Эта фраза восстановления не относится к базе.</value>
-	</data>
 	<data name="RecoveryPhraseCreated" xml:space="preserve">
 		<value>Фраза восстановления создана: она открывает базу без устройства.</value>
 	</data>
 	<data name="RecoveryPhraseInstructions" xml:space="preserve">
 		<value>Запишите фразу восстановления на бумаге и храните её в надёжном месте.
 
-Фраза открывает базу без FIDO2‑устройства (если в мастер‑ключе есть пароль — вместе с ним). Не храните её в файлах, облаке или фотографиях. Потерянную или скомпрометированную фразу удалите на вкладке «FIDO2» — мастер‑ключ базы будет заменён.
+Фраза открывает базу без FIDO2‑устройства (если в мастер‑ключе есть пароль или файл‑ключ — вместе с ними). Не храните её в файлах, облаке или фотографиях. Потерянную или скомпрометированную фразу удалите на вкладке «FIDO2» — мастер‑ключ базы будет заменён.
 
 Фраза показывается только сейчас: посмотреть её позже будет невозможно.</value>
+	</data>
+	<data name="RecoveryPhraseMismatch" xml:space="preserve">
+		<value>Эта фраза восстановления не относится к базе.</value>
 	</data>
 	<data name="RecoveryPhraseTitle" xml:space="preserve">
 		<value>Фраза восстановления</value>
@@ -464,20 +464,23 @@
 	<data name="SavingPhrase" xml:space="preserve">
 		<value>Сохранение фразы восстановления…</value>
 	</data>
+	<data name="SigningKeyInvalid" xml:space="preserve">
+		<value>Ключ подписи базы отсутствует или не соответствует записям устройств. Смените мастер‑ключ, чтобы создать новые записи.</value>
+	</data>
 	<data name="SingleDeviceWarning" xml:space="preserve">
 		<value>Устройство одно, фразы восстановления нет: при его потере или поломке база станет недоступна. Добавьте второе устройство или создайте фразу восстановления.</value>
 	</data>
 	<data name="StatusDatabaseMissing" xml:space="preserve">
-		<value>база не найдена</value>
+		<value>не найдена по сохранённому пути</value>
 	</data>
 	<data name="StatusInUse" xml:space="preserve">
 		<value>используется</value>
 	</data>
 	<data name="StatusLocationUnavailable" xml:space="preserve">
-		<value>расположение базы недоступно</value>
+		<value>не найдена; диск или сетевое расположение может быть отключено</value>
 	</data>
 	<data name="StatusNotInDatabase" xml:space="preserve">
-		<value>в заголовке базы отсутствует</value>
+		<value>нет в базе по сохранённому пути</value>
 	</data>
 	<data name="StatusPathUnknown" xml:space="preserve">
 		<value>путь неизвестен</value>
@@ -512,12 +515,8 @@
 	<data name="UnsupportedDeviceRecordsVersion" xml:space="preserve">
 		<value>Неподдерживаемая версия записей устройств: {0}</value>
 	</data>
-	<data name="UnsupportedRecoveryRecordVersion" xml:space="preserve">
-		<value>Неподдерживаемая версия записи фразы восстановления: {0}</value>
-	</data>
 	<data name="UnusedCredentialsHint" xml:space="preserve">
-		<value>Показаны только credential, не привязанные к существующим базам. Отмечены те, чьи файлы
-не найдены; остальные удаляйте осознанно — без credential базу открыть будет нельзя.</value>
+		<value>Не найдены в открытых и недавних базах и по сохранённому пути. Перемещённая или переименованная база не обнаруживается: удаляйте только заведомо ненужные credential.</value>
 	</data>
 	<data name="VerifyPhraseDescription" xml:space="preserve">
 		<value>Для проверки введите слова фразы с указанными номерами.</value>
@@ -529,16 +528,15 @@
 	<data name="WebAuthnUnavailable" xml:space="preserve">
 		<value>Windows WebAuthn API недоступен.
 
-Этот плагин требует Windows 10 22H2 или Windows 11 (WebAuthn API v4+).
-Убедитесь, что ваша система соответствует минимальным требованиям.</value>
+Плагину требуется WebAuthn API версии 4 или новее (Windows 11 22H2 и новее).</value>
 	</data>
 	<data name="WebAuthnUnavailableRequires" xml:space="preserve">
 		<value>Windows WebAuthn API недоступен.
 
-Требуется Windows 10 22H2 или Windows 11 (WebAuthn API v4+).</value>
+Требуется WebAuthn API версии 4 или новее (Windows 11 22H2 и новее).</value>
 	</data>
 	<data name="WebAuthnUnavailableShort" xml:space="preserve">
-		<value>Windows WebAuthn API недоступен (требуется Windows 10 22H2 / Windows 11).</value>
+		<value>Windows WebAuthn API недоступен (требуется API v4+, Windows 11 22H2 и новее).</value>
 	</data>
 	<data name="WordMismatch" xml:space="preserve">
 		<value>Слово №{0} не совпадает. Нажмите «Назад», чтобы посмотреть фразу ещё раз.</value>
