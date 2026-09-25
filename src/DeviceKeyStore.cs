@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using KeePassLib;
 using KeePassLib.Collections;
@@ -10,14 +10,13 @@ using KeePassLib.Utility;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Device record: database key K "wrapped" with this device's PRF secret
+	/// Device record: database key K wrapped for this device (see <see cref="KeyWrap"/>)
 	/// </summary>
 	public sealed class DeviceRecord
 	{
 		public byte[] CredentialId { get; set; }
 
-		/// <summary>K ⊕ PRF (32 bytes)</summary>
-		public byte[] WrappedKey { get; set; }
+		public KeyWrap Wrap { get; set; }
 
 		public string Label { get; set; }
 	}
@@ -25,22 +24,18 @@ namespace KeePassPasskeyKeyProvider
 	/// <summary>
 	/// Stores device records in PublicCustomData of the KDBX 4 outer header.
 	/// The header is not encrypted (read before unlocking) but is HMAC-protected, so tampering is detected.
-	/// Database key K is random and exists only in wrapped keys K ⊕ PRF_i — a one-time pad: PRF_i is random,
-	/// of the same length and used nowhere else. The database cannot be opened without the records.
-	/// Changing K (rotation on device removal) re-wraps keys without authenticators:
-	/// K_new ⊕ PRF_i = (K_old ⊕ PRF_i) ⊕ K_old ⊕ K_new.
-	/// Credential IDs of all records are passed in allowList so that Windows does not show a credential picker.
-	/// The recovery phrase is stored separately with the same wrapping K ⊕ R (see <see cref="RecoveryPhrase"/>).
+	/// Database key K is random and exists only wrapped for each device and the recovery phrase; the database
+	/// cannot be opened without the records. Credential IDs of all records are passed in allowList so that
+	/// Windows does not show a credential picker.
 	/// </summary>
 	public static class DeviceKeyStore
 	{
-		// IMPORTANT: the key name and record format are part of the database "format". Change only with a version bump.
-		// v1 (empty WrappedKey = "the main device's PRF is K") is no longer supported.
+		// IMPORTANT: the key names and record formats are part of the database "format". Change only with a version bump.
+		// Devices v1/v2 (XOR wrapping) and recovery v1 are no longer supported.
 		private const string CustomDataKey = "KeePassFIDO2.Devices";
-		private const byte FormatVersion = 2;
+		private const byte FormatVersion = 3;
 		private const string RecoveryDataKey = "KeePassFIDO2.Recovery";
-		private const byte RecoveryFormatVersion = 1;
-		public const int KeyLength = 32;
+		private const byte RecoveryFormatVersion = 2;
 
 		// KDBX outer header (KdbxFile constants in KeePassLib are not public)
 		private const uint FileSignature1 = 0x9AA2D903;
@@ -51,6 +46,15 @@ namespace KeePassPasskeyKeyProvider
 		private const byte HeaderPublicCustomData = 12;
 		// Outer header fields are bytes/kilobytes; anything larger is a corrupted or forged file
 		private const int MaxHeaderFieldSize = 1024 * 1024;
+
+		/// <summary>Records as the plugin last read or wrote them, per open database (see <see cref="RestoreIfChanged"/>)</summary>
+		private static readonly ConditionalWeakTable<PwDatabase, Snapshot> snapshots = new ConditionalWeakTable<PwDatabase, Snapshot>();
+
+		private sealed class Snapshot
+		{
+			public byte[] Devices;
+			public byte[] Recovery;
+		}
 
 		public static List<DeviceRecord> Load(PwDatabase db)
 		{
@@ -67,28 +71,33 @@ namespace KeePassPasskeyKeyProvider
 			else
 				db.PublicCustomData.SetByteArray(CustomDataKey, Serialize(records));
 			db.Modified = true;
+			Remember(db);
 		}
 
-		/// <summary>Key wrapped with the recovery phrase K ⊕ R; null if there is no phrase</summary>
-		public static byte[] LoadRecovery(PwDatabase db)
+		/// <summary>Key wrapped for the recovery phrase; null if there is no phrase</summary>
+		public static KeyWrap LoadRecovery(PwDatabase db)
 		{
 			return ParseRecovery(db.PublicCustomData.GetByteArray(RecoveryDataKey));
 		}
 
-		/// <summary>Writes (null removes) the recovery phrase wrapped key and marks the database modified</summary>
-		public static void SaveRecovery(PwDatabase db, byte[] wrappedKey)
+		/// <summary>Writes (null removes) the recovery phrase record and marks the database modified</summary>
+		public static void SaveRecovery(PwDatabase db, KeyWrap wrap)
 		{
-			if (wrappedKey == null)
+			if (wrap == null)
 				db.PublicCustomData.Remove(RecoveryDataKey);
 			else
 			{
-				CheckLength(wrappedKey, "wrapped key");
-				byte[] data = new byte[KeyLength + 1];
-				data[0] = RecoveryFormatVersion;
-				Array.Copy(wrappedKey, 0, data, 1, KeyLength);
-				db.PublicCustomData.SetByteArray(RecoveryDataKey, data);
+				using (var ms = new MemoryStream())
+				using (var bw = new BinaryWriter(ms))
+				{
+					bw.Write(RecoveryFormatVersion);
+					wrap.Write(bw);
+					bw.Flush();
+					db.PublicCustomData.SetByteArray(RecoveryDataKey, ms.ToArray());
+				}
 			}
 			db.Modified = true;
+			Remember(db);
 		}
 
 		/// <summary>
@@ -98,7 +107,54 @@ namespace KeePassPasskeyKeyProvider
 		{
 			bool devices = db.PublicCustomData.Remove(CustomDataKey);
 			bool recovery = db.PublicCustomData.Remove(RecoveryDataKey);
+			Remember(db);
 			return devices || recovery;
+		}
+
+		/// <summary>Remembers the records of the database as valid (on opening and after each write by the plugin)</summary>
+		public static void Remember(PwDatabase db)
+		{
+			if (db == null) return;
+			snapshots.Remove(db);
+			snapshots.Add(db, new Snapshot
+			{
+				Devices = CloneOrNull(db.PublicCustomData.GetByteArray(CustomDataKey)),
+				Recovery = CloneOrNull(db.PublicCustomData.GetByteArray(RecoveryDataKey))
+			});
+		}
+
+		/// <summary>
+		/// Called before saving. Only the plugin changes its records, but merging another database into this one
+		/// (File → Import, Synchronize) copies that database's PublicCustomData — records that wrap a different key.
+		/// Saving them would make the database impossible to open, so the remembered records are put back.
+		/// </summary>
+		/// <returns>true if the records were restored</returns>
+		public static bool RestoreIfChanged(PwDatabase db)
+		{
+			Snapshot snapshot;
+			if (db == null || !snapshots.TryGetValue(db, out snapshot)) return false;
+
+			bool devices = Restore(db, CustomDataKey, snapshot.Devices);
+			bool recovery = Restore(db, RecoveryDataKey, snapshot.Recovery);
+			return devices || recovery;
+		}
+
+		private static bool Restore(PwDatabase db, string key, byte[] expected)
+		{
+			byte[] current = db.PublicCustomData.GetByteArray(key);
+			if (current == null && expected == null) return false;
+			if (current != null && expected != null && MemUtil.ArraysEqual(current, expected)) return false;
+
+			if (expected == null)
+				db.PublicCustomData.Remove(key);
+			else
+				db.PublicCustomData.SetByteArray(key, (byte[])expected.Clone());
+			return true;
+		}
+
+		private static byte[] CloneOrNull(byte[] data)
+		{
+			return data == null ? null : (byte[])data.Clone();
 		}
 
 		/// <summary>Device records from the database file before unlocking; no records — empty list</summary>
@@ -107,8 +163,8 @@ namespace KeePassPasskeyKeyProvider
 			return Parse(ReadPublicCustomData(ioc)?.GetByteArray(CustomDataKey));
 		}
 
-		/// <summary>Recovery phrase wrapped key from the database file before unlocking; null if there is no phrase</summary>
-		public static byte[] LoadRecoveryFromFile(IOConnectionInfo ioc)
+		/// <summary>Recovery phrase record from the database file before unlocking; null if there is no phrase</summary>
+		public static KeyWrap LoadRecoveryFromFile(IOConnectionInfo ioc)
 		{
 			return ParseRecovery(ReadPublicCustomData(ioc)?.GetByteArray(RecoveryDataKey));
 		}
@@ -153,45 +209,6 @@ namespace KeePassPasskeyKeyProvider
 			return records.ConvertAll(r => r.CredentialId);
 		}
 
-		/// <summary>K ⊕ PRF — both encryption and decryption</summary>
-		public static byte[] Wrap(byte[] key, byte[] prf)
-		{
-			CheckLength(key, "key");
-			CheckLength(prf, "PRF secret");
-
-			byte[] result = new byte[KeyLength];
-			for (int i = 0; i < KeyLength; i++)
-				result[i] = (byte)(key[i] ^ prf[i]);
-			return result;
-		}
-
-		/// <summary>
-		/// Re-wraps keys from the old database key to the new one (in place).
-		/// PRF_i never enters memory: the wrapped key changes in a single XOR pass.
-		/// </summary>
-		public static void Rewrap(IEnumerable<DeviceRecord> records, byte[] oldKey, byte[] newKey)
-		{
-			foreach (DeviceRecord r in records)
-				Rewrap(r.WrappedKey, oldKey, newKey);
-		}
-
-		/// <summary>Re-wraps one wrapped key (device or phrase) from the old key to the new one (in place)</summary>
-		public static void Rewrap(byte[] wrappedKey, byte[] oldKey, byte[] newKey)
-		{
-			CheckLength(oldKey, "old key");
-			CheckLength(newKey, "new key");
-			CheckLength(wrappedKey, "wrapped key");
-
-			for (int i = 0; i < KeyLength; i++)
-				wrappedKey[i] ^= (byte)(oldKey[i] ^ newKey[i]);
-		}
-
-		private static void CheckLength(byte[] data, string what)
-		{
-			if (data == null || data.Length != KeyLength)
-				throw new ArgumentException($"Expected {KeyLength} bytes of {what}");
-		}
-
 		private static byte[] Serialize(List<DeviceRecord> records)
 		{
 			using (var ms = new MemoryStream())
@@ -202,7 +219,7 @@ namespace KeePassPasskeyKeyProvider
 				foreach (DeviceRecord r in records)
 				{
 					WriteBlock(bw, r.CredentialId);
-					WriteBlock(bw, r.WrappedKey);
+					r.Wrap.Write(bw);
 					WriteBlock(bw, Encoding.UTF8.GetBytes(r.Label ?? string.Empty));
 				}
 				bw.Flush();
@@ -215,40 +232,46 @@ namespace KeePassPasskeyKeyProvider
 			var records = new List<DeviceRecord>();
 			if (data == null || data.Length == 0) return records;
 
-			using (var br = new BinaryReader(new MemoryStream(data, false)))
+			try
 			{
-				byte version = br.ReadByte();
-				if (version != FormatVersion)
-					throw new InvalidDataException(string.Format(Strings.UnsupportedDeviceRecordsVersion, version));
-
-				int count = br.ReadUInt16();
-				for (int i = 0; i < count; i++)
+				using (var br = new BinaryReader(new MemoryStream(data, false)))
 				{
-					var record = new DeviceRecord
+					byte version = br.ReadByte();
+					if (version != FormatVersion)
+						throw new InvalidDataException(string.Format(Strings.UnsupportedDeviceRecordsVersion, version));
+
+					int count = br.ReadUInt16();
+					for (int i = 0; i < count; i++)
 					{
-						CredentialId = ReadBlock(br),
-						WrappedKey = ReadBlock(br),
-						Label = Encoding.UTF8.GetString(ReadBlock(br))
-					};
-					if (record.CredentialId.Length == 0 || record.WrappedKey.Length != KeyLength)
-						throw new InvalidDataException(Strings.CorruptedDeviceRecord);
-					records.Add(record);
+						var record = new DeviceRecord
+						{
+							CredentialId = ReadBlock(br),
+							Wrap = KeyWrap.Read(br),
+							Label = Encoding.UTF8.GetString(ReadBlock(br))
+						};
+						if (record.CredentialId.Length == 0)
+							throw new InvalidDataException(Strings.CorruptedDeviceRecord);
+						records.Add(record);
+					}
 				}
+			}
+			catch (EndOfStreamException)
+			{
+				throw new InvalidDataException(Strings.CorruptedDeviceRecord);
 			}
 			return records;
 		}
 
-		private static byte[] ParseRecovery(byte[] data)
+		private static KeyWrap ParseRecovery(byte[] data)
 		{
 			if (data == null || data.Length == 0) return null;
 			if (data[0] != RecoveryFormatVersion)
 				throw new InvalidDataException(string.Format(Strings.UnsupportedRecoveryRecordVersion, data[0]));
-			if (data.Length != KeyLength + 1)
+			if (data.Length != KeyWrap.SerializedLength + 1)
 				throw new InvalidDataException(Strings.CorruptedRecoveryRecord);
 
-			byte[] wrappedKey = new byte[KeyLength];
-			Array.Copy(data, 1, wrappedKey, 0, KeyLength);
-			return wrappedKey;
+			using (var br = new BinaryReader(new MemoryStream(data, 1, data.Length - 1, false)))
+				return KeyWrap.Read(br);
 		}
 
 		private static void WriteBlock(BinaryWriter bw, byte[] block)
@@ -259,7 +282,10 @@ namespace KeePassPasskeyKeyProvider
 
 		private static byte[] ReadBlock(BinaryReader br)
 		{
-			return br.ReadBytes(br.ReadUInt16());
+			int length = br.ReadUInt16();
+			byte[] block = br.ReadBytes(length);
+			if (block.Length != length) throw new EndOfStreamException();
+			return block;
 		}
 	}
 }

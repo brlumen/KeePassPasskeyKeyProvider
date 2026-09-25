@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using KeePass;
@@ -15,7 +16,9 @@ namespace KeePassPasskeyKeyProvider
 
 		private static readonly CultureInfo culture = GetKeePassCulture();
 
-		private static string Get([CallerMemberName] string name = null) => manager.GetString(name, culture) ?? name;
+		// Line breaks in .resx depend on the checkout (LF or CRLF); a multiline TextBox shows a lone LF as nothing
+		private static string Get([CallerMemberName] string name = null) =>
+			(manager.GetString(name, culture) ?? name).Replace("\r\n", "\n").Replace("\n", Environment.NewLine);
 
 		private static CultureInfo GetKeePassCulture()
 		{
@@ -138,6 +141,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string RecoveryInputDescription => Get();
 		public static string RecoveryInputTitle => Get();
 		public static string RecoveryPhraseCreated => Get();
+		public static string RecoveryPhraseMismatch => Get();
 		public static string RecoveryPhraseInstructions => Get();
 		public static string RecoveryPhraseTitle => Get();
 		public static string Refresh => Get();
@@ -159,6 +163,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string SingleDeviceWarning => Get();
 		public static string StatusDatabaseMissing => Get();
 		public static string StatusInUse => Get();
+		public static string StatusLocationUnavailable => Get();
 		public static string StatusNotInDatabase => Get();
 		public static string StatusPathUnknown => Get();
 		public static string TransportBluetooth => Get();

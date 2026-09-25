@@ -2,6 +2,8 @@
 
 A KeePass 2.x plugin that opens a password database with a passkey — a hardware FIDO2 security key, a phone or tablet (via QR code) or Windows Hello. It works through the built-in Windows **WebAuthn API** and the **hmac-secret / PRF** extension. No drivers, third-party libraries or administrator rights required.
 
+Not to be confused with the [KeePassPasskey](https://github.com/yusei36/KeePassPasskey) plugin, which stores website passkeys in KeePass. This plugin uses a passkey as a master key component.
+
 ## Features
 
 - **Multiple devices per database.** For example, a YubiKey, a phone and Windows Hello — any of them opens the database.
@@ -16,7 +18,7 @@ A KeePass 2.x plugin that opens a password database with a passkey — a hardwar
 ## Requirements
 
 - Windows 10 22H2 or Windows 11 (WebAuthn API v4+).
-- KeePass 2.x, KDBX 4 database format (KeePass selects it automatically).
+- KeePass 2.52 or later (tested with 2.58), KDBX 4 database format (KeePass selects it automatically).
 - An authenticator with hmac-secret/PRF support:
   - **hardware FIDO2 security key** — YubiKey 5, SoloKey, Nitrokey 3, Google Titan, etc.;
   - **phone or tablet (Android, iOS)** via QR code (Windows 11 23H2+), with a passkey provider that supports PRF (e.g. Google Password Manager on Android 14+);
@@ -33,7 +35,7 @@ A KeePass 2.x plugin that opens a password database with a passkey — a hardwar
 ### Creating a database or changing the master key
 
 1. `File → New` or `File → Change Master Key`.
-2. Check "Key file / provider" and select **FIDO2 Key Provider (Windows WebAuthn)**. You can keep the password — it becomes a second factor.
+2. Check "Key file/provider" (under "Show expert options") and select **Passkey Key Provider (Windows WebAuthn)**. You can keep the password — it becomes a second factor.
 3. In the plugin window, enter a device name (for example, "Blue YubiKey").
 4. In the "Windows Security" window, choose an authenticator:
    - **FIDO2 security key** — PIN and a touch of the key;
@@ -66,10 +68,11 @@ If authentication fails or WebAuthn is unavailable, and the database has a recov
 
 - **Database key K** — 32 random bytes; KeePass uses it as a master key component.
 - **Device** — a discoverable credential (passkey) with the hmac-secret/PRF extension. For a fixed salt it returns a secret PRF_i that does not leave the authenticator without user confirmation (user verification is required: PIN, biometrics).
-- **Device record** in the database header (the unencrypted part of the KDBX 4 header, `PublicCustomData`): credential ID, name and K ⊕ PRF_i. Without the device this record is useless.
-- **Opening:** GetAssertion by the credential IDs from the records → PRF_i → K = (K ⊕ PRF_i) ⊕ PRF_i.
-- **Removing a device** = rotation: a new K'; the wrapped keys of the remaining devices and the phrase are recomputed without the devices themselves; the master key is replaced (password and key file are kept); the database is saved.
-- **Recovery phrase:** 128 bits of entropy as 12 BIP39 words (English wordlist, with checksum). R = HMAC‑SHA256(entropy, label); the header stores K ⊕ R.
+- **Device record** in the database header (the unencrypted part of the KDBX 4 header, `PublicCustomData`): credential ID, name and K wrapped for the device. Each device has its own P‑256 key pair; its private key d_i is stored as d_i ⊕ PRF_i, and K is encrypted to the public key (ECIES: ephemeral ECDH + SHA‑256). Without the device this record is useless.
+- **Opening:** GetAssertion by the credential IDs from the records → PRF_i → d_i → K.
+- **Removing a device** = rotation: a new K' is encrypted to the public keys of the remaining devices and the phrase — without the devices themselves; the master key is replaced (password and key file are kept); the database is saved. New and old records are unrelated, so a removed device learns nothing about K' even from old copies of the file.
+- **Recovery phrase:** 128 bits of entropy as 12 BIP39 words (English wordlist, with checksum). R = HMAC‑SHA256(entropy, label); the phrase has its own key pair protected by R, like a device.
+- **Import and synchronization:** merging another database into this one does not replace its device records — the plugin restores them before saving.
 - **PRF salt and RP ID** (`keepass-fido2.local`) are fixed: the secret depends on them, and changing them would make existing databases impossible to open.
 
 There are no files next to the database: a copy of the `.kdbx` contains everything needed except the devices themselves.
@@ -108,13 +111,12 @@ You can check an authenticator in `Tools → KeePassPasskeyKeyProvider → PRF d
 ```powershell
 git clone https://github.com/brlumen/KeePassPasskeyKeyProvider.git
 cd KeePassPasskeyKeyProvider
-nuget restore KeePassPasskeyKeyProvider.sln
 dotnet build KeePassPasskeyKeyProvider.csproj -c Release   # → bin\Release\KeePassPasskeyKeyProvider.dll
 ```
 
-- .NET Framework 4.7.2, Visual Studio 2019+ or the `dotnet` SDK.
-- KeePass must be installed: `KeePass.exe` is referenced from `C:\Program Files\KeePass Password Safe 2\`.
-- The Debug configuration builds the DLL directly into KeePass's `Plugins\KeePassPasskeyKeyProvider\` (write access to that folder is required).
+- .NET Framework 4.7.2, Visual Studio 2019+ or the `dotnet` SDK. No NuGet packages.
+- KeePass must be installed: `KeePass.exe` is referenced from `C:\Program Files\KeePass Password Safe 2\`. For another location: `dotnet build ... -p:KeePassDir="D:\KeePass\"` (with a trailing backslash).
+- The Debug configuration builds the DLL directly into KeePass's `Plugins\KeePassPasskeyKeyProvider\` (write access to that folder is required, KeePass must be closed).
 
 ## Code structure
 
@@ -123,15 +125,21 @@ src/
 ├── KeePassPasskeyKeyProviderExt.cs        — plugin entry point: provider, menu, FIDO2 tab, KeePass events
 ├── FIDO2KeyProvider.cs         — Key Provider: key creation, opening, rotation
 ├── DeviceKeyStore.cs           — device and phrase records in the KDBX header
+├── KeyWrap.cs                  — wrapping of the database key for a device or the phrase (ECIES)
 ├── RecoveryPhrase.cs           — BIP39 recovery phrase
 ├── HelloCredentialAudit.cs     — search for unused Windows Hello credentials
 ├── FIDO2DevicesControl.cs      — "FIDO2" tab in the database settings
 ├── FIDO2OptionsForm.cs         — "Tools → KeePassPasskeyKeyProvider" window
 ├── FIDO2DiagnosticsForm.cs     — PRF diagnostics
 ├── DeviceNameForm.cs, RecoveryPhrase*Form.cs, BusyIndicator.cs — dialogs
+├── Strings.cs, Strings*.resx, EmbeddedResourceManager.cs — UI strings (English, Russian)
 └── WebAuthn/
     ├── WebAuthnApi.cs          — P/Invoke and webauthn.dll structures
     └── WebAuthnHelper.cs       — MakeCredential / GetAssertion with PRF, Windows Hello credentials
 ```
 
 API documentation: [Windows WebAuthn](https://learn.microsoft.com/windows/win32/api/webauthn/), header [webauthn.h](https://github.com/microsoft/webauthn/blob/master/webauthn.h), [hmac-secret specification](https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-errata-20220621.html#sctn-hmac-secret-extension), [KeePass plugins](https://keepass.info/help/v2_dev/plg_index.html).
+
+## License
+
+[MIT](LICENSE)

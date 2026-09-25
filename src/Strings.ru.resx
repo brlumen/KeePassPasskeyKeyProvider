@@ -93,14 +93,13 @@
 	</data>
 	<data name="CreateCredentialDescription" xml:space="preserve">
 		<value>Сейчас будет создан новый FIDO2 credential для этой базы данных.
-Введите ниже название устройства, которым создаётся ключ — оно отличает его от других в списке устройств базы. Если оставить пустым, подпись будет составлена из типа устройства и даты.
+Введите ниже название устройства, которым создаётся ключ — оно отличает его от других в списке устройств базы. Если оставить пустым, подпись будет составлена из типа устройства, имени компьютера и даты.
 
 Вам потребуется:
 1. FIDO2‑ключ с поддержкой hmac-secret/PRF (YubiKey 5 и др.), Windows Hello или телефон
 2. Ввести PIN‑код ключа
 3. Подтвердить создание credential (обычно нажатием кнопки на ключе)
 
-Credential сохраняется на самом устройстве — файлы рядом с базой не нужны.
 Другие устройства: Файл → Параметры базы → вкладка «FIDO2».</value>
 	</data>
 	<data name="CreateCredentialFailed" xml:space="preserve">
@@ -120,7 +119,7 @@ Credential сохраняется на самом устройстве — фа�
 	</data>
 	<data name="DeleteCredentialsRisk" xml:space="preserve">
 		<value>Среди отмеченных есть credential, для которых нельзя подтвердить, что они не используются
-(база существует, но в её заголовке credential нет, либо путь к базе неизвестен).
+(база существует, но в её заголовке credential нет, либо путь к базе неизвестен или недоступен).
 Если такой credential — единственный ключ базы, открыть её будет невозможно.
 
 </value>
@@ -393,6 +392,9 @@ Credential сохраняется на самом устройстве — фа�
 	<data name="RecoveryInputTitle" xml:space="preserve">
 		<value>Открытие базы фразой восстановления</value>
 	</data>
+	<data name="RecoveryPhraseMismatch" xml:space="preserve">
+		<value>Эта фраза восстановления не относится к базе.</value>
+	</data>
 	<data name="RecoveryPhraseCreated" xml:space="preserve">
 		<value>Фраза восстановления создана: она открывает базу без устройства.</value>
 	</data>
@@ -471,6 +473,9 @@ Credential сохраняется на самом устройстве — фа�
 	<data name="StatusInUse" xml:space="preserve">
 		<value>используется</value>
 	</data>
+	<data name="StatusLocationUnavailable" xml:space="preserve">
+		<value>расположение базы недоступно</value>
+	</data>
 	<data name="StatusNotInDatabase" xml:space="preserve">
 		<value>в заголовке базы отсутствует</value>
 	</data>
@@ -519,7 +524,6 @@ Credential сохраняется на самом устройстве — фа�
 	</data>
 	<data name="WebAuthnAvailableInfo" xml:space="preserve">
 		<value>Windows WebAuthn API доступен (версия {0}).
-Credential хранится на устройстве (discoverable), файлы рядом с базой не нужны.
 Устройства базы: Файл → Параметры базы → вкладка «FIDO2».</value>
 	</data>
 	<data name="WebAuthnUnavailable" xml:space="preserve">

@@ -10,7 +10,7 @@ namespace KeePassPasskeyKeyProvider
 	/// <summary>
 	/// Recovery phrase: 128 bits of random entropy as 12 BIP39 words (English wordlist,
 	/// 4 bits of SHA‑256 as a checksum against typos). Phrase secret R = HMAC‑SHA256(entropy, label);
-	/// the database header stores K ⊕ R, like a device wrapped key (see <see cref="DeviceKeyStore"/>).
+	/// the database header stores K wrapped for R, like for a device (see <see cref="KeyWrap"/>).
 	/// </summary>
 	public static class RecoveryPhrase
 	{

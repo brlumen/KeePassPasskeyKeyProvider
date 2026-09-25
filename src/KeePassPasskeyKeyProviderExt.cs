@@ -24,9 +24,22 @@ namespace KeePassPasskeyKeyProvider
 			keyProvider = new FIDO2KeyProvider(host);
 			PluginHost.KeyProviderPool.Add(keyProvider);
 			PluginHost.MainWindow.FileCreated += OnFileCreated;
+			PluginHost.MainWindow.FileOpened += OnFileOpened;
+			PluginHost.MainWindow.FileSaving += OnFileSaving;
 			PluginHost.MainWindow.MasterKeyChanged += OnMasterKeyChanged;
 			GlobalWindowManager.WindowAdded += OnWindowAdded;
 			return true;
+		}
+
+		private static void OnFileOpened(object sender, FileOpenedEventArgs e)
+		{
+			DeviceKeyStore.Remember(e?.Database);
+		}
+
+		/// <summary>Merging another database (import, synchronization) must not replace the device records</summary>
+		private static void OnFileSaving(object sender, FileSavingEventArgs e)
+		{
+			DeviceKeyStore.RestoreIfChanged(e?.Database);
 		}
 
 		/// <summary>
@@ -110,6 +123,8 @@ namespace KeePassPasskeyKeyProvider
 		{
 			GlobalWindowManager.WindowAdded -= OnWindowAdded;
 			PluginHost.MainWindow.MasterKeyChanged -= OnMasterKeyChanged;
+			PluginHost.MainWindow.FileSaving -= OnFileSaving;
+			PluginHost.MainWindow.FileOpened -= OnFileOpened;
 			PluginHost.MainWindow.FileCreated -= OnFileCreated;
 			PluginHost.KeyProviderPool.Remove(keyProvider);
 		}

@@ -121,7 +121,7 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Adding a device: new credential with PRF → record K ⊕ PRF in the database header
+		/// Adding a device: new credential with PRF → K wrapped for it in the database header
 		/// </summary>
 		private void AddDeviceButtonClick(object sender, EventArgs e)
 		{
@@ -150,7 +150,7 @@ namespace KeePassPasskeyKeyProvider
 					records.Add(new DeviceRecord
 					{
 						CredentialId = created.CredentialId,
-						WrappedKey = DeviceKeyStore.Wrap(key, created.PrfSecret),
+						Wrap = KeyWrap.Create(key, created.PrfSecret),
 						Label = label
 					});
 				}
@@ -175,7 +175,7 @@ namespace KeePassPasskeyKeyProvider
 
 		/// <summary>
 		/// Removing a device = database key rotation: otherwise the removed device would open
-		/// the current file with its wrapped key K ⊕ PRF left in its copies
+		/// the current file with its record left in its copies
 		/// </summary>
 		private void RemoveDeviceButtonClick(object sender, EventArgs e)
 		{
@@ -203,8 +203,8 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Creating (replacing) the recovery phrase: record K ⊕ R in the database header. Replacement = revoking the old phrase,
-		/// so rotation comes first: otherwise the old phrase plus its copy of the wrapped key from earlier file versions would yield K.
+		/// Creating (replacing) the recovery phrase: K wrapped for the phrase in the database header. Replacement = revoking the old phrase,
+		/// so rotation comes first: otherwise the old phrase plus its record from earlier file versions would yield K.
 		/// </summary>
 		private void RecoveryButtonClick(object sender, EventArgs e)
 		{
@@ -231,7 +231,7 @@ namespace KeePassPasskeyKeyProvider
 					byte[] secret = RecoveryPhrase.DeriveSecret(entropy);
 					try
 					{
-						DeviceKeyStore.SaveRecovery(database, DeviceKeyStore.Wrap(key, secret));
+						DeviceKeyStore.SaveRecovery(database, KeyWrap.Create(key, secret));
 					}
 					finally
 					{

@@ -20,6 +20,7 @@ namespace KeePassPasskeyKeyProvider
 		{
 			InitializeComponent();
 			host = pluginHost;
+			groupBoxHello.Text = string.Format(Strings.HelloCredentialsGroup, WebAuthnHelper.RpId);
 
 			if (!WebAuthnHelper.IsWebAuthnAvailable())
 			{
@@ -32,8 +33,6 @@ namespace KeePassPasskeyKeyProvider
 
 			uint apiVersion = WebAuthnHelper.GetApiVersion();
 			ShowInfo(string.Format(Strings.WebAuthnAvailableInfo, apiVersion));
-
-			groupBoxHello.Text = string.Format(Strings.HelloCredentialsGroup, WebAuthnHelper.RpId);
 			RefreshCredentials();
 		}
 
@@ -169,8 +168,8 @@ namespace KeePassPasskeyKeyProvider
 		/// </summary>
 		private void DiagnosticsButtonClick(object sender, EventArgs e)
 		{
-			var diagnosticsForm = new FIDO2DiagnosticsForm();
-			diagnosticsForm.ShowDialog(this);
+			using (var diagnosticsForm = new FIDO2DiagnosticsForm())
+				diagnosticsForm.ShowDialog(this);
 		}
 	}
 }

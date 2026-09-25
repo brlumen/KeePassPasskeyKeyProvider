@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("KeePassPasskeyKeyProvider")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Opens databases with a passkey: a FIDO2 security key, a phone or Windows Hello (Windows WebAuthn API, hmac-secret/PRF).")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Grigory Ermolaev")]
 [assembly: AssemblyProduct("KeePass Plugin")]

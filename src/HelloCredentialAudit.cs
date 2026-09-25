@@ -11,12 +11,14 @@ namespace KeePassPasskeyKeyProvider
 {
 	public enum HelloCredentialStatus
 	{
-		/// <summary>Credential is present in the header of an existing database</summary>
+		/// <summary>Credential is present in the header of an existing database or in an open database</summary>
 		InUse,
-		/// <summary>Database file not found at the stored path; safe to delete</summary>
+		/// <summary>Database file not found at the stored path although its folder is reachable; safe to delete</summary>
 		DatabaseMissing,
 		/// <summary>Database exists but its header lacks the credential (master key changed or old-format database)</summary>
 		NotInDatabase,
+		/// <summary>Database folder is unreachable (removed drive, offline network share, URL): the database may still exist</summary>
+		LocationUnavailable,
 		/// <summary>Path unknown (credential created before paths were stored); not found in open databases</summary>
 		Unknown
 	}
@@ -38,6 +40,7 @@ namespace KeePassPasskeyKeyProvider
 					case HelloCredentialStatus.InUse: return Strings.StatusInUse;
 					case HelloCredentialStatus.DatabaseMissing: return Strings.StatusDatabaseMissing;
 					case HelloCredentialStatus.NotInDatabase: return Strings.StatusNotInDatabase;
+					case HelloCredentialStatus.LocationUnavailable: return Strings.StatusLocationUnavailable;
 					default: return Strings.StatusPathUnknown;
 				}
 			}
@@ -71,15 +74,18 @@ namespace KeePassPasskeyKeyProvider
 		private static HelloCredentialStatus Classify(IPluginHost host, byte[] credentialId, string path,
 			Dictionary<string, List<DeviceRecord>> headerCache)
 		{
+			// An open database may have been renamed or moved since the credential was created
+			if (IsInOpenDatabase(host, credentialId))
+				return HelloCredentialStatus.InUse;
 			if (path == null)
-			{
-				return IsInOpenDatabase(host, credentialId)
-					? HelloCredentialStatus.InUse
-					: HelloCredentialStatus.Unknown;
-			}
+				return HelloCredentialStatus.Unknown;
 
 			if (!File.Exists(path))
-				return HelloCredentialStatus.DatabaseMissing;
+			{
+				return IsFolderReachable(path)
+					? HelloCredentialStatus.DatabaseMissing
+					: HelloCredentialStatus.LocationUnavailable;
+			}
 
 			List<DeviceRecord> records;
 			if (!headerCache.TryGetValue(path, out records))
@@ -108,6 +114,12 @@ namespace KeePassPasskeyKeyProvider
 				catch { /* corrupted records: treat as not found */ }
 			}
 			return false;
+		}
+
+		private static bool IsFolderReachable(string path)
+		{
+			try { return Directory.Exists(Path.GetDirectoryName(path)); }
+			catch { return false; } // URL or invalid path
 		}
 
 		private static bool LooksLikePath(string s)

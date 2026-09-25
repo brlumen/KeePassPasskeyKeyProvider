@@ -74,6 +74,7 @@ namespace KeePassPasskeyKeyProvider
 			//
 			this.textBoxDeviceName.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.textBoxDeviceName.Margin = new System.Windows.Forms.Padding(3, 0, 3, 12);
+			this.textBoxDeviceName.MaxLength = 100;
 			this.textBoxDeviceName.Name = "textBoxDeviceName";
 			this.textBoxDeviceName.TabIndex = 0;
 			//

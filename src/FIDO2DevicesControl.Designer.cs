@@ -120,6 +120,7 @@ namespace KeePassPasskeyKeyProvider
 			// textBoxDeviceName
 			//
 			this.textBoxDeviceName.Anchor = System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+			this.textBoxDeviceName.MaxLength = 100;
 			this.textBoxDeviceName.Name = "textBoxDeviceName";
 			this.textBoxDeviceName.TabIndex = 2;
 			//

@@ -14,29 +14,25 @@ namespace KeePassPasskeyKeyProvider
 	/// <summary>
 	/// KeePass Key Provider using FIDO2 authentication via the Windows WebAuthn API
 	/// with PRF extension support (WebAuthn Level 3).
-	/// Database key K is 32 random bytes; the KDBX header (PublicCustomData) stores K ⊕ PRF_i
-	/// for each device (see <see cref="DeviceKeyStore"/>). Credentials are discoverable: no files next to the database.
-	/// Removing a device = rotation of K: the new K is re-wrapped for the remaining devices and the recovery phrase.
+	/// Database key K is 32 random bytes; the KDBX header (PublicCustomData) stores K wrapped
+	/// for each device (see <see cref="DeviceKeyStore"/>, <see cref="KeyWrap"/>). Credentials are discoverable:
+	/// no files next to the database. Removing a device = rotation of K: the new K is wrapped for the remaining
+	/// devices and the recovery phrase without the authenticators.
 	/// </summary>
 	public class FIDO2KeyProvider : KeyProvider
 	{
 		public const string ProviderName = "Passkey Key Provider (Windows WebAuthn)";
 
 		/// <summary>
-		/// Device created by the last GetKey(CreatingNewKey) call: credential ID, wrapped key K ⊕ PRF,
-		/// label and SHA‑256 of K. The database is not yet available at this point; the record is written by
-		/// <see cref="RegisterPendingDevice"/> when database settings are shown or on FileCreated / MasterKeyChanged events.
+		/// Device created by the last GetKey(CreatingNewKey) call and SHA‑256 of its K. The database is not yet
+		/// available at this point; the record is written by <see cref="RegisterPendingDevice"/> when database
+		/// settings are shown or on FileCreated / MasterKeyChanged events.
 		/// </summary>
-		private static byte[] pendingCredentialId;
-		private static byte[] pendingWrappedKey;
+		private static DeviceRecord pendingRecord;
 		private static byte[] pendingKeyHash;
-		private static string pendingLabel;
 
-		/// <summary>
-		/// Master key change keeping the other devices: the previous database key, used to re-wrap
-		/// their wrapped keys for the new K (as in rotation). null — the other devices are removed.
-		/// </summary>
-		private static byte[] pendingOldKey;
+		/// <summary>Master key change keeping the other devices: their K is re-wrapped for the new key</summary>
+		private static bool pendingKeepDevices;
 
 		private readonly IPluginHost host;
 
@@ -75,42 +71,36 @@ namespace KeePassPasskeyKeyProvider
 			string.Format(Strings.AuthenticationError, ex.Message);
 
 		/// <summary>
-		/// Creates a new credential and a random database key K; the wrapped key K ⊕ PRF awaits writing to the database.
+		/// Creates a new credential and a random database key K; the device record awaits writing to the database.
 		/// When changing the master key of an open database, the user chooses whether to keep its other devices.
 		/// </summary>
 		private byte[] CreateNewCredential(KeyProviderQueryContext ctx)
 		{
 			PwDatabase current = FindOpenDatabase(ctx);
-			byte[] oldKey = GetDatabaseKey(current);
-			List<DeviceRecord> existing = oldKey != null ? LoadRecordsSafe(current) : new List<DeviceRecord>();
+			List<DeviceRecord> existing = UsesFido2Key(current) ? LoadRecordsSafe(current) : new List<DeviceRecord>();
 
+			var form = new DeviceNameForm(existing.ConvertAll(r => r.Label));
+			if (UIUtil.ShowDialogAndDestroy(form) != DialogResult.OK)
+				return null;
+			string label = form.DeviceName;
+
+			PrfResult created = CreateCredentialForDatabase(GetActiveWindowHandle(), ctx.DatabasePath);
 			try
 			{
-				var form = new DeviceNameForm(existing.ConvertAll(r => r.Label));
-				if (UIUtil.ShowDialogAndDestroy(form) != DialogResult.OK)
-					return null;
-				string label = form.DeviceName;
-				bool keep = form.KeepDevices && existing.Count > 0;
-
-				PrfResult created = CreateCredentialForDatabase(GetActiveWindowHandle(), ctx.DatabasePath);
-				try
+				byte[] key = GenerateKey();
+				pendingRecord = new DeviceRecord
 				{
-					byte[] key = GenerateKey();
-					pendingCredentialId = created.CredentialId;
-					pendingWrappedKey = DeviceKeyStore.Wrap(key, created.PrfSecret);
-					pendingKeyHash = HashKey(key);
-					pendingLabel = label.Length > 0 ? label : DefaultLabel(created.Transport);
-					pendingOldKey = keep ? (byte[])oldKey.Clone() : null;
-					return key;
-				}
-				finally
-				{
-					MemUtil.ZeroByteArray(created.PrfSecret);
-				}
+					CredentialId = created.CredentialId,
+					Wrap = KeyWrap.Create(key, created.PrfSecret),
+					Label = label.Length > 0 ? label : DefaultLabel(created.Transport)
+				};
+				pendingKeyHash = HashKey(key);
+				pendingKeepDevices = form.KeepDevices && existing.Count > 0;
+				return key;
 			}
 			finally
 			{
-				if (oldKey != null) MemUtil.ZeroByteArray(oldKey);
+				MemUtil.ZeroByteArray(created.PrfSecret);
 			}
 		}
 
@@ -140,12 +130,12 @@ namespace KeePassPasskeyKeyProvider
 		/// </summary>
 		public static bool PendingKeepsDevices(PwDatabase db)
 		{
-			return pendingOldKey != null && MatchesPending(db);
+			return pendingKeepDevices && MatchesPending(db);
 		}
 
 		private static bool MatchesPending(PwDatabase db)
 		{
-			if (pendingCredentialId == null) return false;
+			if (pendingRecord == null) return false;
 			byte[] key = GetDatabaseKey(db);
 			if (key == null) return false;
 			try
@@ -158,15 +148,15 @@ namespace KeePassPasskeyKeyProvider
 			}
 		}
 
-		/// <summary>Default device label: type by transport and credential creation time</summary>
+		/// <summary>Default device label: type by transport, computer name and credential creation time</summary>
 		private static string DefaultLabel(uint transport)
 		{
-			return $"{WebAuthnHelper.TransportName(transport)}, {DateTime.Now:dd.MM.yyyy HH:mm}";
+			return $"{WebAuthnHelper.TransportName(transport)} ({Environment.MachineName}), {DateTime.Now:dd.MM.yyyy HH:mm}";
 		}
 
 		/// <summary>
 		/// If the database master key is the key of the last created credential, adds its record
-		/// to PublicCustomData (when keeping devices, re-wraps their keys for the new key).
+		/// to PublicCustomData (when keeping devices, re-wraps the key for them and the phrase).
 		/// Returns true if the record was added.
 		/// </summary>
 		public static bool RegisterPendingDevice(PwDatabase db)
@@ -174,13 +164,12 @@ namespace KeePassPasskeyKeyProvider
 			if (!MatchesPending(db)) return false;
 
 			List<DeviceRecord> records = DeviceKeyStore.Load(db);
-			if (pendingOldKey != null)
+			if (pendingKeepDevices)
 			{
 				byte[] key = GetDatabaseKey(db);
 				try
 				{
-					DeviceKeyStore.Rewrap(records, pendingOldKey, key);
-					RewrapRecovery(db, pendingOldKey, key);
+					Seal(db, records, key);
 				}
 				finally
 				{
@@ -188,39 +177,29 @@ namespace KeePassPasskeyKeyProvider
 				}
 			}
 
-			records.Add(new DeviceRecord
-			{
-				CredentialId = pendingCredentialId,
-				WrappedKey = pendingWrappedKey,
-				Label = pendingLabel
-			});
+			records.Add(pendingRecord);
 			DeviceKeyStore.Save(db, records);
 
-			if (pendingOldKey != null) MemUtil.ZeroByteArray(pendingOldKey);
-			pendingOldKey = null;
-			pendingCredentialId = null;
-			pendingWrappedKey = null;
+			pendingRecord = null;
 			pendingKeyHash = null;
-			pendingLabel = null;
+			pendingKeepDevices = false;
 			return true;
 		}
 
 		/// <summary>
-		/// Database key rotation: a new random K is re-wrapped for all records and the recovery phrase and substituted
+		/// Database key rotation: a new random K is wrapped for all records and the recovery phrase and substituted
 		/// into the database master key (other master key components are kept). No authenticators needed.
 		/// The database must be saved afterwards.
 		/// </summary>
 		public static void RotateDatabaseKey(PwDatabase db, List<DeviceRecord> records)
 		{
-			byte[] oldKey = GetDatabaseKey(db);
-			if (oldKey == null)
+			if (!UsesFido2Key(db))
 				throw new InvalidOperationException(Strings.MasterKeyNotFido2);
 
 			byte[] newKey = GenerateKey();
 			try
 			{
-				DeviceKeyStore.Rewrap(records, oldKey, newKey);
-				RewrapRecovery(db, oldKey, newKey);
+				Seal(db, records, newKey);
 
 				var masterKey = new CompositeKey();
 				foreach (IUserKey userKey in db.MasterKey.UserKeys)
@@ -232,17 +211,20 @@ namespace KeePassPasskeyKeyProvider
 			}
 			finally
 			{
-				MemUtil.ZeroByteArray(oldKey);
 				MemUtil.ZeroByteArray(newKey);
 			}
 		}
 
-		private static void RewrapRecovery(PwDatabase db, byte[] oldKey, byte[] newKey)
+		/// <summary>Wraps the key for the records (in place) and the recovery phrase (written to the database)</summary>
+		private static void Seal(PwDatabase db, List<DeviceRecord> records, byte[] key)
 		{
-			byte[] wrappedKey = DeviceKeyStore.LoadRecovery(db);
-			if (wrappedKey == null) return;
-			DeviceKeyStore.Rewrap(wrappedKey, oldKey, newKey);
-			DeviceKeyStore.SaveRecovery(db, wrappedKey);
+			foreach (DeviceRecord r in records)
+				r.Wrap.Seal(key);
+
+			KeyWrap recovery = DeviceKeyStore.LoadRecovery(db);
+			if (recovery == null) return;
+			recovery.Seal(key);
+			DeviceKeyStore.SaveRecovery(db, recovery);
 		}
 
 		/// <summary>
@@ -275,7 +257,7 @@ namespace KeePassPasskeyKeyProvider
 
 		private static byte[] GenerateKey()
 		{
-			byte[] key = new byte[DeviceKeyStore.KeyLength];
+			byte[] key = new byte[KeyWrap.KeyLength];
 			using (var rng = new RNGCryptoServiceProvider())
 				rng.GetBytes(key);
 			return key;
@@ -349,14 +331,14 @@ namespace KeePassPasskeyKeyProvider
 			return UnlockWithRecoveryPhrase(ctx, problem);
 		}
 
-		/// <summary>K = (K ⊕ R) ⊕ R, where R is the secret of the entered phrase. KeePass itself rejects a wrong phrase.</summary>
+		/// <summary>K unwrapped with the secret R of the entered phrase</summary>
 		private static byte[] UnlockWithRecoveryPhrase(KeyProviderQueryContext ctx, string problem)
 		{
-			byte[] wrappedKey = null;
-			try { wrappedKey = DeviceKeyStore.LoadRecoveryFromFile(ctx.DatabaseIOInfo); }
+			KeyWrap recovery = null;
+			try { recovery = DeviceKeyStore.LoadRecoveryFromFile(ctx.DatabaseIOInfo); }
 			catch { /* a corrupted phrase record is not offered */ }
 
-			if (wrappedKey == null)
+			if (recovery == null)
 			{
 				MessageService.ShowWarning(problem);
 				return null;
@@ -372,7 +354,12 @@ namespace KeePassPasskeyKeyProvider
 			byte[] secret = RecoveryPhrase.DeriveSecret(form.Entropy);
 			try
 			{
-				return DeviceKeyStore.Wrap(wrappedKey, secret);
+				return recovery.Open(secret);
+			}
+			catch (CryptographicException)
+			{
+				MessageService.ShowWarning(Strings.RecoveryPhraseMismatch);
+				return null;
 			}
 			finally
 			{
@@ -382,7 +369,7 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Unlocks the database with a device: GetAssertion with the records' allowList → K = wrapped key ⊕ PRF
+		/// Unlocks the database with a device: GetAssertion with the records' allowList → PRF → K
 		/// </summary>
 		private static byte[] UnlockWithCredential(List<DeviceRecord> records)
 		{
@@ -393,7 +380,7 @@ namespace KeePassPasskeyKeyProvider
 				if (record == null)
 					throw new WebAuthnException(Strings.UnknownCredential);
 
-				return DeviceKeyStore.Wrap(record.WrappedKey, assertion.PrfSecret);
+				return record.Wrap.Open(assertion.PrfSecret);
 			}
 			finally
 			{

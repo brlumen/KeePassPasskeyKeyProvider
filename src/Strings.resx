@@ -93,14 +93,13 @@
 	</data>
 	<data name="CreateCredentialDescription" xml:space="preserve">
 		<value>A new FIDO2 credential will now be created for this database.
-Enter below the name of the device used to create the key — it distinguishes it from others in the database device list. If left empty, the label will be made from the device type and date.
+Enter below the name of the device used to create the key — it distinguishes it from others in the database device list. If left empty, the label will be made from the device type, computer name and date.
 
 You will need to:
 1. Have a FIDO2 key with hmac-secret/PRF support (YubiKey 5, etc.), Windows Hello or a phone
 2. Enter the key PIN
 3. Confirm credential creation (usually by touching the key)
 
-The credential is stored on the device itself — no files next to the database are needed.
 Other devices: File → Database Settings → "FIDO2" tab.</value>
 	</data>
 	<data name="CreateCredentialFailed" xml:space="preserve">
@@ -120,7 +119,7 @@ Other devices: File → Database Settings → "FIDO2" tab.</value>
 	</data>
 	<data name="DeleteCredentialsRisk" xml:space="preserve">
 		<value>Some of the checked credentials cannot be confirmed as unused
-(the database exists but its header does not contain the credential, or the database path is unknown).
+(the database exists but its header does not contain the credential, or the database path is unknown or unavailable).
 If such a credential is the only key of a database, that database cannot be opened.
 
 </value>
@@ -393,6 +392,9 @@ After opening the database, add a new device: File → Database Settings → "FI
 	<data name="RecoveryInputTitle" xml:space="preserve">
 		<value>Open Database with Recovery Phrase</value>
 	</data>
+	<data name="RecoveryPhraseMismatch" xml:space="preserve">
+		<value>This recovery phrase does not belong to the database.</value>
+	</data>
 	<data name="RecoveryPhraseCreated" xml:space="preserve">
 		<value>A recovery phrase has been created: it opens the database without a device.</value>
 	</data>
@@ -471,6 +473,9 @@ The database master key will be replaced and the database saved. The old phrase 
 	<data name="StatusInUse" xml:space="preserve">
 		<value>in use</value>
 	</data>
+	<data name="StatusLocationUnavailable" xml:space="preserve">
+		<value>database location unavailable</value>
+	</data>
 	<data name="StatusNotInDatabase" xml:space="preserve">
 		<value>missing from database header</value>
 	</data>
@@ -519,7 +524,6 @@ were not found; delete others deliberately — without its credential a database
 	</data>
 	<data name="WebAuthnAvailableInfo" xml:space="preserve">
 		<value>Windows WebAuthn API is available (version {0}).
-The credential is stored on the device (discoverable); no files next to the database are needed.
 Database devices: File → Database Settings → "FIDO2" tab.</value>
 	</data>
 	<data name="WebAuthnUnavailable" xml:space="preserve">
