@@ -113,6 +113,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string DiagTestCancelled => Get();
 		public static string DiagTestFinished => Get();
 		public static string DiagUnexpectedError => Get();
+		public static string DiagWaitingForHello => Get();
 		public static string DiagnosticsTitle => Get();
 		public static string Done => Get();
 		public static string EnterDeviceName => Get();

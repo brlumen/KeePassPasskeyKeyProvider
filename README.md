@@ -114,6 +114,8 @@ There are no files next to the database: a copy of the `.kdbx` contains everythi
 
 **The "Windows Security" window does not appear** — check whether it is hidden behind other windows; for a phone the computer needs Bluetooth.
 
+**Windows Hello does not offer a just-created passkey** — after creating a passkey Windows Hello may need from several seconds to a few minutes to load its passkey list (the "Windows Security" window is slow to appear then too); until then "Windows Security" offers only a security key or a phone. Wait a few minutes and try again. PRF diagnostics waits for this automatically.
+
 You can check an authenticator in `Tools → KeePassPasskeyKeyProvider → PRF diagnostics`: it shows whether it enabled PRF (`bPrfEnabled`, WebAuthn API v6+), returned a secret (`pHmacSecret`) and whether the secret matches on repeat.
 
 ## Building

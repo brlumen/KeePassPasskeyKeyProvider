@@ -585,14 +585,22 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				// the broker may not take focus and its window ends up beneath KeePass. Allow it explicitly.
 				User32.AllowSetForegroundWindow(User32.ASFW_ANY);
 
+				var timer = System.Diagnostics.Stopwatch.StartNew();
 				thread.Start();
 				bool dialogRaised = false;
+				int waitReported = 0;
 				while (!thread.Join(50))
 				{
 					Application.DoEvents();
-					if (!dialogRaised)
-						dialogRaised = RaiseSecurityDialog();
+					if (dialogRaised) continue;
+
+					dialogRaised = RaiseSecurityDialog();
+					if (dialogRaised)
+						Log($"\"Windows Security\" dialog appeared after {timer.Elapsed.TotalSeconds:F1} s");
+					else if ((int)timer.Elapsed.TotalSeconds / 10 > waitReported)
+						Log($"Waiting for the \"Windows Security\" dialog: {++waitReported * 10} s");
 				}
+				Log($"WebAuthn call finished after {timer.Elapsed.TotalSeconds:F1} s");
 			}
 			finally
 			{

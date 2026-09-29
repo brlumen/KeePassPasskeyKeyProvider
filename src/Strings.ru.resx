@@ -303,6 +303,9 @@
 	<data name="DiagUnexpectedError" xml:space="preserve">
 		<value>❌ НЕПРЕДВИДЕННАЯ ОШИБКА: {0}</value>
 	</data>
+	<data name="DiagWaitingForHello" xml:space="preserve">
+		<value>  Ожидание {0} с: Windows Hello предлагает ключ доступа не сразу после создания...</value>
+	</data>
 	<data name="DiagnosticsTitle" xml:space="preserve">
 		<value>FIDO2 Диагностика - Проверка поддержки PRF</value>
 	</data>

@@ -303,6 +303,9 @@ Continue the test?</value>
 	<data name="DiagUnexpectedError" xml:space="preserve">
 		<value>❌ UNEXPECTED ERROR: {0}</value>
 	</data>
+	<data name="DiagWaitingForHello" xml:space="preserve">
+		<value>  Waiting {0} s: Windows Hello does not offer a passkey right after creating it...</value>
+	</data>
 	<data name="DiagnosticsTitle" xml:space="preserve">
 		<value>FIDO2 Diagnostics - PRF Support Check</value>
 	</data>

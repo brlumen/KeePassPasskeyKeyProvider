@@ -191,11 +191,13 @@ namespace KeePassPasskeyKeyProvider
 				// Create the credential
 				byte[] credentialId;
 				byte[] creationSecret;
+				uint transport;
 				try
 				{
 					var created = WebAuthnHelper.CreateCredential(this.Handle, testUserId, "KeePass: PRF diagnostics");
 					credentialId = created.CredentialId;
 					creationSecret = created.PrfSecret;
+					transport = created.Transport;
 					Log(Strings.DiagCredentialCreated);
 					Log($"  Credential ID: {BitConverter.ToString(credentialId, 0, Math.Min(16, credentialId.Length)).Replace("-", "")}... ({credentialId.Length} {Strings.Bytes})");
 					if (creationSecret != null)
@@ -214,8 +216,10 @@ namespace KeePassPasskeyKeyProvider
 				Log(Strings.DiagStep2Getting);
 				Log(Strings.DiagPinAgain);
 
-				// Pause to let the operation complete
-				System.Threading.Thread.Sleep(500);
+				if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_INTERNAL) != 0)
+					WaitForPlatformCredential();
+				else
+					System.Threading.Thread.Sleep(500);
 
 				// Get the PRF secret
 				byte[] prfSecret;
@@ -290,6 +294,23 @@ namespace KeePassPasskeyKeyProvider
 				Log("----------------------------------------");
 				Log("");
 				WebAuthnHelper.Logger = null;
+			}
+		}
+
+		/// <summary>
+		/// Windows Hello does not offer a passkey right after creating it (the "Windows Security" dialog shows only
+		/// a security key and a phone). Polling WebAuthNGetPlatformCredentialList makes it much slower (minutes),
+		/// so this just waits: opening a database about 20 s after creating its key works.
+		/// </summary>
+		private void WaitForPlatformCredential()
+		{
+			const int seconds = 30;
+			Log(string.Format(Strings.DiagWaitingForHello, seconds));
+			var timer = System.Diagnostics.Stopwatch.StartNew();
+			while (timer.Elapsed.TotalSeconds < seconds && !IsDisposed)
+			{
+				System.Threading.Thread.Sleep(100);
+				Application.DoEvents();
 			}
 		}
 
