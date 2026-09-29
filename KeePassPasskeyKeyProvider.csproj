@@ -27,10 +27,11 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
+    <!-- No PDB: the release DLL is reproducible (same bytes on any machine) and has no debug directory -->
+    <DebugType>none</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <!-- The PDB path in the published DLL must not contain the local user folder -->
+    <!-- Source paths in the compiled output must not contain the local folder -->
     <PathMap>$(MSBuildProjectDirectory)\=.\</PathMap>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
