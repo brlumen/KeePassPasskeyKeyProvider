@@ -27,7 +27,7 @@ Not to be confused with the [KeePassPasskey](https://github.com/yusei36/KeePassP
 
 ## Installation
 
-1. Download `KeePassPasskeyKeyProvider.dll` from [Releases](https://github.com/brlumen/KeePassPasskeyKeyProvider/releases).
+1. Download `KeePassPasskeyKeyProvider.dll` from [Releases](https://github.com/brlumen/KeePassPasskeyKeyProvider/releases). Release DLLs are built by GitHub Actions from the tagged source; to check that a file came from that build: `gh attestation verify KeePassPasskeyKeyProvider.dll --repo brlumen/KeePassPasskeyKeyProvider`.
 2. Put it into the KeePass `Plugins` folder (for example, `C:\Program Files\KeePass Password Safe 2\Plugins\KeePassPasskeyKeyProvider\`).
 3. Restart KeePass.
 

@@ -1,0 +1,75 @@
+# Release build on GitHub: the published DLL is built from the tagged source only,
+# against the official KeePass 2.58 binaries (hash-pinned), with a signed build provenance attestation.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: # test build without a release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    permissions:
+      contents: write     # create the draft release
+      id-token: write     # build provenance attestation
+      attestations: write
+    env:
+      KEEPASS_ZIP_URL: https://sourceforge.net/projects/keepass/files/KeePass%202.x/2.58/KeePass-2.58.zip/download
+      # SHA-256 of KeePass-2.58.zip from https://keepass.info/integrity.html
+      KEEPASS_ZIP_SHA256: A613CA206FBF5875AD8FE5E440A76418CE01135D3304DC56A0DF12255D83FE07
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 8.0.303
+
+      - name: Download KeePass
+        shell: pwsh
+        run: |
+          Invoke-WebRequest $env:KEEPASS_ZIP_URL -OutFile KeePass.zip -UserAgent 'Wget'
+          $hash = (Get-FileHash KeePass.zip -Algorithm SHA256).Hash
+          if ($hash -ne $env:KEEPASS_ZIP_SHA256) { throw "KeePass.zip SHA-256 mismatch: $hash" }
+          Expand-Archive KeePass.zip -DestinationPath "$env:RUNNER_TEMP\KeePass"
+
+      - name: Build
+        shell: pwsh
+        run: dotnet build KeePassPasskeyKeyProvider.csproj -c Release -nologo "-p:KeePassDir=$env:RUNNER_TEMP\KeePass\\"
+
+      - name: SHA-256
+        id: hash
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash bin\Release\KeePassPasskeyKeyProvider.dll -Algorithm SHA256).Hash.ToLowerInvariant()
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
+          "KeePassPasskeyKeyProvider.dll SHA-256: ``$hash``" >> $env:GITHUB_STEP_SUMMARY
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: bin/Release/KeePassPasskeyKeyProvider.dll
+
+      - name: Draft release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA256: ${{ steps.hash.outputs.sha256 }}
+        run: |
+          $notes = @"
+          Opens a KeePass 2.x database with a passkey (FIDO2 security key, phone, Windows Hello) through the Windows WebAuthn API and hmac-secret/PRF. See the README for usage and the security model.
+
+          **Requirements:** Windows 11 22H2 or later (WebAuthn API v4+), KeePass 2.52 or later, an authenticator with hmac-secret/PRF support.
+
+          **Installation:** put ``KeePassPasskeyKeyProvider.dll`` into ``KeePass\Plugins\KeePassPasskeyKeyProvider\`` and restart KeePass.
+
+          **SHA-256:** ``$env:SHA256``
+
+          Built by GitHub Actions from this tag. Verify the origin: ``gh attestation verify KeePassPasskeyKeyProvider.dll --repo $env:GITHUB_REPOSITORY``
+          "@
+          gh release create $env:GITHUB_REF_NAME bin\Release\KeePassPasskeyKeyProvider.dll --draft --verify-tag --title "KeePassPasskeyKeyProvider $($env:GITHUB_REF_NAME.TrimStart('v'))" --notes $notes
