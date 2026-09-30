@@ -108,7 +108,7 @@ namespace KeePassPasskeyKeyProvider
 			try
 			{
 				// Import checks that d matches Q: a wrong secret fails here
-				using (ECDiffieHellman ecdh = ECDiffieHellman.Create(owner))
+				using (ECDiffieHellman ecdh = ImportKey(() => ECDiffieHellman.Create(owner)))
 				{
 					byte[] mask = DeriveMask(ecdh, ephemeralPublicKey);
 					try
@@ -155,7 +155,7 @@ namespace KeePassPasskeyKeyProvider
 		private static byte[] DeriveMask(ECDiffieHellman own, byte[] otherPublicKey)
 		{
 			var other = new ECParameters { Curve = Curve, Q = DecodePoint(otherPublicKey) };
-			using (ECDiffieHellman peer = ECDiffieHellman.Create(other))
+			using (ECDiffieHellman peer = ImportKey(() => ECDiffieHellman.Create(other)))
 				return own.DeriveKeyFromHash(peer.PublicKey, HashAlgorithmName.SHA256, null, KdfLabel);
 		}
 
@@ -167,6 +167,22 @@ namespace KeePassPasskeyKeyProvider
 				hmac.TransformBlock(TagLabel, 0, TagLabel.Length, null, 0);
 				hmac.TransformFinalBlock(verificationKey, 0, verificationKey.Length);
 				return hmac.Hash;
+			}
+		}
+
+		/// <summary>
+		/// Key from imported parameters. .NET Framework reports a point off the curve as PlatformNotSupportedException;
+		/// callers expect CryptographicException for any invalid key material.
+		/// </summary>
+		internal static T ImportKey<T>(Func<T> create)
+		{
+			try
+			{
+				return create();
+			}
+			catch (PlatformNotSupportedException ex)
+			{
+				throw new CryptographicException("Invalid elliptic curve key", ex);
 			}
 		}
 

@@ -68,7 +68,7 @@ namespace KeePassPasskeyKeyProvider
 			var p = new ECParameters { Curve = KeyWrap.Curve, Q = KeyWrap.DecodePoint(VerificationKey), D = (byte[])privateKey.Clone() };
 			try
 			{
-				using (ECDsa ecdsa = ECDsa.Create(p))
+				using (ECDsa ecdsa = KeyWrap.ImportKey(() => ECDsa.Create(p)))
 					return ecdsa.SignData(data, HashAlgorithmName.SHA256);
 			}
 			finally
@@ -83,7 +83,7 @@ namespace KeePassPasskeyKeyProvider
 			try
 			{
 				var p = new ECParameters { Curve = KeyWrap.Curve, Q = KeyWrap.DecodePoint(verificationKey) };
-				using (ECDsa ecdsa = ECDsa.Create(p))
+				using (ECDsa ecdsa = KeyWrap.ImportKey(() => ECDsa.Create(p)))
 					return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
 			}
 			catch (CryptographicException)
