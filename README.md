@@ -2,7 +2,17 @@
 
 A KeePass 2.x plugin that opens a password database with a passkey — a hardware FIDO2 security key, a phone or tablet (via QR code) or Windows Hello. It works through the built-in Windows **WebAuthn API** and the **hmac-secret / PRF** extension. No drivers, third-party libraries or administrator rights required.
 
-Not to be confused with the [KeePassPasskey](https://github.com/yusei36/KeePassPasskey) plugin, which stores website passkeys in KeePass. This plugin uses a passkey as a master key component.
+This plugin does not store website passkeys in KeePass: it uses a passkey as a master key component to unlock the database.
+
+**Why this is stronger than a password.** The database is locked with a random 256-bit key instead of something you have to remember:
+- you neither remember nor type it: it is securely kept on your devices — a security key, a phone or Windows Hello — and released only after your PIN, fingerprint or face;
+- it cannot be guessed or brute-forced, even by someone who has a copy of the database file;
+- since it is never typed, a keylogger or a phishing window cannot capture it;
+- unlike quick-unlock tools, it does not keep a copy of your master password on the computer: the database file holds the key only in encrypted form, which only your device or your recovery phrase can unlock.
+
+**What it does not protect against.** Just like a password, it does not protect an open database from malware on your computer: while the database is open, its key and contents are in KeePass's memory. See [Security model and limitations](#security-model-and-limitations).
+
+You can still keep a password as a second factor.
 
 ## Features
 
