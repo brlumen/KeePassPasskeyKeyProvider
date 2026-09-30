@@ -107,7 +107,9 @@ namespace KeePassPasskeyKeyProvider
 			var owner = new ECParameters { Curve = Curve, Q = DecodePoint(publicKey), D = Xor(encryptedPrivateKey, secret) };
 			try
 			{
-				// Import checks that d matches Q: a wrong secret fails here
+				// A wrong secret fails the tag check; a wrap whose parts were swapped under a copied tag fails here
+				if (!IsKeyPair(owner))
+					throw new CryptographicException("The owner private key does not match the public key");
 				using (ECDiffieHellman ecdh = ImportKey(() => ECDiffieHellman.Create(owner)))
 				{
 					byte[] mask = DeriveMask(ecdh, ephemeralPublicKey);
@@ -184,6 +186,21 @@ namespace KeePassPasskeyKeyProvider
 			{
 				throw new CryptographicException("Invalid elliptic curve key", ex);
 			}
+		}
+
+		/// <summary>
+		/// Checks that the private scalar belongs to the public point: not every Windows version checks it on import,
+		/// and a mismatched pair silently yields a wrong ECDH secret
+		/// </summary>
+		internal static bool IsKeyPair(ECParameters keyPair)
+		{
+			byte[] probe = new byte[KeyLength];
+			byte[] signature;
+			using (ECDsa signer = ImportKey(() => ECDsa.Create(keyPair)))
+				signature = signer.SignData(probe, HashAlgorithmName.SHA256);
+			var publicKey = new ECParameters { Curve = keyPair.Curve, Q = keyPair.Q };
+			using (ECDsa verifier = ImportKey(() => ECDsa.Create(publicKey)))
+				return verifier.VerifyData(probe, signature, HashAlgorithmName.SHA256);
 		}
 
 		/// <summary>Comparison whose time does not depend on where the arrays differ</summary>

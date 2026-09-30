@@ -39,10 +39,8 @@ namespace KeePassPasskeyKeyProvider
 			var key = new SigningKey((byte[])verificationKey.Clone(), privateKey);
 			try
 			{
-				byte[] probe = new byte[KeyWrap.KeyLength];
-				using (var rng = new RNGCryptoServiceProvider())
-					rng.GetBytes(probe);
-				if (!Verify(verificationKey, probe, key.Sign(probe)))
+				var keyPair = new ECParameters { Curve = KeyWrap.Curve, Q = KeyWrap.DecodePoint(verificationKey), D = privateKey };
+				if (!KeyWrap.IsKeyPair(keyPair))
 					throw new CryptographicException("The signing key does not match the verification key");
 				return key;
 			}
