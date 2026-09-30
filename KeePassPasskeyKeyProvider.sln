@@ -2,6 +2,10 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeePassPasskeyKeyProvider", "KeePassPasskeyKeyProvider.csproj", "{4938357E-DC8E-4A1D-B112-3432E1E1CD8D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6AEBB4A2-B2CB-464F-BE51-C3979153BAAF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KeePassPasskeyKeyProvider.Tests", "tests\KeePassPasskeyKeyProvider.Tests\KeePassPasskeyKeyProvider.Tests.csproj", "{8DFAFF6D-8663-4725-9879-80BC113DA74E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +16,12 @@ Global
 		{4938357E-DC8E-4A1D-B112-3432E1E1CD8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4938357E-DC8E-4A1D-B112-3432E1E1CD8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4938357E-DC8E-4A1D-B112-3432E1E1CD8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DFAFF6D-8663-4725-9879-80BC113DA74E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DFAFF6D-8663-4725-9879-80BC113DA74E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DFAFF6D-8663-4725-9879-80BC113DA74E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DFAFF6D-8663-4725-9879-80BC113DA74E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8DFAFF6D-8663-4725-9879-80BC113DA74E} = {6AEBB4A2-B2CB-464F-BE51-C3979153BAAF}
 	EndGlobalSection
 EndGlobal

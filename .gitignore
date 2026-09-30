@@ -12,3 +12,4 @@ obj/
 *.user
 *.userosscache
 *.sln.docstates
+TestResults/

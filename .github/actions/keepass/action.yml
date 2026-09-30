@@ -1,0 +1,15 @@
+name: KeePass
+description: Downloads the official KeePass 2.58 binaries (hash-pinned) into $RUNNER_TEMP\KeePass for the KeePass.exe reference
+runs:
+  using: composite
+  steps:
+    - shell: pwsh
+      env:
+        KEEPASS_ZIP_URL: https://sourceforge.net/projects/keepass/files/KeePass%202.x/2.58/KeePass-2.58.zip/download
+        # SHA-256 of KeePass-2.58.zip from https://keepass.info/integrity.html
+        KEEPASS_ZIP_SHA256: A613CA206FBF5875AD8FE5E440A76418CE01135D3304DC56A0DF12255D83FE07
+      run: |
+        Invoke-WebRequest $env:KEEPASS_ZIP_URL -OutFile "$env:RUNNER_TEMP\KeePass.zip" -UserAgent 'Wget'
+        $hash = (Get-FileHash "$env:RUNNER_TEMP\KeePass.zip" -Algorithm SHA256).Hash
+        if ($hash -ne $env:KEEPASS_ZIP_SHA256) { throw "KeePass.zip SHA-256 mismatch: $hash" }
+        Expand-Archive "$env:RUNNER_TEMP\KeePass.zip" -DestinationPath "$env:RUNNER_TEMP\KeePass"
