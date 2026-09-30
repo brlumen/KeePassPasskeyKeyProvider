@@ -83,6 +83,20 @@ There are no files next to the database: a copy of the `.kdbx` contains everythi
 
 ## Security model and limitations
 
+### Threat model
+
+Protected: the database key K, the device secrets and the recovery phrase. Trusted: Windows, the authenticator and KeePass. A program running under your account while the database is open is out of scope: it can read the open database from KeePass's memory anyway.
+
+| Attacker | Outcome |
+| --- | --- |
+| Has a copy of the file (cloud, backup, stolen disk) | Cannot open it without a registered device with its user verification (PIN, biometrics) or the recovery phrase, plus the other master key components |
+| Has a registered device, but not its PIN or biometrics | Stopped by the authenticator: user verification is required |
+| Can write the file, never had K | Can damage or replace the file (denial of service), cannot build a database that your device or phrase opens |
+| Had K before: a removed device or phrase with an old copy, or anyone who opened the database | Not fully stopped, see below |
+| Has the recovery phrase | Equivalent to a device |
+
+### Limitations
+
 - **Forged headers.** Anyone with write access to the file can replace its header. Someone who never had the database key cannot build a database that your device or phrase opens: a copied wrap is bound to your VK by the owner tag, and signing for that VK requires SK from inside the database.
 - **A revoked party with an old copy is not stopped.** Anyone who once had K — for example, the holder of a removed device or phrase with a copy of the database from before the removal — can extract SK from that copy, since rotation keeps SK. If they can write the file, they can forge records that your devices accept, or roll the file back to a copy from before the removal — the removed device then regains access to everything saved after that. A password in the composite master key prevents forging by anyone who does not know it: use one for databases in cloud or shared folders.
 - **Revocation only works forward.** A removed device will not open the current database or its later versions, but will open copies made before the removal (backups, version history in the cloud). If it must not have access to the secrets in the database, change them.
@@ -94,6 +108,8 @@ There are no files next to the database: a copy of the `.kdbx` contains everythi
 - **Windows Hello** is protected the same way as your Windows account (PIN, TPM).
 - **A passkey on a phone is synced** via the provider account (Google, Apple, etc.): its security equals the security of that account. The database path stored in the credential is synced too.
 - **Attestation is not verified:** any authenticator with PRF support is accepted.
+
+Report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
 
 ## Troubleshooting
 
@@ -128,6 +144,7 @@ dotnet build KeePassPasskeyKeyProvider.csproj -c Release   # → bin\Release\Kee
 
 - .NET Framework 4.7.2 Developer Pack (targeting pack) and Visual Studio 2019+ or the `dotnet` SDK. No NuGet packages.
 - KeePass must be installed: `KeePass.exe` is referenced from `C:\Program Files\KeePass Password Safe 2\`. For another location, pass the folder with a trailing backslash: `dotnet build ... -p:KeePassDir=D:\KeePass\`. A backslash before a closing quote escapes the quote, so for a path with spaces double it: `-p:KeePassDir="C:\My Apps\KeePass\\"`.
+- Tests of the cryptographic core (key wrapping, record signing, recovery phrase, header parsing): `dotnet test tests\KeePassPasskeyKeyProvider.Tests` (builds the Release configuration of the plugin; `-p:KeePassDir=...` works the same way). GitHub Actions runs them on every push, along with CodeQL analysis.
 - The Debug configuration builds the DLL directly into KeePass's `Plugins\KeePassPasskeyKeyProvider\` (write access to that folder is required, KeePass must be closed).
 
 ## Code structure
@@ -149,6 +166,7 @@ src/
 └── WebAuthn/
     ├── WebAuthnApi.cs          — P/Invoke and webauthn.dll structures
     └── WebAuthnHelper.cs       — MakeCredential / GetAssertion with PRF, Windows Hello credentials
+tests/KeePassPasskeyKeyProvider.Tests/ — unit tests (MSTest)
 ```
 
 API documentation: [Windows WebAuthn](https://learn.microsoft.com/windows/win32/api/webauthn/), header [webauthn.h](https://github.com/microsoft/webauthn/blob/master/webauthn.h), [hmac-secret specification](https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-errata-20220621.html#sctn-hmac-secret-extension), [KeePass plugins](https://keepass.info/help/v2_dev/plg_index.html).
