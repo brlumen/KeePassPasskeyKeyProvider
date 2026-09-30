@@ -531,12 +531,10 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			uint currentProcess = User32.GetCurrentProcessId();
 
 			// No owner, or it is minimized or hidden (tray): use our process's active window, if any
-			if (windowHandle == IntPtr.Zero || User32.IsIconic(windowHandle) || !User32.IsWindowVisible(windowHandle))
+			if ((windowHandle == IntPtr.Zero || User32.IsIconic(windowHandle) || !User32.IsWindowVisible(windowHandle))
+				&& foreground != IntPtr.Zero && GetWindowProcessId(foreground) == currentProcess)
 			{
-				if (foreground != IntPtr.Zero && GetWindowProcessId(foreground) == currentProcess)
-				{
-					windowHandle = foreground;
-				}
+				windowHandle = foreground;
 			}
 
 			if (windowHandle == IntPtr.Zero)

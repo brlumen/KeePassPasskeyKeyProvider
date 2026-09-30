@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using KeePass;
 using KeePass.Plugins;
 using KeePass.UI;
@@ -109,10 +110,9 @@ namespace KeePassPasskeyKeyProvider
 			List<IOConnectionInfo> recent = Program.Config?.Application?.MostRecentlyUsed?.Items;
 			if (recent == null) return records;
 
-			foreach (IOConnectionInfo ioc in recent)
+			// Remote URLs are skipped: reading them may be slow or ask for credentials
+			foreach (IOConnectionInfo ioc in recent.Where(i => i != null && i.IsLocalFile() && !string.IsNullOrEmpty(i.Path)))
 			{
-				// Remote URLs are skipped: reading them may be slow or ask for credentials
-				if (ioc == null || !ioc.IsLocalFile() || string.IsNullOrEmpty(ioc.Path)) continue;
 				try
 				{
 					if (File.Exists(ioc.Path))

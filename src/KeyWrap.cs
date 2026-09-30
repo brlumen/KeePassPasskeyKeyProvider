@@ -138,6 +138,7 @@ namespace KeePassPasskeyKeyProvider
 			bw.Write(ownerTag);
 		}
 
+		/// <summary>Wrap in the layout written by <see cref="Write"/></summary>
 		/// <exception cref="InvalidDataException">Truncated or malformed data</exception>
 		public static KeyWrap Read(BinaryReader br)
 		{

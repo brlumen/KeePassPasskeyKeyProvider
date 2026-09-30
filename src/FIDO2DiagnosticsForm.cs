@@ -14,7 +14,7 @@ namespace KeePassPasskeyKeyProvider
 		private Button btnTestHmacSecret;
 		private Button btnCheckApiVersion;
 		private Button btnClose;
-		private StringBuilder logBuilder;
+		private readonly StringBuilder logBuilder;
 
 		public FIDO2DiagnosticsForm()
 		{
@@ -31,9 +31,7 @@ namespace KeePassPasskeyKeyProvider
 			this.SuspendLayout();
 
 			// txtLog
-			this.txtLog.Anchor = ((AnchorStyles)((((AnchorStyles.Top | AnchorStyles.Bottom)
-				| AnchorStyles.Left)
-				| AnchorStyles.Right)));
+			this.txtLog.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 			this.txtLog.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
 			this.txtLog.Location = new System.Drawing.Point(12, 12);
 			this.txtLog.Multiline = true;
@@ -44,7 +42,7 @@ namespace KeePassPasskeyKeyProvider
 			this.txtLog.TabIndex = 0;
 
 			// btnCheckApiVersion
-			this.btnCheckApiVersion.Anchor = ((AnchorStyles)((AnchorStyles.Bottom | AnchorStyles.Left)));
+			this.btnCheckApiVersion.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
 			this.btnCheckApiVersion.Location = new System.Drawing.Point(12, 398);
 			this.btnCheckApiVersion.Name = "btnCheckApiVersion";
 			this.btnCheckApiVersion.Size = new System.Drawing.Size(150, 30);
@@ -54,7 +52,7 @@ namespace KeePassPasskeyKeyProvider
 			this.btnCheckApiVersion.Click += new EventHandler(this.BtnCheckApiVersion_Click);
 
 			// btnTestHmacSecret
-			this.btnTestHmacSecret.Anchor = ((AnchorStyles)((AnchorStyles.Bottom | AnchorStyles.Left)));
+			this.btnTestHmacSecret.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
 			this.btnTestHmacSecret.Location = new System.Drawing.Point(168, 398);
 			this.btnTestHmacSecret.Name = "btnTestHmacSecret";
 			this.btnTestHmacSecret.Size = new System.Drawing.Size(180, 30);
@@ -64,7 +62,7 @@ namespace KeePassPasskeyKeyProvider
 			this.btnTestHmacSecret.Click += new EventHandler(this.BtnTestHmacSecret_Click);
 
 			// btnClose
-			this.btnClose.Anchor = ((AnchorStyles)((AnchorStyles.Bottom | AnchorStyles.Right)));
+			this.btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
 			this.btnClose.Location = new System.Drawing.Point(597, 398);
 			this.btnClose.Name = "btnClose";
 			this.btnClose.Size = new System.Drawing.Size(75, 30);
