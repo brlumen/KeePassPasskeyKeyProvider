@@ -95,7 +95,7 @@ namespace KeePassPasskeyKeyProvider
 				if (UIUtil.ShowDialogAndDestroy(form) != DialogResult.OK)
 					return null;
 				string label = form.DeviceName;
-				bool keepDevices = form.KeepDevices && existing.Count > 0;
+				bool keepDevices = form.KeepDevices && currentSigningKey != null && existing.Count > 0;
 
 				PrfResult created = CreateCredentialForDatabase(GetActiveWindowHandle(), ctx.DatabasePath);
 				SigningKey signingKey = keepDevices ? currentSigningKey.Clone() : SigningKey.Generate();

@@ -13,6 +13,7 @@ namespace KeePassPasskeyKeyProvider
 		private readonly string deviceList;
 		private readonly bool changingKey;
 
+		/// <summary>Asks for the name of a new device</summary>
 		/// <param name="existingDevices">Labels of the devices of the database whose master key is being changed; empty for a new database</param>
 		public DeviceNameForm(IList<string> existingDevices)
 		{

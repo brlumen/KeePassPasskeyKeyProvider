@@ -6,3 +6,10 @@ paths-ignore:
 query-filters:
   - exclude:
       id: cs/catch-of-all-exceptions
+  # The plugin is built on P/Invoke into webauthn.dll and user32.dll; signatures follow the Windows API
+  - exclude:
+      id: cs/unmanaged-code
+  - exclude:
+      id: cs/call-to-unmanaged-code
+  - exclude:
+      id: cs/too-many-ref-parameters
