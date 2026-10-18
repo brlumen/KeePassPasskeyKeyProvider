@@ -51,7 +51,7 @@ namespace KeePassPasskeyKeyProvider.Tests
 
 		internal static class Vectors
 		{
-			// Made by OpenSSL: an implementation independent of the platform ones
+			// Made by the OpenSSL command-line tool, independently of the plugin and of CNG
 			public const string PublicKey = "04b37d70e453050d5197c2a155bd85e40bbd9b283c364dc6af823e86d9c88b42c1f78ed8050039d41eb0c16eec1b7154bea275eaeab04a787c689daf358f034152";
 			public const string Data = "KeePassPasskeyKeyProvider signature vector";
 			public const string P1363 = "862926203fa56a28cf568b028f05678cfd295fb2a958720e5d301793834fbdcf008658ef9d0f23d9bdf3fbc060628763ab8af27dc1535200b12e3e1d9d8fd5a3";
