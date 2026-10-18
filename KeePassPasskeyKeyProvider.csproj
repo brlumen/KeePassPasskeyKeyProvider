@@ -107,6 +107,9 @@
       <DependentUpon>RecoveryPhraseInputForm.cs</DependentUpon>
     </Compile>
     <Compile Include="src\Strings.cs" />
+    <Compile Include="src\WaitForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\WebAuthn\WebAuthnApi.cs" />
     <Compile Include="src\WebAuthn\WebAuthnHelper.cs" />
     <Compile Include="src\Properties\AssemblyInfo.cs" />
