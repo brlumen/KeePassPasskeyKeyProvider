@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using KeePassLib.Utility;
+using KeePassPasskeyKeyProvider.Ecc;
 
 namespace KeePassPasskeyKeyProvider
 {
@@ -21,13 +22,12 @@ namespace KeePassPasskeyKeyProvider
 	public sealed class KeyWrap
 	{
 		public const int KeyLength = 32;
-		public const int PublicKeyLength = 1 + 2 * KeyLength; // 0x04 ‖ X ‖ Y
+		public const int PublicKeyLength = P256.PublicKeyLength;
 		public const int SerializedLength = 2 * PublicKeyLength + 3 * KeyLength;
 
 		// IMPORTANT: part of the database "format"
 		private static readonly byte[] KdfLabel = Encoding.ASCII.GetBytes("KeePassPasskeyKeyProvider key wrap v1");
 		private static readonly byte[] TagLabel = Encoding.ASCII.GetBytes("KeePassPasskeyKeyProvider owner tag v1");
-		internal static readonly ECCurve Curve = ECCurve.NamedCurves.nistP256;
 
 		private byte[] publicKey;
 		private byte[] encryptedPrivateKey;
@@ -48,17 +48,14 @@ namespace KeePassPasskeyKeyProvider
 			CheckLength(secret, KeyLength, "secret");
 
 			var wrap = new KeyWrap { ownerTag = ComputeTag(secret, verificationKey) };
-			ECParameters owner;
-			using (ECDiffieHellman ecdh = ECDiffieHellman.Create(Curve))
-				owner = ecdh.ExportParameters(true);
+			P256.Current.GenerateKey(out byte[] privateKey, out wrap.publicKey);
 			try
 			{
-				wrap.publicKey = EncodePoint(owner.Q);
-				wrap.encryptedPrivateKey = Xor(owner.D, secret);
+				wrap.encryptedPrivateKey = Xor(privateKey, secret);
 			}
 			finally
 			{
-				MemUtil.ZeroByteArray(owner.D);
+				MemUtil.ZeroByteArray(privateKey);
 			}
 
 			wrap.Seal(key);
@@ -70,18 +67,15 @@ namespace KeePassPasskeyKeyProvider
 		{
 			CheckLength(key, KeyLength, "key");
 
-			using (ECDiffieHellman ephemeral = ECDiffieHellman.Create(Curve))
+			byte[] mask = P256.Current.DeriveEphemeralKeyFromHash(publicKey, KdfLabel, out byte[] ephemeral);
+			try
 			{
-				byte[] mask = DeriveMask(ephemeral, publicKey);
-				try
-				{
-					wrappedKey = Xor(key, mask);
-					ephemeralPublicKey = EncodePoint(ephemeral.ExportParameters(false).Q);
-				}
-				finally
-				{
-					MemUtil.ZeroByteArray(mask);
-				}
+				wrappedKey = Xor(key, mask);
+				ephemeralPublicKey = ephemeral;
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(mask);
 			}
 		}
 
@@ -104,28 +98,25 @@ namespace KeePassPasskeyKeyProvider
 				MemUtil.ZeroByteArray(expectedTag);
 			}
 
-			var owner = new ECParameters { Curve = Curve, Q = DecodePoint(publicKey), D = Xor(encryptedPrivateKey, secret) };
+			byte[] privateKey = Xor(encryptedPrivateKey, secret);
 			try
 			{
 				// A wrong secret fails the tag check; a wrap whose parts were swapped under a copied tag fails here
-				if (!IsKeyPair(owner))
+				if (!IsKeyPair(privateKey, publicKey))
 					throw new CryptographicException("The owner private key does not match the public key");
-				using (ECDiffieHellman ecdh = ImportKey(() => ECDiffieHellman.Create(owner)))
+				byte[] mask = P256.Current.DeriveKeyFromHash(privateKey, publicKey, ephemeralPublicKey, KdfLabel);
+				try
 				{
-					byte[] mask = DeriveMask(ecdh, ephemeralPublicKey);
-					try
-					{
-						return Xor(wrappedKey, mask);
-					}
-					finally
-					{
-						MemUtil.ZeroByteArray(mask);
-					}
+					return Xor(wrappedKey, mask);
+				}
+				finally
+				{
+					MemUtil.ZeroByteArray(mask);
 				}
 			}
 			finally
 			{
-				MemUtil.ZeroByteArray(owner.D);
+				MemUtil.ZeroByteArray(privateKey);
 			}
 		}
 
@@ -155,13 +146,6 @@ namespace KeePassPasskeyKeyProvider
 			return wrap;
 		}
 
-		private static byte[] DeriveMask(ECDiffieHellman own, byte[] otherPublicKey)
-		{
-			var other = new ECParameters { Curve = Curve, Q = DecodePoint(otherPublicKey) };
-			using (ECDiffieHellman peer = ImportKey(() => ECDiffieHellman.Create(other)))
-				return own.DeriveKeyFromHash(peer.PublicKey, HashAlgorithmName.SHA256, null, KdfLabel);
-		}
-
 		private static byte[] ComputeTag(byte[] secret, byte[] verificationKey)
 		{
 			CheckLength(verificationKey, PublicKeyLength, "verification key");
@@ -174,34 +158,15 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Key from imported parameters. .NET Framework reports a point off the curve as PlatformNotSupportedException;
-		/// callers expect CryptographicException for any invalid key material.
+		/// Checks that the private scalar belongs to the public point: crypto libraries do not always check it on import
+		/// (not every Windows version does), and a mismatched pair silently yields a wrong ECDH secret
 		/// </summary>
-		internal static T ImportKey<T>(Func<T> create)
-		{
-			try
-			{
-				return create();
-			}
-			catch (PlatformNotSupportedException ex)
-			{
-				throw new CryptographicException("Invalid elliptic curve key", ex);
-			}
-		}
-
-		/// <summary>
-		/// Checks that the private scalar belongs to the public point: not every Windows version checks it on import,
-		/// and a mismatched pair silently yields a wrong ECDH secret
-		/// </summary>
-		internal static bool IsKeyPair(ECParameters keyPair)
+		/// <exception cref="CryptographicException">The public key is not a point on the curve</exception>
+		internal static bool IsKeyPair(byte[] privateKey, byte[] publicKey)
 		{
 			byte[] probe = new byte[KeyLength];
-			byte[] signature;
-			using (ECDsa signer = ImportKey(() => ECDsa.Create(keyPair)))
-				signature = signer.SignData(probe, HashAlgorithmName.SHA256);
-			var publicKey = new ECParameters { Curve = keyPair.Curve, Q = keyPair.Q };
-			using (ECDsa verifier = ImportKey(() => ECDsa.Create(publicKey)))
-				return verifier.VerifyData(probe, signature, HashAlgorithmName.SHA256);
+			byte[] signature = P256.Current.SignData(privateKey, publicKey, probe);
+			return P256.Current.VerifyData(publicKey, probe, signature);
 		}
 
 		/// <summary>Comparison whose time does not depend on where the arrays differ</summary>
@@ -212,25 +177,6 @@ namespace KeePassPasskeyKeyProvider
 			for (int i = 0; i < a.Length; i++)
 				diff |= a[i] ^ b[i];
 			return diff == 0;
-		}
-
-		internal static byte[] EncodePoint(ECPoint q)
-		{
-			byte[] result = new byte[PublicKeyLength];
-			result[0] = 0x04;
-			Array.Copy(q.X, 0, result, 1, KeyLength);
-			Array.Copy(q.Y, 0, result, 1 + KeyLength, KeyLength);
-			return result;
-		}
-
-		internal static ECPoint DecodePoint(byte[] data)
-		{
-			CheckLength(data, PublicKeyLength, "public key");
-			if (data[0] != 0x04) throw new CryptographicException("Unsupported public key encoding");
-			var q = new ECPoint { X = new byte[KeyLength], Y = new byte[KeyLength] };
-			Array.Copy(data, 1, q.X, 0, KeyLength);
-			Array.Copy(data, 1 + KeyLength, q.Y, 0, KeyLength);
-			return q;
 		}
 
 		private static byte[] ReadExact(BinaryReader br, int length)

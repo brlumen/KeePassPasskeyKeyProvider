@@ -1,6 +1,7 @@
 using System;
 using System.Security.Cryptography;
 using KeePassLib.Utility;
+using KeePassPasskeyKeyProvider.Ecc;
 
 namespace KeePassPasskeyKeyProvider
 {
@@ -11,7 +12,7 @@ namespace KeePassPasskeyKeyProvider
 	/// </summary>
 	public sealed class SigningKey : IDisposable
 	{
-		public const int SignatureLength = 2 * KeyWrap.KeyLength; // IEEE P1363: r ‖ s
+		public const int SignatureLength = P256.SignatureLength;
 
 		private byte[] privateKey;
 
@@ -25,11 +26,8 @@ namespace KeePassPasskeyKeyProvider
 
 		public static SigningKey Generate()
 		{
-			using (ECDsa ecdsa = ECDsa.Create(KeyWrap.Curve))
-			{
-				ECParameters p = ecdsa.ExportParameters(true);
-				return new SigningKey(KeyWrap.EncodePoint(p.Q), p.D);
-			}
+			P256.Current.GenerateKey(out byte[] privateKey, out byte[] verificationKey);
+			return new SigningKey(verificationKey, privateKey);
 		}
 
 		/// <summary>Key pair from the stored private scalar; checks that it belongs to the verification key</summary>
@@ -39,8 +37,7 @@ namespace KeePassPasskeyKeyProvider
 			var key = new SigningKey((byte[])verificationKey.Clone(), privateKey);
 			try
 			{
-				var keyPair = new ECParameters { Curve = KeyWrap.Curve, Q = KeyWrap.DecodePoint(verificationKey), D = privateKey };
-				if (!KeyWrap.IsKeyPair(keyPair))
+				if (!KeyWrap.IsKeyPair(privateKey, verificationKey))
 					throw new CryptographicException("The signing key does not match the verification key");
 				return key;
 			}
@@ -63,16 +60,7 @@ namespace KeePassPasskeyKeyProvider
 
 		public byte[] Sign(byte[] data)
 		{
-			var p = new ECParameters { Curve = KeyWrap.Curve, Q = KeyWrap.DecodePoint(VerificationKey), D = (byte[])privateKey.Clone() };
-			try
-			{
-				using (ECDsa ecdsa = KeyWrap.ImportKey(() => ECDsa.Create(p)))
-					return ecdsa.SignData(data, HashAlgorithmName.SHA256);
-			}
-			finally
-			{
-				MemUtil.ZeroByteArray(p.D);
-			}
+			return P256.Current.SignData(privateKey, VerificationKey, data);
 		}
 
 		public static bool Verify(byte[] verificationKey, byte[] data, byte[] signature)
@@ -80,9 +68,7 @@ namespace KeePassPasskeyKeyProvider
 			if (signature == null || signature.Length != SignatureLength) return false;
 			try
 			{
-				var p = new ECParameters { Curve = KeyWrap.Curve, Q = KeyWrap.DecodePoint(verificationKey) };
-				using (ECDsa ecdsa = KeyWrap.ImportKey(() => ECDsa.Create(p)))
-					return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
+				return P256.Current.VerifyData(verificationKey, data, signature);
 			}
 			catch (CryptographicException)
 			{

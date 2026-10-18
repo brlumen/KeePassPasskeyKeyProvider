@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace KeePassPasskeyKeyProvider.Tests
@@ -13,6 +14,13 @@ namespace KeePassPasskeyKeyProvider.Tests
 		{
 			using (SigningKey sk = SigningKey.Generate())
 				Assert.IsTrue(SigningKey.Verify(sk.VerificationKey, data, sk.Sign(data)));
+		}
+
+		[TestMethod]
+		public void VerifiesSignatureOfOtherImplementation()
+		{
+			Assert.IsTrue(SigningKey.Verify(TestData.FromHex(EcdsaSignatureTests.Vectors.PublicKey),
+				Encoding.ASCII.GetBytes(EcdsaSignatureTests.Vectors.Data), TestData.FromHex(EcdsaSignatureTests.Vectors.P1363)));
 		}
 
 		[TestMethod]
