@@ -192,7 +192,7 @@ namespace KeePassPasskeyKeyProvider
 		/// <summary>Default device label: type by transport, computer name and credential creation time</summary>
 		private static string DefaultLabel(uint transport)
 		{
-			// A browser passkey of this computer is iCloud Keychain or Google Password Manager, not Windows Hello
+			// A browser passkey of this computer is in the passkey manager of the browser or system, not in Windows Hello
 			string type = UsesBrowser && (transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_INTERNAL) != 0
 				? Strings.TransportThisComputer
 				: WebAuthnHelper.TransportName(transport);

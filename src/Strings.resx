@@ -173,18 +173,18 @@ In the "Windows Security" window, choose:
 • Windows Hello — PIN, face or fingerprint;
 • a phone or tablet — scan the QR code and confirm on the phone.
 
-A passkey on a phone or a security key can also open the database on macOS and Linux (in the browser). Other devices: File → Database Settings → "FIDO2" tab.</value>
+A passkey on a phone or a security key can also open the database on other systems, such as Linux (in the browser). Other devices: File → Database Settings → "FIDO2" tab.</value>
 	</data>
 	<data name="CreateCredentialDescriptionBrowser" xml:space="preserve">
 		<value>A new passkey (FIDO2 credential) will now be created for this database in the browser.
 Enter below the name of the device used to create the key — it distinguishes it from others in the database device list. If left empty, the label will be made from the device type, computer name and date.
 
 On the page that opens, click "Continue" and choose:
-• this computer — the passkey manager of the system or browser (iCloud Keychain, Google Password Manager);
+• this computer — the passkey manager of the browser or system (e.g. Google Password Manager);
 • a phone or tablet — scan the QR code and confirm on the phone;
 • a security key with PRF (hmac-secret) support.
 
-Such a passkey opens the database on Windows, macOS and Linux. Other devices: File → Database Settings → "FIDO2" tab.</value>
+A passkey on a phone or a security key opens the database both on Windows and on other systems. Other devices: File → Database Settings → "FIDO2" tab.</value>
 	</data>
 	<data name="CreateCredentialFailed" xml:space="preserve">
 		<value>Failed to create credential: {0} (HRESULT: 0x{1:X8})</value>
@@ -325,13 +325,12 @@ Continue the test?</value>
 		<value>A test passkey will now be created to check whether your device can protect a KeePass database.
 
 A page opens in the browser. Click "Continue" and choose where to save the passkey:
-• this Mac — iCloud Keychain (Safari) or Google Password Manager (Chrome);
+• this computer — the passkey manager of the browser or system (e.g. Google Password Manager in Chrome);
 • a phone — scan the QR code, the passkey is saved on the phone;
 • a security key (YubiKey, etc.) — insert the key and touch it.
 Then confirm the passkey once more: this checks that it can produce the key for a database.
 
 The test does not touch your databases. But the test passkey stays where you saved it: in the password list it is an entry for the site "keepass-fido2.localhost" named "KeePass: PRF diagnostics". It opens nothing and can be deleted:
-• iCloud Keychain — the Passwords app, search for "keepass-fido2";
 • Google Password Manager — open chrome://password-manager in Chrome, search for "keepass-fido2";
 • phone — its password manager (iPhone: Settings → Passwords; Android: Google Password Manager), search for "keepass-fido2";
 • security key — in Chrome open chrome://settings/securityKeys → "Sign-in data", or use the manufacturer's app (Yubico Authenticator).

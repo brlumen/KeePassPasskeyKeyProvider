@@ -15,7 +15,7 @@ namespace KeePassPasskeyKeyProvider.Browser
 	/// WebAuthn with PRF in the system browser, for systems other than Windows: the plugin serves a page
 	/// from <see cref="LoopbackServer"/> at http://keepass-fido2.localhost:port (loopback, a secure context), the page
 	/// calls navigator.credentials for portable devices and posts the credential ID and the PRF result back.
-	/// The browser offers its own authenticators: this computer (iCloud Keychain, Google Password Manager),
+	/// The browser offers its own authenticators: this computer (the passkey manager of the browser or system),
 	/// a phone by QR code or a security key.
 	/// The result is not authenticated beyond the secrets of the server (see <see cref="LoopbackServer"/>): a wrong PRF
 	/// secret does not match the owner tag of any wrap (see <see cref="KeyWrap.Open"/>), so a forged answer cannot open
