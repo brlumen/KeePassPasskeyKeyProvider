@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using KeePass.Plugins;
 using KeePass.UI;
 using KeePassPasskeyKeyProvider.Browser;
+using KeePassPasskeyKeyProvider.Fido2;
 using KeePassPasskeyKeyProvider.WebAuthn;
 using KeePassLib;
 using KeePassLib.Keys;
@@ -15,7 +16,8 @@ namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
 	/// KeePass Key Provider using FIDO2 authentication with the PRF extension (WebAuthn Level 3): via the Windows
-	/// WebAuthn API on Windows, in the system browser elsewhere (see <see cref="UsesBrowser"/>, <see cref="DeviceKind"/>).
+	/// WebAuthn API on Windows; elsewhere a USB security key through libfido2 or the system browser (see
+	/// <see cref="UnlockWays"/>, <see cref="DeviceKind"/>).
 	/// Database key K is 32 random bytes; the KDBX header (PublicCustomData) stores K wrapped
 	/// for each device, signed with the database signing key (see <see cref="DeviceKeyStore"/>, <see cref="KeyWrap"/>).
 	/// Credentials are discoverable: no files next to the database. Removing a device = rotation of K: the new K is
@@ -27,7 +29,8 @@ namespace KeePassPasskeyKeyProvider
 
 		/// <summary>
 		/// Way to the authenticators: on Windows the Windows WebAuthn API for devices of both kinds, elsewhere the
-		/// system browser for portable devices only (browsers do not accept the RP ID of classic devices)
+		/// system browser for portable devices only (browsers do not accept the RP ID of classic devices); a security key
+		/// also opens databases through libfido2 there (see <see cref="UnlockWays"/>)
 		/// </summary>
 		internal static readonly bool UsesBrowser = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
@@ -359,16 +362,41 @@ namespace KeePassPasskeyKeyProvider
 			}
 		}
 
-		/// <summary>Whether devices of the kind can be used on this system</summary>
+		/// <summary>
+		/// Whether devices of the kind can be added and used on this system (outside Windows a classic device that is
+		/// a security key also opens a database, see <see cref="UnlockWays"/>)
+		/// </summary>
 		internal static bool CanUse(DeviceKind kind)
 		{
 			return UsesBrowser ? kind == DeviceKind.Portable : WebAuthnHelper.IsWebAuthnAvailable();
 		}
 
+		/// <summary>Way to the authenticators when unlocking</summary>
+		private enum Way
+		{
+			/// <summary>Windows WebAuthn API</summary>
+			WebAuthn,
+
+			/// <summary>Connected USB security key through libfido2: no dialog if none of them holds a device</summary>
+			SecurityKey,
+
+			/// <summary>System browser</summary>
+			Browser
+		}
+
 		/// <summary>
-		/// Unlocks the database with a device: portable devices, then classic ones (each kind is one authentication
-		/// dialog; a kind without devices is skipped). If authentication fails or the records are not authentic, offers
-		/// the next way: the other kind, then the recovery phrase (if there is one).
+		/// Unlock order. Windows: the Windows WebAuthn API for portable, then for classic devices (each kind is one
+		/// dialog). Elsewhere: a connected security key that holds a device of either kind (the only way for classic
+		/// devices), then the browser for portable devices.
+		/// </summary>
+		private static readonly (Way Way, DeviceKind[] Kinds)[] UnlockWays = UsesBrowser
+			? new[] { (Way.SecurityKey, new[] { DeviceKind.Portable, DeviceKind.Classic }), (Way.Browser, new[] { DeviceKind.Portable }) }
+			: new[] { (Way.WebAuthn, new[] { DeviceKind.Portable }), (Way.WebAuthn, new[] { DeviceKind.Classic }) };
+
+		/// <summary>
+		/// Unlocks the database with a device in the order of <see cref="UnlockWays"/>; a way without devices is skipped.
+		/// If authentication fails or the records are not authentic, offers the next way, then the recovery phrase
+		/// (if there is one).
 		/// </summary>
 		private static byte[] Unlock(KeyProviderQueryContext ctx)
 		{
@@ -379,33 +407,100 @@ namespace KeePassPasskeyKeyProvider
 			string databaseName = DatabaseName(ctx.DatabasePath);
 			string problem = null;
 			bool failed = false;
-			foreach (DeviceKind kind in new[] { DeviceKind.Portable, DeviceKind.Classic })
+			foreach ((Way way, DeviceKind[] kinds) in UnlockWays)
 			{
-				if (!set.Devices.Exists(r => r.Kind == kind))
+				if (!set.Devices.Exists(r => Array.IndexOf(kinds, r.Kind) >= 0))
 					continue;
-				if (!CanUse(kind))
+				if (!IsAvailable(way))
 				{
-					problem = problem ?? (UsesBrowser ? Strings.WindowsDevicesOnly : Strings.WebAuthnUnavailable);
+					problem = problem ?? Unavailable(way, set);
 					continue;
 				}
 				if (failed && !MessageService.AskYesNo(problem + "\n\n" + Strings.TryOtherDevicesQuestion, "KeePassPasskeyKeyProvider"))
 					break;
 
-				byte[] key = TryUnlock(set, kind, databaseName, out problem);
+				byte[] key = TryUnlock(set, way, kinds, databaseName, out string reason, out bool asked);
 				if (key != null)
 					return key;
-				failed = true;
+				if (asked)
+				{
+					problem = reason;
+					failed = true;
+				}
+				else
+					problem = problem ?? reason;
 			}
 			return UnlockWithRecoveryPhrase(set, problem);
 		}
 
-		/// <summary>K from a device of the kind; null and the reason if authentication failed or the records are not authentic</summary>
-		private static byte[] TryUnlock(DeviceRecordSet set, DeviceKind kind, string databaseName, out string problem)
+		private static bool IsAvailable(Way way)
+		{
+			switch (way)
+			{
+				case Way.WebAuthn: return WebAuthnHelper.IsWebAuthnAvailable();
+				case Way.SecurityKey: return Fido2Authenticator.IsAvailable;
+				default: return true;
+			}
+		}
+
+		/// <summary>Why devices cannot be used without the way; null if no word is needed</summary>
+		private static string Unavailable(Way way, DeviceRecordSet set)
+		{
+			if (way == Way.WebAuthn)
+				return Strings.WebAuthnUnavailable;
+			// Without libfido2 portable devices still work in the browser
+			return set.Devices.Exists(r => r.Kind == DeviceKind.Classic) ? ClassicDevicesProblem(Strings.Fido2LibraryMissing) : null;
+		}
+
+		/// <summary>Classic devices outside Windows: only a security key among them works</summary>
+		private static string ClassicDevicesProblem(string reason) => reason + "\n\n" + Strings.ClassicDevicesElsewhere;
+
+		/// <summary>K from a device of the kinds; null and the reason if authentication failed or the records are not authentic</summary>
+		/// <param name="asked">
+		/// The user took part; false if no connected security key holds a device (the reason is then about classic devices, or null)
+		/// </param>
+		private static byte[] TryUnlock(DeviceRecordSet set, Way way, DeviceKind[] kinds, string databaseName, out string problem,
+			out bool asked)
 		{
 			problem = null;
+			asked = true;
 			try
 			{
-				return UnlockWithCredential(set, kind, databaseName);
+				Form owner = GetActiveForm();
+				Fido2Exception notFound = null;
+				foreach (DeviceKind kind in kinds)
+				{
+					List<DeviceRecord> devices = set.Devices.FindAll(r => r.Kind == kind);
+					if (devices.Count == 0)
+						continue;
+					List<byte[]> allowList = DeviceKeyStore.GetAllowList(devices, kind);
+					PrfResult assertion;
+					switch (way)
+					{
+						case Way.WebAuthn:
+							assertion = WebAuthnHelper.GetPrfSecret(owner?.Handle ?? IntPtr.Zero, kind, allowList);
+							break;
+						case Way.Browser:
+							assertion = BrowserWebAuthn.GetPrfSecret(owner, allowList, databaseName);
+							break;
+						default:
+							try
+							{
+								assertion = SecurityKeyPrompt.GetPrfSecret(owner, WebAuthnHelper.RpId(kind), allowList);
+							}
+							catch (Fido2Exception ex) when (ex.KeyNotFound)
+							{
+								notFound = ex;
+								continue;
+							}
+							break;
+					}
+					return UnlockWithCredential(set, devices, assertion);
+				}
+
+				asked = false;
+				if (set.Devices.Exists(r => r.Kind == DeviceKind.Classic))
+					problem = ClassicDevicesProblem(notFound?.Message);
 			}
 			catch (WebAuthnException ex)
 			{
@@ -463,18 +558,10 @@ namespace KeePassPasskeyKeyProvider
 			}
 		}
 
-		/// <summary>
-		/// Unlocks the database with a device of the kind: GetAssertion with the allowList of its records → PRF → K
-		/// </summary>
+		/// <summary>K from the PRF secret of a device: the wrap of its record, opened with the secret</summary>
 		/// <exception cref="CryptographicException">The records are not authentic</exception>
-		private static byte[] UnlockWithCredential(DeviceRecordSet set, DeviceKind kind, string databaseName)
+		private static byte[] UnlockWithCredential(DeviceRecordSet set, List<DeviceRecord> devices, PrfResult assertion)
 		{
-			List<DeviceRecord> devices = set.Devices.FindAll(r => r.Kind == kind);
-			List<byte[]> allowList = DeviceKeyStore.GetAllowList(devices, kind);
-			Form owner = GetActiveForm();
-			PrfResult assertion = UsesBrowser
-				? BrowserWebAuthn.GetPrfSecret(owner, allowList, databaseName)
-				: WebAuthnHelper.GetPrfSecret(owner?.Handle ?? IntPtr.Zero, kind, allowList);
 			byte[] key;
 			try
 			{

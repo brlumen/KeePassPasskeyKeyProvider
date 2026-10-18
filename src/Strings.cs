@@ -66,6 +66,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string CannotOpenDatabase => Get();
 		public static string ChangeNotSaved => Get();
 		public static string CheckApi => Get();
+		public static string ClassicDevicesElsewhere => Get();
 		public static string Close => Get();
 		public static string Continue => Get();
 		public static string CorruptedDeviceRecord => Get();
@@ -167,6 +168,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string PhraseUnknownWord => Get();
 		public static string PhraseWordCount => Get();
 		public static string PinAttemptsLeft => Get();
+		public static string PinTitle => Get();
 		public static string PinWrong => Get();
 		public static string PrfDiagnosticsButton => Get();
 		public static string PrfTest => Get();
@@ -195,6 +197,8 @@ namespace KeePassPasskeyKeyProvider
 		public static string ReplacePhraseTitle => Get();
 		public static string SavePhraseFailed => Get();
 		public static string SavingPhrase => Get();
+		public static string SecurityKeyPin => Get();
+		public static string SecurityKeyTouch => Get();
 		public static string SigningKeyInvalid => Get();
 		public static string SingleDeviceWarning => Get();
 		public static string StatusDatabaseMissing => Get();
@@ -220,7 +224,6 @@ namespace KeePassPasskeyKeyProvider
 		public static string WebAuthnUnavailable => Get();
 		public static string WebAuthnUnavailableRequires => Get();
 		public static string WebAuthnUnavailableShort => Get();
-		public static string WindowsDevicesOnly => Get();
 		public static string WindowsDeviceSuffix => Get();
 		public static string WordMismatch => Get();
 		public static string WordNumber => Get();

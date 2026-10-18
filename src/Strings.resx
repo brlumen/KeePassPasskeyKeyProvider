@@ -149,6 +149,11 @@ This window closes by itself.</value>
 	<data name="CheckApi" xml:space="preserve">
 		<value>Check API</value>
 	</data>
+	<data name="ClassicDevicesElsewhere" xml:space="preserve">
+		<value>The devices of this database were added by an earlier version of the plugin. Outside Windows only a USB security key among them works; a phone or Windows Hello works only on Windows.
+
+To open the database on this system with another device, add it on Windows: File → Database Settings → "FIDO2" tab. A passkey on a phone or a security key added there works on this system too.</value>
+	</data>
 	<data name="Close" xml:space="preserve">
 		<value>Close</value>
 	</data>
@@ -494,6 +499,9 @@ File → Change Master Key → "{0}".</value>
 	<data name="PinAttemptsLeft" xml:space="preserve">
 		<value>Attempts left: {0}.</value>
 	</data>
+	<data name="PinTitle" xml:space="preserve">
+		<value>Security key PIN</value>
+	</data>
 	<data name="PinWrong" xml:space="preserve">
 		<value>Wrong PIN.</value>
 	</data>
@@ -594,6 +602,14 @@ The database master key will be replaced and the database saved. The old phrase 
 	<data name="SavingPhrase" xml:space="preserve">
 		<value>Saving the recovery phrase…</value>
 	</data>
+	<data name="SecurityKeyPin" xml:space="preserve">
+		<value>Enter the PIN of the security key "{0}".</value>
+	</data>
+	<data name="SecurityKeyTouch" xml:space="preserve">
+		<value>Touch the security key "{0}".
+
+This window closes by itself.</value>
+	</data>
 	<data name="SigningKeyInvalid" xml:space="preserve">
 		<value>The database signing key is missing or does not match the device records. Change the master key to create new records.</value>
 	</data>
@@ -677,13 +693,8 @@ Requires WebAuthn API v4 or later (Windows 11 22H2 or later).</value>
 	<data name="WebAuthnUnavailableShort" xml:space="preserve">
 		<value>Windows WebAuthn API is not available (requires API v4+, Windows 11 22H2 or later).</value>
 	</data>
-	<data name="WindowsDevicesOnly" xml:space="preserve">
-		<value>The devices of this database work only on Windows: they were added by an earlier version of the plugin.
-
-To open the database on this system, add a device to it on Windows: File → Database Settings → "FIDO2" tab. A passkey on a phone or a security key added there works on this system too.</value>
-	</data>
 	<data name="WindowsDeviceSuffix" xml:space="preserve">
-		<value>(Windows only)</value>
+		<value>(Windows only, except security keys)</value>
 	</data>
 	<data name="WordMismatch" xml:space="preserve">
 		<value>Word #{0} does not match. Click "Back" to view the phrase again.</value>

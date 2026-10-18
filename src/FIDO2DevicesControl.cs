@@ -78,7 +78,7 @@ namespace KeePassPasskeyKeyProvider
 			SetEnabled(true, canAdd);
 		}
 
-		/// <summary>Device label; a classic device is marked: it does not work outside Windows</summary>
+		/// <summary>Device label; a classic device is marked: outside Windows it works only if it is a security key</summary>
 		private static string DisplayName(DeviceRecord r)
 		{
 			string name = string.IsNullOrEmpty(r.Label) ? Strings.Unnamed : r.Label;

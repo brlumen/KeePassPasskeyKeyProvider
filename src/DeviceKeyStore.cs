@@ -21,7 +21,8 @@ namespace KeePassPasskeyKeyProvider
 	{
 		/// <summary>
 		/// RP ID "keepass-fido2.local": browsers do not accept it, so the device works only through the Windows WebAuthn
-		/// API. Devices of plugin versions before portable devices (records v4).
+		/// API, or through libfido2 if it is a USB security key (see <see cref="Fido2.Fido2Authenticator"/>). Devices of
+		/// plugin versions before portable devices (records v4).
 		/// </summary>
 		Classic = 0,
 

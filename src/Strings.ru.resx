@@ -149,6 +149,11 @@
 	<data name="CheckApi" xml:space="preserve">
 		<value>Проверить API</value>
 	</data>
+	<data name="ClassicDevicesElsewhere" xml:space="preserve">
+		<value>Устройства этой базы добавлены предыдущей версией плагина. Вне Windows из них работает только USB‑ключ безопасности; телефон и Windows Hello работают только в Windows.
+
+Чтобы открывать базу в этой системе другим устройством, добавьте его в Windows: Файл → Параметры базы → вкладка «FIDO2». Добавленный там passkey на телефоне или ключе безопасности работает и в этой системе.</value>
+	</data>
 	<data name="Close" xml:space="preserve">
 		<value>Закрыть</value>
 	</data>
@@ -494,6 +499,9 @@ Passkey на телефоне или ключе безопасности отк�
 	<data name="PinAttemptsLeft" xml:space="preserve">
 		<value>Осталось попыток: {0}.</value>
 	</data>
+	<data name="PinTitle" xml:space="preserve">
+		<value>PIN ключа безопасности</value>
+	</data>
 	<data name="PinWrong" xml:space="preserve">
 		<value>Неверный PIN.</value>
 	</data>
@@ -594,6 +602,14 @@ Passkey на телефоне или ключе безопасности отк�
 	<data name="SavingPhrase" xml:space="preserve">
 		<value>Сохранение фразы восстановления…</value>
 	</data>
+	<data name="SecurityKeyPin" xml:space="preserve">
+		<value>Введите PIN ключа безопасности «{0}».</value>
+	</data>
+	<data name="SecurityKeyTouch" xml:space="preserve">
+		<value>Коснитесь ключа безопасности «{0}».
+
+Это окно закроется само.</value>
+	</data>
 	<data name="SigningKeyInvalid" xml:space="preserve">
 		<value>Ключ подписи базы отсутствует или не соответствует записям устройств. Смените мастер‑ключ, чтобы создать новые записи.</value>
 	</data>
@@ -677,13 +693,8 @@ Passkey на телефоне или ключе безопасности отк�
 	<data name="WebAuthnUnavailableShort" xml:space="preserve">
 		<value>Windows WebAuthn API недоступен (требуется API v4+, Windows 11 22H2 и новее).</value>
 	</data>
-	<data name="WindowsDevicesOnly" xml:space="preserve">
-		<value>Устройства этой базы работают только в Windows: они добавлены предыдущей версией плагина.
-
-Чтобы открывать базу в этой системе, добавьте к ней устройство в Windows: Файл → Параметры базы → вкладка «FIDO2». Добавленный там passkey на телефоне или ключе безопасности работает и в этой системе.</value>
-	</data>
 	<data name="WindowsDeviceSuffix" xml:space="preserve">
-		<value>(только Windows)</value>
+		<value>(только Windows, кроме ключей безопасности)</value>
 	</data>
 	<data name="WordMismatch" xml:space="preserve">
 		<value>Слово №{0} не совпадает. Нажмите «Назад», чтобы посмотреть фразу ещё раз.</value>

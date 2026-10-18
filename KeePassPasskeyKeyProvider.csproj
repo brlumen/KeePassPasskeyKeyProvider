@@ -66,6 +66,10 @@
     <Compile Include="src\Fido2\Fido2Authenticator.cs" />
     <Compile Include="src\Fido2\Fido2Exception.cs" />
     <Compile Include="src\Fido2\LibFido2.cs" />
+    <Compile Include="src\Fido2\PinForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\Fido2\SecurityKeyPrompt.cs" />
     <Compile Include="src\HelloCredentialAudit.cs" />
     <Compile Include="src\FIDO2KeyProvider.cs" />
     <Compile Include="src\DeviceNameForm.cs">
