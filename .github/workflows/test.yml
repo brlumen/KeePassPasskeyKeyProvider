@@ -26,3 +26,29 @@ jobs:
       - name: Test
         shell: pwsh
         run: dotnet test tests/KeePassPasskeyKeyProvider.Tests/KeePassPasskeyKeyProvider.Tests.csproj -nologo "-p:KeePassDir=$env:RUNNER_TEMP\KeePass\\"
+
+  # Outside Windows the plugin runs on Mono with the system OpenSSL as its P-256 backend
+  test-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 8.0.303
+
+      - name: Install Mono
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends mono-devel
+          mono --version | head -n 1
+          openssl version
+
+      - name: Download KeePass
+        uses: ./.github/actions/keepass
+
+      # .NET Framework reference assemblies come from Mono; vstest runs the net472 test host under mono
+      - name: Test
+        run: dotnet test tests/KeePassPasskeyKeyProvider.Tests/KeePassPasskeyKeyProvider.Tests.csproj -nologo "-p:KeePassDir=$RUNNER_TEMP/KeePass/" -p:FrameworkPathOverride=/usr/lib/mono/4.7.2-api/
