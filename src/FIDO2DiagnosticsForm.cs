@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
+using KeePassPasskeyKeyProvider.Browser;
 using KeePassPasskeyKeyProvider.WebAuthn;
 
 namespace KeePassPasskeyKeyProvider
@@ -15,11 +17,19 @@ namespace KeePassPasskeyKeyProvider
 		private Button btnCheckApiVersion;
 		private Button btnClose;
 		private readonly StringBuilder logBuilder;
+		// The Windows WebAuthn API check makes sense only on Windows; elsewhere the PRF test runs in the browser
+		private readonly bool windows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
 		public FIDO2DiagnosticsForm()
 		{
 			InitializeComponent();
 			logBuilder = new StringBuilder();
+
+			if (!windows)
+			{
+				btnCheckApiVersion.Visible = false;
+				btnTestHmacSecret.Left = btnCheckApiVersion.Left;
+			}
 		}
 
 		private void InitializeComponent()
@@ -97,10 +107,11 @@ namespace KeePassPasskeyKeyProvider
 			Log("");
 			Log(Strings.DiagIntro3);
 			Log("");
-			Log(Strings.DiagSteps);
-			Log(Strings.DiagStep1);
-			Log(Strings.DiagStep2);
-			Log("");
+			if (windows)
+			{
+				Log(Strings.DiagCheckApiHint);
+				Log("");
+			}
 			Log(Strings.DiagReady);
 			Log("----------------------------------------");
 			Log("");
@@ -157,9 +168,12 @@ namespace KeePassPasskeyKeyProvider
 				Log(Strings.DiagStartingPrfTest);
 				Log("");
 
+				// Without the Windows WebAuthn API (other OS) the test runs in the browser, like browser devices
+				bool browser = !WebAuthnHelper.IsWebAuthnAvailable();
+
 				// Warn the user
 				var result = MessageBox.Show(
-					Strings.DiagPrfTestConfirm,
+					browser ? Strings.DiagPrfTestConfirmBrowser : Strings.DiagPrfTestConfirm,
 					Strings.PrfTest,
 					MessageBoxButtons.YesNo,
 					MessageBoxIcon.Question);
@@ -192,7 +206,9 @@ namespace KeePassPasskeyKeyProvider
 				uint transport;
 				try
 				{
-					var created = WebAuthnHelper.CreateCredential(this.Handle, testUserId, "KeePass: PRF diagnostics");
+					var created = browser
+						? BrowserWebAuthn.CreateCredential(this, testUserId, "KeePass: PRF diagnostics", null, null)
+						: WebAuthnHelper.CreateCredential(this.Handle, testUserId, "KeePass: PRF diagnostics");
 					credentialId = created.CredentialId;
 					creationSecret = created.PrfSecret;
 					transport = created.Transport;
@@ -214,38 +230,43 @@ namespace KeePassPasskeyKeyProvider
 				Log(Strings.DiagStep2Getting);
 				Log(Strings.DiagPinAgain);
 
-				if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_INTERNAL) != 0)
-					WaitForPlatformCredential();
-				else
-					System.Threading.Thread.Sleep(500);
+				// The browser offers a just-created passkey right away
+				if (!browser)
+				{
+					if ((transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_INTERNAL) != 0)
+						WaitForPlatformCredential();
+					else
+						System.Threading.Thread.Sleep(500);
+				}
 
 				// Get the PRF secret
 				byte[] prfSecret;
 				try
 				{
 					// allowList contains only the test credential, so real database credentials are not involved
-					PrfResult assertion = WebAuthnHelper.GetPrfSecret(this.Handle, new[] { credentialId });
+					PrfResult assertion = browser
+						? BrowserWebAuthn.GetPrfSecret(this, new[] { credentialId }, null)
+						: WebAuthnHelper.GetPrfSecret(this.Handle, new[] { credentialId });
 					prfSecret = assertion.PrfSecret;
 
 					if (prfSecret != null && prfSecret.Length > 0)
 					{
 						Log(Strings.DiagPrfSuccess);
 						Log(string.Format(Strings.DiagSecretLength, prfSecret.Length));
+						// A key that differs from the one at creation would not open the database next time
+						bool stable = true;
 						if (creationSecret != null)
 						{
-							bool same = creationSecret.Length == prfSecret.Length
+							stable = creationSecret.Length == prfSecret.Length
 								&& System.Linq.Enumerable.SequenceEqual(creationSecret, prfSecret);
-							Log(same
+							Log(stable
 								? Strings.DiagSecretMatches
 								: Strings.DiagSecretMismatch);
 							Array.Clear(creationSecret, 0, creationSecret.Length);
 						}
 						Log("");
-						Log("╔════════════════════════════════════════════════════════════╗");
-						Log(Strings.DiagKeySupportsPrf);
-						Log(Strings.DiagKeyUsable);
-						Log("╚════════════════════════════════════════════════════════════╝");
-						
+						Log(stable ? Strings.DiagResultSuitable : Strings.DiagResultUnsuitable);
+
 						// Clear the secret from memory
 						Array.Clear(prfSecret, 0, prfSecret.Length);
 					}
@@ -259,10 +280,7 @@ namespace KeePassPasskeyKeyProvider
 				{
 					Log(string.Format(Strings.DiagGetSecretFailed, ex.Message));
 					Log("");
-					Log("╔════════════════════════════════════════════════════════════╗");
-					Log(Strings.DiagKeyNoPrf);
-					Log(Strings.DiagKeyNoPrfReason);
-					Log("╚════════════════════════════════════════════════════════════╝");
+					Log(Strings.DiagResultUnsuitable);
 					Log("");
 					Log(Strings.DiagPossibleCauses);
 					Log(Strings.DiagCause1);

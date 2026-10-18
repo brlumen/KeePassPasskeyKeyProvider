@@ -64,6 +64,79 @@
 	<data name="Back" xml:space="preserve">
 		<value>Back</value>
 	</data>
+	<data name="BrowserCancelled" xml:space="preserve">
+		<value>The operation was cancelled.</value>
+	</data>
+	<data name="BrowserCreateWaiting" xml:space="preserve">
+		<value>Continue on the KeePass page that opened in the browser: click "Continue" and choose where to keep the passkey — this computer, your phone (QR code) or a security key.
+
+This window closes by itself.</value>
+	</data>
+	<data name="BrowserDeviceSuffix" xml:space="preserve">
+		<value>(browser)</value>
+	</data>
+	<data name="BrowserInvalidAnswer" xml:space="preserve">
+		<value>The browser returned an invalid answer.</value>
+	</data>
+	<data name="BrowserOpenAgain" xml:space="preserve">
+		<value>Open the page again</value>
+	</data>
+	<data name="BrowserOpenFailed" xml:space="preserve">
+		<value>Could not open the browser: {0}
+
+Open this address in a browser manually:
+{1}</value>
+	</data>
+	<data name="BrowserPageButton" xml:space="preserve">
+		<value>Continue</value>
+	</data>
+	<data name="BrowserPageCancelled" xml:space="preserve">
+		<value>Cancelled or timed out. Click "Continue" to try again.</value>
+	</data>
+	<data name="BrowserPageCreate" xml:space="preserve">
+		<value>KeePass is setting up how you will open your password database. Click "Continue" and choose where to keep the passkey: this computer, your phone or a security key. You will open the database with it.</value>
+	</data>
+	<data name="BrowserPageDone" xml:space="preserve">
+		<value>Done. Return to KeePass — this tab can be closed.</value>
+	</data>
+	<data name="BrowserPageExists" xml:space="preserve">
+		<value>This passkey is already added to the database. Choose another place to save it.</value>
+	</data>
+	<data name="BrowserPageFailed" xml:space="preserve">
+		<value>Something went wrong:</value>
+	</data>
+	<data name="BrowserPageGet" xml:space="preserve">
+		<value>To open your password database in KeePass, click "Continue" and confirm with your fingerprint, face, PIN or phone — the way you protected the database.</value>
+	</data>
+	<data name="BrowserPageNextStep" xml:space="preserve">
+		<value>Continue (step 2 of 2)</value>
+	</data>
+	<data name="BrowserPageNoPrf" xml:space="preserve">
+		<value>This option cannot protect a KeePass database. Choose another: this computer, your phone or another security key.</value>
+	</data>
+	<data name="BrowserPageTitleCreate" xml:space="preserve">
+		<value>Protect KeePass database</value>
+	</data>
+	<data name="BrowserPageTitleCreateNamed" xml:space="preserve">
+		<value>Protecting KeePass database "{0}"</value>
+	</data>
+	<data name="BrowserPageTitleGet" xml:space="preserve">
+		<value>Open KeePass database</value>
+	</data>
+	<data name="BrowserPageTitleGetNamed" xml:space="preserve">
+		<value>Opening KeePass database "{0}"</value>
+	</data>
+	<data name="BrowserPageWorking" xml:space="preserve">
+		<value>Follow the prompts in the window that appeared…</value>
+	</data>
+	<data name="BrowserTimedOut" xml:space="preserve">
+		<value>The browser did not answer in time.</value>
+	</data>
+	<data name="BrowserUnlockWaiting" xml:space="preserve">
+		<value>Confirm on the KeePass page that opened in the browser.
+
+This window closes by itself.</value>
+	</data>
 	<data name="Bytes" xml:space="preserve">
 		<value>bytes</value>
 	</data>
@@ -101,6 +174,17 @@ In the "Windows Security" window, choose:
 • a phone or tablet — scan the QR code and confirm on the phone.
 
 Other devices: File → Database Settings → "FIDO2" tab.</value>
+	</data>
+	<data name="CreateCredentialDescriptionBrowser" xml:space="preserve">
+		<value>A new passkey (FIDO2 credential) will now be created for this database in the browser.
+Enter below the name of the device used to create the key — it distinguishes it from others in the database device list. If left empty, the label will be made from the device type, computer name and date.
+
+On the page that opens, click "Continue" and choose:
+• this computer — the passkey manager of the system or browser (iCloud Keychain, Google Password Manager);
+• a phone or tablet — scan the QR code and confirm on the phone;
+• a security key with PRF (hmac-secret) support.
+
+Such a passkey opens the database on Windows, macOS and Linux. Other devices: File → Database Settings → "FIDO2" tab.</value>
 	</data>
 	<data name="CreateCredentialFailed" xml:space="preserve">
 		<value>Failed to create credential: {0} (HRESULT: 0x{1:X8})</value>
@@ -163,6 +247,9 @@ If a deleted credential is the only device of such a database and it has no reco
 	<data name="DiagCause3" xml:space="preserve">
 		<value>  3. Problems with the Windows WebAuthn API</value>
 	</data>
+	<data name="DiagCheckApiHint" xml:space="preserve">
+		<value>If the test does not start, click "Check API": it shows whether Windows supports passkeys.</value>
+	</data>
 	<data name="DiagCheckingApi" xml:space="preserve">
 		<value>&gt;&gt;&gt; Checking Windows WebAuthn API...</value>
 	</data>
@@ -185,31 +272,19 @@ If a deleted credential is the only device of such a database and it has no reco
 		<value>❌ ERROR getting PRF secret: {0}</value>
 	</data>
 	<data name="DiagHeader" xml:space="preserve">
-		<value>=== FIDO2 Diagnostics - PRF Extension ===</value>
+		<value>=== Device check for KeePass ===</value>
 	</data>
 	<data name="DiagIntro1" xml:space="preserve">
-		<value>This utility checks whether your authenticator (security key, Windows Hello, phone) supports</value>
+		<value>This test checks whether your device — this computer, a phone or a security key — can open a KeePass database.</value>
 	</data>
 	<data name="DiagIntro2" xml:space="preserve">
-		<value>the PRF (Pseudo-Random Function) extension - WebAuthn Level 3.</value>
+		<value>For that the device must be able to produce a secret key (the PRF feature): KeePass encrypts the database key with it. Not all devices support this feature.</value>
 	</data>
 	<data name="DiagIntro3" xml:space="preserve">
-		<value>PRF is the WebAuthn extension built on the CTAP hmac-secret extension of FIDO2 authenticators.</value>
+		<value>Click "PRF test": KeePass creates a test passkey and checks whether it produces such a key.</value>
 	</data>
 	<data name="DiagKeyMayNotSupport" xml:space="preserve">
 		<value>  The authenticator may not support PRF.</value>
-	</data>
-	<data name="DiagKeyNoPrf" xml:space="preserve">
-		<value>║  ❌ THE AUTHENTICATOR DOES NOT SUPPORT PRF                ║</value>
-	</data>
-	<data name="DiagKeyNoPrfReason" xml:space="preserve">
-		<value>║     or Windows WebAuthn API did not pass the extension    ║</value>
-	</data>
-	<data name="DiagKeySupportsPrf" xml:space="preserve">
-		<value>║  ✓ THE AUTHENTICATOR SUPPORTS PRF!                        ║</value>
-	</data>
-	<data name="DiagKeyUsable" xml:space="preserve">
-		<value>║  ✓ It can be used for the KeePass master key             ║</value>
 	</data>
 	<data name="DiagPinAgain" xml:space="preserve">
 		<value>  (confirmation on the authenticator will be required again)</value>
@@ -230,7 +305,7 @@ If a deleted credential is the only device of such a database and it has no reco
 		<value>❌ PRF secret received but empty!</value>
 	</data>
 	<data name="DiagPrfSuccess" xml:space="preserve">
-		<value>✓✓✓ SUCCESS! PRF secret received!</value>
+		<value>✓ The key was received.</value>
 	</data>
 	<data name="DiagPrfTestConfirm" xml:space="preserve">
 		<value>A TEST credential will now be created. Depending on your choice in the "Windows Security" window, it is created on a FIDO2 security key, in Windows Hello or on a phone (a passkey on a phone is synced to the provider account, e.g. Google).
@@ -243,6 +318,23 @@ The test does NOT affect your databases, but the test credential stays on the au
 • phone — in the password manager of the passkey provider.
 
 Do NOT reset the security key in Windows Settings: a reset deletes all its credentials, including those that open your databases.
+
+Continue the test?</value>
+	</data>
+	<data name="DiagPrfTestConfirmBrowser" xml:space="preserve">
+		<value>A test passkey will now be created to check whether your device can protect a KeePass database.
+
+A page opens in the browser. Click "Continue" and choose where to save the passkey:
+• this Mac — iCloud Keychain (Safari) or Google Password Manager (Chrome);
+• a phone — scan the QR code, the passkey is saved on the phone;
+• a security key (YubiKey, etc.) — insert the key and touch it.
+Then confirm the passkey once more: this checks that it can produce the key for a database.
+
+The test does not touch your databases. But the test passkey stays where you saved it: in the password list it is an entry for the site "localhost" named "KeePass: PRF diagnostics". It opens nothing and can be deleted:
+• iCloud Keychain — the Passwords app, search for "localhost";
+• Google Password Manager — open chrome://password-manager in Chrome, search for "localhost";
+• phone — its password manager (iPhone: Settings → Passwords; Android: Google Password Manager), search for "localhost";
+• security key — in Chrome open chrome://settings/securityKeys → "Sign-in data", or use the manufacturer's app (Yubico Authenticator).
 
 Continue the test?</value>
 	</data>
@@ -264,32 +356,29 @@ Continue the test?</value>
 	<data name="DiagRecommendations" xml:space="preserve">
 		<value>Recommendations:</value>
 	</data>
+	<data name="DiagResultSuitable" xml:space="preserve">
+		<value>Result: the device is suitable — it can open a KeePass database.</value>
+	</data>
+	<data name="DiagResultUnsuitable" xml:space="preserve">
+		<value>Result: the device is not suitable — it does not reliably produce the key KeePass needs (PRF).</value>
+	</data>
 	<data name="DiagSecretLength" xml:space="preserve">
 		<value>  Length: {0} bytes</value>
 	</data>
 	<data name="DiagSecretMatches" xml:space="preserve">
-		<value>  ✓ Secret matches the one received at creation (PRF is deterministic)</value>
+		<value>  ✓ It matches the key received at creation: the device produces it consistently.</value>
 	</data>
 	<data name="DiagSecretMismatch" xml:space="preserve">
-		<value>  ❌ Secret does NOT match the one received at creation: this authenticator cannot be used reliably!</value>
+		<value>  ❌ It does not match the key received at creation: the device produces it inconsistently.</value>
 	</data>
 	<data name="DiagStartingPrfTest" xml:space="preserve">
 		<value>&gt;&gt;&gt; Starting PRF (Pseudo-Random Function) test...</value>
 	</data>
-	<data name="DiagStep1" xml:space="preserve">
-		<value>1. Click 'Check API' to check WebAuthn API availability</value>
-	</data>
 	<data name="DiagStep1Creating" xml:space="preserve">
 		<value>Step 1: Creating a test credential with the PRF extension...</value>
 	</data>
-	<data name="DiagStep2" xml:space="preserve">
-		<value>2. Click 'PRF test' to create a test credential and check PRF</value>
-	</data>
 	<data name="DiagStep2Getting" xml:space="preserve">
 		<value>Step 2: Getting the PRF secret from the authenticator...</value>
-	</data>
-	<data name="DiagSteps" xml:space="preserve">
-		<value>Steps:</value>
 	</data>
 	<data name="DiagSystemReady" xml:space="preserve">
 		<value>The system is ready to work with FIDO2 authenticators.</value>
@@ -307,7 +396,7 @@ Continue the test?</value>
 		<value>  Waiting {0} s: Windows Hello does not offer a passkey right after creating it...</value>
 	</data>
 	<data name="DiagnosticsTitle" xml:space="preserve">
-		<value>FIDO2 Diagnostics - PRF Support Check</value>
+		<value>Device check for KeePass</value>
 	</data>
 	<data name="Done" xml:space="preserve">
 		<value>Done</value>
@@ -357,6 +446,9 @@ File → Change Master Key → "{0}".</value>
 	</data>
 	<data name="Open" xml:space="preserve">
 		<value>Open</value>
+	</data>
+	<data name="OpenInBrowserQuestion" xml:space="preserve">
+		<value>Open the database with a passkey in the browser?</value>
 	</data>
 	<data name="OpenWithRecoveryPhrase" xml:space="preserve">
 		<value>Open the database with the recovery phrase?</value>
@@ -500,6 +592,9 @@ The database master key will be replaced and the database saved. The old phrase 
 	<data name="TransportPhone" xml:space="preserve">
 		<value>Phone</value>
 	</data>
+	<data name="TransportThisComputer" xml:space="preserve">
+		<value>Passkey of this computer</value>
+	</data>
 	<data name="TransportUsb" xml:space="preserve">
 		<value>USB security key</value>
 	</data>
@@ -512,6 +607,9 @@ Type: {1}</value>
 	<data name="UnknownCredential" xml:space="preserve">
 		<value>The authenticator presented a credential not registered in this database</value>
 	</data>
+	<data name="UnknownDeviceKind" xml:space="preserve">
+		<value>The device records contain a device of an unknown type. Update the plugin.</value>
+	</data>
 	<data name="Unnamed" xml:space="preserve">
 		<value>(unnamed)</value>
 	</data>
@@ -520,6 +618,9 @@ Type: {1}</value>
 	</data>
 	<data name="UnusedCredentialsHint" xml:space="preserve">
 		<value>Not found in open or recently used databases or at the saved path. A moved or renamed database is not detected: delete only credentials you are sure are unused.</value>
+	</data>
+	<data name="UseBrowserCheckBox" xml:space="preserve">
+		<value>Create in the browser (the passkey will work on macOS and Linux too)</value>
 	</data>
 	<data name="VerifyPhraseDescription" xml:space="preserve">
 		<value>To verify, enter the phrase words with the given numbers.</value>
@@ -540,6 +641,14 @@ Requires WebAuthn API v4 or later (Windows 11 22H2 or later).</value>
 	</data>
 	<data name="WebAuthnUnavailableShort" xml:space="preserve">
 		<value>Windows WebAuthn API is not available (requires API v4+, Windows 11 22H2 or later).</value>
+	</data>
+	<data name="WindowsDevicesOnly" xml:space="preserve">
+		<value>The devices of this database work only on Windows (Windows WebAuthn API).
+
+To open the database on this system, add a browser device on Windows: File → Database Settings → "FIDO2" tab.</value>
+	</data>
+	<data name="WindowsDeviceSuffix" xml:space="preserve">
+		<value>(Windows only)</value>
 	</data>
 	<data name="WordMismatch" xml:space="preserve">
 		<value>Word #{0} does not match. Click "Back" to view the phrase again.</value>

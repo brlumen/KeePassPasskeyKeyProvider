@@ -35,6 +35,9 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 		};
 
+		/// <summary>PRF salt, also used by browser devices</summary>
+		internal static byte[] PrfSalt => (byte[])PRF_SALT.Clone();
+
 		/// <summary>Logging delegate (the diagnostics form subscribes to it)</summary>
 		public static Action<string> Logger { get; set; }
 

@@ -8,14 +8,28 @@ using KeePassLib;
 using KeePassLib.Collections;
 using KeePassLib.Serialization;
 using KeePassLib.Utility;
+using KeePassPasskeyKeyProvider.Browser;
+using KeePassPasskeyKeyProvider.WebAuthn;
 
 namespace KeePassPasskeyKeyProvider
 {
+	/// <summary>How the plugin talks to the authenticator of a device; each kind has its own RP ID and credentials</summary>
+	public enum DeviceKind : byte
+	{
+		/// <summary>Windows WebAuthn API (webauthn.dll), RP ID <see cref="WebAuthnHelper.RpId"/></summary>
+		WindowsWebAuthn = 0,
+
+		/// <summary>System browser through the plugin's local web server, RP ID <see cref="BrowserWebAuthn.RpId"/>; any OS</summary>
+		Browser = 1
+	}
+
 	/// <summary>
 	/// Device record: database key K wrapped for this device (see <see cref="KeyWrap"/>)
 	/// </summary>
 	public sealed class DeviceRecord
 	{
+		public DeviceKind Kind { get; set; }
+
 		public byte[] CredentialId { get; set; }
 
 		public KeyWrap Wrap { get; set; }
@@ -80,8 +94,11 @@ namespace KeePassPasskeyKeyProvider
 		//   byte recovery flag (0/1); if 1: KeyWrap
 		//   byte[64] ECDSA P‑256 / SHA‑256 signature (r ‖ s) over all preceding bytes
 		// KeyWrap: Q (65) ‖ d ⊕ S (32) ‖ ephemeral public key (65) ‖ wrapped K (32) ‖ owner tag (32)
+		// v5 = v4 with a DeviceKind byte before each credential ID (v4 devices are WindowsWebAuthn). Records without
+		// browser devices are still written as v4, so that plugin versions before v5 keep opening such databases.
 		private const string CustomDataKey = "KeePassFIDO2.Devices";
-		private const byte FormatVersion = 4;
+		private const byte FormatVersion4 = 4;
+		private const byte FormatVersion5 = 5;
 		// Private scalar of SK (base64) in the encrypted CustomData
 		private const string SigningKeyDataKey = "KeePassFIDO2.SigningKey";
 
@@ -300,10 +317,10 @@ namespace KeePassPasskeyKeyProvider
 			return records.Find(r => MemUtil.ArraysEqual(r.CredentialId, credentialId));
 		}
 
-		/// <summary>Credential IDs of all records for allowList</summary>
-		public static List<byte[]> GetAllowList(List<DeviceRecord> records)
+		/// <summary>Credential IDs of the records of one kind for allowList</summary>
+		public static List<byte[]> GetAllowList(List<DeviceRecord> records, DeviceKind kind)
 		{
-			return records.ConvertAll(r => r.CredentialId);
+			return records.FindAll(r => r.Kind == kind).ConvertAll(r => r.CredentialId);
 		}
 
 		private static byte[] Serialize(DeviceRecordSet set, SigningKey signingKey)
@@ -311,11 +328,14 @@ namespace KeePassPasskeyKeyProvider
 			using (var ms = new MemoryStream())
 			using (var bw = new BinaryWriter(ms))
 			{
-				bw.Write(FormatVersion);
+				bool withKinds = set.Devices.Exists(r => r.Kind != DeviceKind.WindowsWebAuthn);
+				bw.Write(withKinds ? FormatVersion5 : FormatVersion4);
 				bw.Write(set.VerificationKey);
 				bw.Write(checked((ushort)set.Devices.Count));
 				foreach (DeviceRecord r in set.Devices)
 				{
+					if (withKinds)
+						bw.Write((byte)r.Kind);
 					WriteBlock(bw, r.CredentialId);
 					r.Wrap.Write(bw);
 					WriteBlock(bw, Encoding.UTF8.GetBytes(r.Label ?? string.Empty));
@@ -344,7 +364,7 @@ namespace KeePassPasskeyKeyProvider
 				using (var br = new BinaryReader(ms))
 				{
 					byte version = br.ReadByte();
-					if (version != FormatVersion)
+					if (version != FormatVersion4 && version != FormatVersion5)
 						throw new InvalidDataException(string.Format(Strings.UnsupportedDeviceRecordsVersion, version));
 
 					set.VerificationKey = ReadExact(br, KeyWrap.PublicKeyLength);
@@ -354,8 +374,12 @@ namespace KeePassPasskeyKeyProvider
 					int count = br.ReadUInt16();
 					for (int i = 0; i < count; i++)
 					{
+						var kind = version == FormatVersion5 ? (DeviceKind)br.ReadByte() : DeviceKind.WindowsWebAuthn;
+						if (!Enum.IsDefined(typeof(DeviceKind), kind))
+							throw new InvalidDataException(Strings.UnknownDeviceKind);
 						var record = new DeviceRecord
 						{
+							Kind = kind,
 							CredentialId = ReadBlock(br),
 							Wrap = KeyWrap.Read(br),
 							Label = Encoding.UTF8.GetString(ReadBlock(br))

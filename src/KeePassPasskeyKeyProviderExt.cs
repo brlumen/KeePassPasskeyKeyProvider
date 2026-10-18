@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using KeePass.Forms;
 using KeePass.Plugins;
@@ -139,9 +140,12 @@ namespace KeePassPasskeyKeyProvider
 			return null;
 		}
 
+		/// <summary>Windows: API info, Windows Hello cleanup and diagnostics; other OS: only the PRF test (in the browser)</summary>
 		private void OnMenuItemClick(object sender, EventArgs e)
 		{
-			var form = new FIDO2OptionsForm(PluginHost);
+			Form form = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+				? new FIDO2OptionsForm(PluginHost)
+				: (Form)new FIDO2DiagnosticsForm();
 			UIUtil.ShowDialogAndDestroy(form);
 		}
 

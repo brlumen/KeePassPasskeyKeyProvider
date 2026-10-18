@@ -27,6 +27,7 @@ namespace KeePassPasskeyKeyProvider
 			this.labelDeviceName = new System.Windows.Forms.Label();
 			this.textBoxDeviceName = new System.Windows.Forms.TextBox();
 			this.buttonAddDevice = new System.Windows.Forms.Button();
+			this.checkBoxBrowser = new System.Windows.Forms.CheckBox();
 			this.labelStatus = new System.Windows.Forms.Label();
 			this.labelRecovery = new System.Windows.Forms.Label();
 			this.recoveryButtons = new System.Windows.Forms.FlowLayoutPanel();
@@ -45,9 +46,10 @@ namespace KeePassPasskeyKeyProvider
 			this.layout.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.layout.Name = "layout";
 			this.layout.Padding = new System.Windows.Forms.Padding(6);
-			this.layout.RowCount = 8;
+			this.layout.RowCount = 9;
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -61,12 +63,14 @@ namespace KeePassPasskeyKeyProvider
 			this.layout.Controls.Add(this.labelDeviceName, 0, 3);
 			this.layout.Controls.Add(this.textBoxDeviceName, 0, 4);
 			this.layout.Controls.Add(this.buttonAddDevice, 1, 4);
-			this.layout.Controls.Add(this.labelRecovery, 0, 5);
-			this.layout.Controls.Add(this.recoveryButtons, 0, 6);
-			this.layout.Controls.Add(this.labelStatus, 0, 7);
+			this.layout.Controls.Add(this.checkBoxBrowser, 0, 5);
+			this.layout.Controls.Add(this.labelRecovery, 0, 6);
+			this.layout.Controls.Add(this.recoveryButtons, 0, 7);
+			this.layout.Controls.Add(this.labelStatus, 0, 8);
 			this.layout.SetColumnSpan(this.labelDevices, 2);
 			this.layout.SetColumnSpan(this.listBoxDevices, 2);
 			this.layout.SetColumnSpan(this.labelDeviceName, 2);
+			this.layout.SetColumnSpan(this.checkBoxBrowser, 2);
 			this.layout.SetColumnSpan(this.labelRecovery, 2);
 			this.layout.SetColumnSpan(this.recoveryButtons, 2);
 			this.layout.SetColumnSpan(this.labelStatus, 2);
@@ -105,7 +109,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonHelloCleanup.Margin = new System.Windows.Forms.Padding(3, 6, 3, 12);
 			this.buttonHelloCleanup.Name = "buttonHelloCleanup";
 			this.buttonHelloCleanup.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
-			this.buttonHelloCleanup.TabIndex = 6;
+			this.buttonHelloCleanup.TabIndex = 7;
 			this.buttonHelloCleanup.Text = Strings.HelloCleanupButton;
 			this.buttonHelloCleanup.UseVisualStyleBackColor = true;
 			this.buttonHelloCleanup.Click += new System.EventHandler(this.HelloCleanupButtonClick);
@@ -134,6 +138,15 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonAddDevice.UseVisualStyleBackColor = true;
 			this.buttonAddDevice.Click += new System.EventHandler(this.AddDeviceButtonClick);
 			//
+			// checkBoxBrowser
+			//
+			this.checkBoxBrowser.AutoSize = true;
+			this.checkBoxBrowser.Margin = new System.Windows.Forms.Padding(3, 3, 3, 3);
+			this.checkBoxBrowser.Name = "checkBoxBrowser";
+			this.checkBoxBrowser.TabIndex = 4;
+			this.checkBoxBrowser.Text = Strings.UseBrowserCheckBox;
+			this.checkBoxBrowser.UseVisualStyleBackColor = true;
+			//
 			// labelRecovery
 			//
 			this.labelRecovery.AutoSize = true;
@@ -155,7 +168,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonRecovery.AutoSize = true;
 			this.buttonRecovery.Name = "buttonRecovery";
 			this.buttonRecovery.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
-			this.buttonRecovery.TabIndex = 4;
+			this.buttonRecovery.TabIndex = 5;
 			this.buttonRecovery.UseVisualStyleBackColor = true;
 			this.buttonRecovery.Click += new System.EventHandler(this.RecoveryButtonClick);
 			//
@@ -164,7 +177,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonRemoveRecovery.AutoSize = true;
 			this.buttonRemoveRecovery.Name = "buttonRemoveRecovery";
 			this.buttonRemoveRecovery.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
-			this.buttonRemoveRecovery.TabIndex = 5;
+			this.buttonRemoveRecovery.TabIndex = 6;
 			this.buttonRemoveRecovery.Text = Strings.RemovePhrase;
 			this.buttonRemoveRecovery.UseVisualStyleBackColor = true;
 			this.buttonRemoveRecovery.Click += new System.EventHandler(this.RemoveRecoveryButtonClick);
@@ -197,6 +210,7 @@ namespace KeePassPasskeyKeyProvider
 		private System.Windows.Forms.Label labelDeviceName;
 		private System.Windows.Forms.TextBox textBoxDeviceName;
 		private System.Windows.Forms.Button buttonAddDevice;
+		private System.Windows.Forms.CheckBox checkBoxBrowser;
 		private System.Windows.Forms.Label labelStatus;
 		private System.Windows.Forms.Label labelRecovery;
 		private System.Windows.Forms.FlowLayoutPanel recoveryButtons;

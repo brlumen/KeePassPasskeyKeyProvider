@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using KeePass.Plugins;
 using KeePass.UI;
@@ -19,6 +20,7 @@ namespace KeePassPasskeyKeyProvider
 		private IPluginHost host;
 		private PwDatabase database;
 		private DeviceRecordSet set = new DeviceRecordSet();
+		private bool windowsWebAuthn;
 
 		public FIDO2DevicesControl()
 		{
@@ -66,14 +68,32 @@ namespace KeePassPasskeyKeyProvider
 				return;
 			}
 
+			// Only adding a device needs an authenticator; removal and the phrase work without WebAuthn.
+			// Without the Windows WebAuthn API devices are added in the browser.
+			windowsWebAuthn = WebAuthnHelper.IsWebAuthnAvailable();
+
 			foreach (DeviceRecord r in set.Devices)
-				listBoxDevices.Items.Add(string.IsNullOrEmpty(r.Label) ? Strings.Unnamed : r.Label);
+				listBoxDevices.Items.Add(DisplayName(r));
 			UpdateRecoveryStatus();
 
-			// Only adding a device needs an authenticator; removal and the phrase work without WebAuthn
-			bool webAuthn = WebAuthnHelper.IsWebAuthnAvailable();
-			ShowStatus(webAuthn ? Strings.DevicesTabInfo : Strings.WebAuthnUnavailableShort);
-			SetEnabled(true, webAuthn);
+			if (!windowsWebAuthn) checkBoxBrowser.Checked = true;
+			checkBoxBrowser.Visible = windowsWebAuthn;
+			buttonHelloCleanup.Visible = windowsWebAuthn;
+			ShowStatus(windowsWebAuthn || !RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+				? Strings.DevicesTabInfo
+				: Strings.WebAuthnUnavailableShort);
+			SetEnabled(true, true);
+		}
+
+		/// <summary>Device label; marked if the device is not of the kind this system uses by default</summary>
+		private string DisplayName(DeviceRecord r)
+		{
+			string name = string.IsNullOrEmpty(r.Label) ? Strings.Unnamed : r.Label;
+			if (windowsWebAuthn && r.Kind == DeviceKind.Browser)
+				return $"{name} {Strings.BrowserDeviceSuffix}";
+			if (!windowsWebAuthn && r.Kind == DeviceKind.WindowsWebAuthn)
+				return $"{name} {Strings.WindowsDeviceSuffix}";
+			return name;
 		}
 
 		/// <summary>Phrase status; a single device without a phrase shows a warning about the risk of losing access</summary>
@@ -102,6 +122,7 @@ namespace KeePassPasskeyKeyProvider
 			listBoxDevices.Enabled = enabled;
 			textBoxDeviceName.Enabled = enabled && canAdd;
 			buttonAddDevice.Enabled = enabled && canAdd;
+			checkBoxBrowser.Enabled = enabled && canAdd;
 			buttonRemoveDevice.Enabled = enabled && CanRemoveSelected();
 			buttonRecovery.Enabled = enabled;
 			buttonRemoveRecovery.Enabled = enabled && HasRecovery;
@@ -144,12 +165,14 @@ namespace KeePassPasskeyKeyProvider
 			bool saved;
 			try
 			{
+				DeviceKind kind = checkBoxBrowser.Checked ? DeviceKind.Browser : DeviceKind.WindowsWebAuthn;
 				PrfResult created = FIDO2KeyProvider.CreateCredentialForDatabase(
-					FindForm()?.Handle ?? Handle, database.IOConnectionInfo.Path);
+					kind, FindForm(), database.IOConnectionInfo.Path, set.Devices);
 				try
 				{
 					set.Devices.Add(new DeviceRecord
 					{
+						Kind = kind,
 						CredentialId = created.CredentialId,
 						Wrap = KeyWrap.Create(key, created.PrfSecret, set.VerificationKey),
 						Label = label

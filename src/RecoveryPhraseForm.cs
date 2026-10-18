@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Windows.Forms;
@@ -27,10 +28,28 @@ namespace KeePassPasskeyKeyProvider
 			checkBoxes = new[] { textBoxWord1, textBoxWord2, textBoxWord3 };
 
 			textBoxWords.Text = RecoveryPhrase.Format(words);
+			FitWordsBox();
 			for (int i = 0; i < CheckedWordCount; i++)
 				checkLabels[i].Text = string.Format(Strings.WordNumber, checkedPositions[i] + 1);
 
 			ShowWords();
+		}
+
+		/// <summary>
+		/// Sizes the box to the words. Consolas exists only on Windows: elsewhere another monospace font with other
+		/// metrics is used, and a box of the designer size would wrap the columns.
+		/// </summary>
+		private void FitWordsBox()
+		{
+			if (textBoxWords.Font.Name != "Consolas")
+				textBoxWords.Font = new Font(FontFamily.GenericMonospace, textBoxWords.Font.SizeInPoints);
+			textBoxWords.WordWrap = false;
+
+			Size text = TextRenderer.MeasureText(textBoxWords.Text, textBoxWords.Font);
+			const int border = 16; // frame and inner margins of the box
+			var size = new Size(Math.Max(textBoxWords.Width, text.Width + border), Math.Max(textBoxWords.Height, text.Height + border));
+			textBoxWords.MinimumSize = size;
+			textBoxWords.Size = size;
 		}
 
 		/// <summary>Three distinct word numbers in ascending order</summary>

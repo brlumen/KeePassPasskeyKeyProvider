@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Windows.Forms;
 using KeePass.Plugins;
 using KeePass.UI;
+using KeePassPasskeyKeyProvider.Browser;
 using KeePassPasskeyKeyProvider.WebAuthn;
 using KeePassLib;
 using KeePassLib.Keys;
@@ -12,8 +14,8 @@ using KeePassLib.Utility;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// KeePass Key Provider using FIDO2 authentication via the Windows WebAuthn API
-	/// with PRF extension support (WebAuthn Level 3).
+	/// KeePass Key Provider using FIDO2 authentication with the PRF extension (WebAuthn Level 3): via the Windows
+	/// WebAuthn API or, on any OS, in the system browser (see <see cref="DeviceKind"/>).
 	/// Database key K is 32 random bytes; the KDBX header (PublicCustomData) stores K wrapped
 	/// for each device, signed with the database signing key (see <see cref="DeviceKeyStore"/>, <see cref="KeyWrap"/>).
 	/// Credentials are discoverable: no files next to the database. Removing a device = rotation of K: the new K is
@@ -47,15 +49,7 @@ namespace KeePassPasskeyKeyProvider
 		{
 			try
 			{
-				if (!ctx.CreatingNewKey)
-					return Unlock(ctx);
-
-				if (!WebAuthnHelper.IsWebAuthnAvailable())
-				{
-					MessageService.ShowWarning(Strings.WebAuthnUnavailable);
-					return null;
-				}
-				return CreateNewCredential(ctx);
+				return ctx.CreatingNewKey ? CreateNewCredential(ctx) : Unlock(ctx);
 			}
 			catch (WebAuthnException ex)
 			{
@@ -91,22 +85,24 @@ namespace KeePassPasskeyKeyProvider
 					if (currentSigningKey != null) existing = set.Devices;
 				}
 
-				var form = new DeviceNameForm(existing.ConvertAll(r => r.Label));
+				var form = new DeviceNameForm(existing.ConvertAll(r => r.Label), WebAuthnHelper.IsWebAuthnAvailable());
 				if (UIUtil.ShowDialogAndDestroy(form) != DialogResult.OK)
 					return null;
 				string label = form.DeviceName;
+				DeviceKind kind = form.UseBrowser ? DeviceKind.Browser : DeviceKind.WindowsWebAuthn;
 				bool keepDevices = form.KeepDevices && currentSigningKey != null && existing.Count > 0;
 
-				PrfResult created = CreateCredentialForDatabase(GetActiveWindowHandle(), ctx.DatabasePath);
+				PrfResult created = CreateCredentialForDatabase(kind, GetActiveForm(), ctx.DatabasePath, existing);
 				SigningKey signingKey = keepDevices ? currentSigningKey.Clone() : SigningKey.Generate();
 				byte[] key = GenerateKey();
 				try
 				{
 					var record = new DeviceRecord
 					{
+						Kind = kind,
 						CredentialId = created.CredentialId,
 						Wrap = KeyWrap.Create(key, created.PrfSecret, signingKey.VerificationKey),
-						Label = label.Length > 0 ? label : DefaultLabel(created.Transport)
+						Label = label.Length > 0 ? label : DefaultLabel(kind, created.Transport)
 					};
 					SetPending(record, HashKey(key), signingKey, keepDevices);
 					signingKey = null;
@@ -183,9 +179,13 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>Default device label: type by transport, computer name and credential creation time</summary>
-		private static string DefaultLabel(uint transport)
+		private static string DefaultLabel(DeviceKind kind, uint transport)
 		{
-			return $"{WebAuthnHelper.TransportName(transport)} ({Environment.MachineName}), {DateTime.Now.ToString("g")}";
+			// A browser passkey of this computer is iCloud Keychain, Google Password Manager or Windows Hello
+			string type = kind == DeviceKind.Browser && (transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_INTERNAL) != 0
+				? Strings.TransportThisComputer
+				: WebAuthnHelper.TransportName(transport);
+			return $"{type} ({Environment.MachineName}), {DateTime.Now.ToString("g")}";
 		}
 
 		/// <summary>
@@ -309,7 +309,8 @@ namespace KeePassPasskeyKeyProvider
 		/// Creates a credential with PRF for the database and returns credential ID + PRF secret
 		/// (used both when creating the key and when adding a device)
 		/// </summary>
-		public static PrfResult CreateCredentialForDatabase(IntPtr windowHandle, string databasePath)
+		/// <param name="existing">Devices of the database: the browser does not register an authenticator twice</param>
+		public static PrfResult CreateCredentialForDatabase(DeviceKind kind, Form owner, string databasePath, List<DeviceRecord> existing)
 		{
 			// User ID (32 bytes) is random so that each database/device gets a separate credential
 			byte[] userId = new byte[32];
@@ -323,7 +324,12 @@ namespace KeePassPasskeyKeyProvider
 
 			try
 			{
+				if (kind == DeviceKind.Browser)
+					return BrowserWebAuthn.CreateCredential(owner, userId, $"KeePass: {dbName}",
+						DeviceKeyStore.GetAllowList(existing, DeviceKind.Browser), DatabaseName(databasePath));
+
 				// displayName = full path: cleanup in Tools → KeePassPasskeyKeyProvider uses it to find credentials of deleted databases
+				IntPtr windowHandle = owner?.Handle ?? IntPtr.Zero;
 				PrfResult created = WebAuthnHelper.CreateCredential(windowHandle, userId, $"KeePass: {dbName}", databasePath);
 
 				// PRF secret: on API 8+ already obtained at creation, otherwise via a separate GetAssertion
@@ -341,8 +347,9 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Unlocks the database with a device; if WebAuthn is unavailable, authentication fails or the records
-		/// are not authentic, offers the recovery phrase (if there is one)
+		/// Unlocks the database with a device: Windows devices through the WebAuthn API (if available), then browser
+		/// devices. If authentication fails or the records are not authentic, offers the next way: browser devices,
+		/// then the recovery phrase (if there is one).
 		/// </summary>
 		private static byte[] Unlock(KeyProviderQueryContext ctx)
 		{
@@ -350,26 +357,50 @@ namespace KeePassPasskeyKeyProvider
 			if (set == null)
 				return null;
 
-			string problem;
-			if (!WebAuthnHelper.IsWebAuthnAvailable())
-				problem = Strings.WebAuthnUnavailable;
-			else
+			string databaseName = DatabaseName(ctx.DatabasePath);
+			bool browser = set.Devices.Exists(r => r.Kind == DeviceKind.Browser);
+			string problem = null;
+			if (set.Devices.Exists(r => r.Kind == DeviceKind.WindowsWebAuthn))
 			{
-				try
+				if (WebAuthnHelper.IsWebAuthnAvailable())
 				{
-					return UnlockWithCredential(set);
+					byte[] key = TryUnlock(set, DeviceKind.WindowsWebAuthn, databaseName, out problem);
+					if (key != null)
+						return key;
+					if (browser && !MessageService.AskYesNo(problem + "\n\n" + Strings.OpenInBrowserQuestion, "KeePassPasskeyKeyProvider"))
+						browser = false;
 				}
-				catch (WebAuthnException ex)
-				{
-					problem = AuthenticationError(ex);
-				}
-				catch (CryptographicException)
-				{
-					// The device secret does not match the owner tag for VK, or the signature is invalid
-					problem = Strings.RecordsNotAuthentic;
-				}
+				else if (!browser)
+					problem = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Strings.WebAuthnUnavailable : Strings.WindowsDevicesOnly;
+			}
+
+			if (browser)
+			{
+				byte[] key = TryUnlock(set, DeviceKind.Browser, databaseName, out problem);
+				if (key != null)
+					return key;
 			}
 			return UnlockWithRecoveryPhrase(set, problem);
+		}
+
+		/// <summary>K from a device of the kind; null and the reason if authentication failed or the records are not authentic</summary>
+		private static byte[] TryUnlock(DeviceRecordSet set, DeviceKind kind, string databaseName, out string problem)
+		{
+			problem = null;
+			try
+			{
+				return UnlockWithCredential(set, kind, databaseName);
+			}
+			catch (WebAuthnException ex)
+			{
+				problem = AuthenticationError(ex);
+			}
+			catch (CryptographicException)
+			{
+				// The device secret does not match the owner tag for VK, or the signature is invalid
+				problem = Strings.RecordsNotAuthentic;
+			}
+			return null;
 		}
 
 		/// <summary>K unwrapped with the secret R of the entered phrase</summary>
@@ -417,16 +448,21 @@ namespace KeePassPasskeyKeyProvider
 		}
 
 		/// <summary>
-		/// Unlocks the database with a device: GetAssertion with the records' allowList → PRF → K
+		/// Unlocks the database with a device of the kind: GetAssertion with the allowList of its records → PRF → K
 		/// </summary>
 		/// <exception cref="CryptographicException">The records are not authentic</exception>
-		private static byte[] UnlockWithCredential(DeviceRecordSet set)
+		private static byte[] UnlockWithCredential(DeviceRecordSet set, DeviceKind kind, string databaseName)
 		{
-			PrfResult assertion = WebAuthnHelper.GetPrfSecret(GetActiveWindowHandle(), DeviceKeyStore.GetAllowList(set.Devices));
+			List<DeviceRecord> devices = set.Devices.FindAll(r => r.Kind == kind);
+			List<byte[]> allowList = DeviceKeyStore.GetAllowList(devices, kind);
+			Form owner = GetActiveForm();
+			PrfResult assertion = kind == DeviceKind.Browser
+				? BrowserWebAuthn.GetPrfSecret(owner, allowList, databaseName)
+				: WebAuthnHelper.GetPrfSecret(owner?.Handle ?? IntPtr.Zero, allowList);
 			byte[] key;
 			try
 			{
-				DeviceRecord record = DeviceKeyStore.Find(set.Devices, assertion.CredentialId);
+				DeviceRecord record = DeviceKeyStore.Find(devices, assertion.CredentialId);
 				if (record == null)
 					throw new WebAuthnException(Strings.UnknownCredential);
 
@@ -478,14 +514,16 @@ namespace KeePassPasskeyKeyProvider
 			return null;
 		}
 
-		/// <summary>
-		/// Gets the active window handle
-		/// </summary>
-		private static IntPtr GetActiveWindowHandle()
+		/// <summary>File name of the database for dialogs; null if there is no path</summary>
+		private static string DatabaseName(string databasePath)
 		{
-			// Try to get the KeePass main window
-			var mainForm = Form.ActiveForm ?? Application.OpenForms[0];
-			return mainForm?.Handle ?? IntPtr.Zero;
+			return string.IsNullOrEmpty(databasePath) ? null : System.IO.Path.GetFileName(databasePath);
+		}
+
+		/// <summary>Active window (the key prompt) or the KeePass main window: owner of the authentication dialogs</summary>
+		private static Form GetActiveForm()
+		{
+			return Form.ActiveForm ?? (Application.OpenForms.Count > 0 ? Application.OpenForms[0] : null);
 		}
 
 		public override string Name => ProviderName;

@@ -64,6 +64,79 @@
 	<data name="Back" xml:space="preserve">
 		<value>Назад</value>
 	</data>
+	<data name="BrowserCancelled" xml:space="preserve">
+		<value>Операция отменена.</value>
+	</data>
+	<data name="BrowserCreateWaiting" xml:space="preserve">
+		<value>Продолжите на странице KeePass, которая открылась в браузере: нажмите «Продолжить» и выберите, где хранить ключ доступа, — на этом компьютере, на телефоне (QR‑код) или на ключе безопасности.
+
+Это окно закроется само.</value>
+	</data>
+	<data name="BrowserDeviceSuffix" xml:space="preserve">
+		<value>(браузер)</value>
+	</data>
+	<data name="BrowserInvalidAnswer" xml:space="preserve">
+		<value>Браузер вернул некорректный ответ.</value>
+	</data>
+	<data name="BrowserOpenAgain" xml:space="preserve">
+		<value>Открыть страницу ещё раз</value>
+	</data>
+	<data name="BrowserOpenFailed" xml:space="preserve">
+		<value>Не удалось открыть браузер: {0}
+
+Откройте этот адрес в браузере вручную:
+{1}</value>
+	</data>
+	<data name="BrowserPageButton" xml:space="preserve">
+		<value>Продолжить</value>
+	</data>
+	<data name="BrowserPageCancelled" xml:space="preserve">
+		<value>Действие отменено или время истекло. Нажмите «Продолжить», чтобы попробовать ещё раз.</value>
+	</data>
+	<data name="BrowserPageCreate" xml:space="preserve">
+		<value>KeePass настраивает вход в базу паролей. Нажмите «Продолжить» и выберите, где хранить ключ доступа (passkey): на этом компьютере, на телефоне или на ключе безопасности. Этим ключом вы будете открывать базу.</value>
+	</data>
+	<data name="BrowserPageDone" xml:space="preserve">
+		<value>Готово. Вернитесь в KeePass — эту вкладку можно закрыть.</value>
+	</data>
+	<data name="BrowserPageExists" xml:space="preserve">
+		<value>Этот ключ доступа уже добавлен к базе. Выберите другое место для сохранения.</value>
+	</data>
+	<data name="BrowserPageFailed" xml:space="preserve">
+		<value>Что-то пошло не так:</value>
+	</data>
+	<data name="BrowserPageGet" xml:space="preserve">
+		<value>Чтобы открыть базу паролей в KeePass, нажмите «Продолжить» и подтвердите вход отпечатком пальца, лицом, PIN‑кодом или на телефоне — тем способом, которым вы защитили базу.</value>
+	</data>
+	<data name="BrowserPageNextStep" xml:space="preserve">
+		<value>Продолжить (шаг 2 из 2)</value>
+	</data>
+	<data name="BrowserPageNoPrf" xml:space="preserve">
+		<value>Этот способ не подходит для защиты базы KeePass. Выберите другой: этот компьютер, телефон или другой ключ безопасности.</value>
+	</data>
+	<data name="BrowserPageTitleCreate" xml:space="preserve">
+		<value>Защита базы KeePass</value>
+	</data>
+	<data name="BrowserPageTitleCreateNamed" xml:space="preserve">
+		<value>Защита базы KeePass «{0}»</value>
+	</data>
+	<data name="BrowserPageTitleGet" xml:space="preserve">
+		<value>Открытие базы KeePass</value>
+	</data>
+	<data name="BrowserPageTitleGetNamed" xml:space="preserve">
+		<value>Открытие базы KeePass «{0}»</value>
+	</data>
+	<data name="BrowserPageWorking" xml:space="preserve">
+		<value>Следуйте подсказкам в появившемся окне…</value>
+	</data>
+	<data name="BrowserTimedOut" xml:space="preserve">
+		<value>Браузер не ответил вовремя.</value>
+	</data>
+	<data name="BrowserUnlockWaiting" xml:space="preserve">
+		<value>Подтвердите вход на странице KeePass, которая открылась в браузере.
+
+Это окно закроется само.</value>
+	</data>
 	<data name="Bytes" xml:space="preserve">
 		<value>байт</value>
 	</data>
@@ -101,6 +174,17 @@
 • телефон или планшет — отсканируйте QR‑код и подтвердите на телефоне.
 
 Другие устройства: Файл → Параметры базы → вкладка «FIDO2».</value>
+	</data>
+	<data name="CreateCredentialDescriptionBrowser" xml:space="preserve">
+		<value>Сейчас для этой базы в браузере будет создан новый passkey (FIDO2 credential).
+Введите ниже название устройства, которым создаётся ключ, — оно отличает его от других в списке устройств базы. Если оставить поле пустым, название будет составлено из типа устройства, имени компьютера и даты.
+
+На открывшейся странице нажмите «Продолжить» и выберите:
+• этот компьютер — менеджер passkey системы или браузера (Связка ключей iCloud, Google Password Manager);
+• телефон или планшет — отсканируйте QR‑код и подтвердите на телефоне;
+• ключ безопасности с поддержкой PRF (hmac-secret).
+
+Такой passkey открывает базу в Windows, macOS и Linux. Другие устройства: Файл → Параметры базы → вкладка «FIDO2».</value>
 	</data>
 	<data name="CreateCredentialFailed" xml:space="preserve">
 		<value>Не удалось создать credential: {0} (HRESULT: 0x{1:X8})</value>
@@ -163,6 +247,9 @@
 	<data name="DiagCause3" xml:space="preserve">
 		<value>  3. Проблемы с Windows WebAuthn API</value>
 	</data>
+	<data name="DiagCheckApiHint" xml:space="preserve">
+		<value>Если тест не запускается, нажмите «Проверить API»: она покажет, поддерживает ли Windows passkey.</value>
+	</data>
 	<data name="DiagCheckingApi" xml:space="preserve">
 		<value>&gt;&gt;&gt; Проверка Windows WebAuthn API...</value>
 	</data>
@@ -185,31 +272,19 @@
 		<value>❌ ОШИБКА при получении PRF secret: {0}</value>
 	</data>
 	<data name="DiagHeader" xml:space="preserve">
-		<value>=== FIDO2 Диагностика - PRF Extension ===</value>
+		<value>=== Проверка устройства для KeePass ===</value>
 	</data>
 	<data name="DiagIntro1" xml:space="preserve">
-		<value>Эта утилита проверяет, поддерживает ли ваш аутентификатор (ключ безопасности, Windows Hello, телефон)</value>
+		<value>Тест проверяет, сможет ли ваше устройство — этот компьютер, телефон или ключ безопасности — открывать базу KeePass.</value>
 	</data>
 	<data name="DiagIntro2" xml:space="preserve">
-		<value>расширение PRF (Pseudo-Random Function) - WebAuthn Level 3.</value>
+		<value>Для этого устройство должно уметь выдавать секретный ключ (функция PRF): им KeePass шифрует ключ базы. Эту функцию поддерживают не все устройства.</value>
 	</data>
 	<data name="DiagIntro3" xml:space="preserve">
-		<value>PRF — расширение WebAuthn, построенное на расширении CTAP hmac-secret FIDO2‑аутентификаторов.</value>
+		<value>Нажмите «Тест PRF»: KeePass создаст тестовый passkey и проверит, выдаёт ли он такой ключ.</value>
 	</data>
 	<data name="DiagKeyMayNotSupport" xml:space="preserve">
 		<value>  Возможно, аутентификатор не поддерживает PRF.</value>
-	</data>
-	<data name="DiagKeyNoPrf" xml:space="preserve">
-		<value>║  ❌ АУТЕНТИФИКАТОР НЕ ПОДДЕРЖИВАЕТ PRF                    ║</value>
-	</data>
-	<data name="DiagKeyNoPrfReason" xml:space="preserve">
-		<value>║     или Windows WebAuthn API не передал расширение        ║</value>
-	</data>
-	<data name="DiagKeySupportsPrf" xml:space="preserve">
-		<value>║  ✓ АУТЕНТИФИКАТОР ПОДДЕРЖИВАЕТ PRF!                       ║</value>
-	</data>
-	<data name="DiagKeyUsable" xml:space="preserve">
-		<value>║  ✓ Можно использовать для KeePass мастер-ключа           ║</value>
 	</data>
 	<data name="DiagPinAgain" xml:space="preserve">
 		<value>  (снова потребуется подтверждение на аутентификаторе)</value>
@@ -230,7 +305,7 @@
 		<value>❌ PRF secret получен, но пустой!</value>
 	</data>
 	<data name="DiagPrfSuccess" xml:space="preserve">
-		<value>✓✓✓ УСПЕХ! PRF secret получен!</value>
+		<value>✓ Ключ получен.</value>
 	</data>
 	<data name="DiagPrfTestConfirm" xml:space="preserve">
 		<value>Сейчас будет создан ТЕСТОВЫЙ credential. В зависимости от выбора в окне «Безопасность Windows» он создаётся на FIDO2‑ключе, в Windows Hello или на телефоне (passkey на телефоне синхронизируется с аккаунтом провайдера, например Google).
@@ -243,6 +318,23 @@
 • телефон — в менеджере паролей провайдера passkey.
 
 НЕ сбрасывайте ключ безопасности в Параметрах Windows: сброс удаляет все его credential, в том числе те, которыми открываются ваши базы.
+
+Продолжить тест?</value>
+	</data>
+	<data name="DiagPrfTestConfirmBrowser" xml:space="preserve">
+		<value>Сейчас будет создан тестовый passkey — чтобы проверить, подходит ли ваше устройство для защиты базы KeePass.
+
+В браузере откроется страница. Нажмите «Продолжить» и выберите, где сохранить passkey:
+• на этом Mac — в Связке ключей iCloud (Safari) или в Google Password Manager (Chrome);
+• на телефоне — отсканируйте QR‑код, passkey сохранится на телефоне;
+• на ключе безопасности (YubiKey и т. п.) — вставьте ключ и коснитесь его.
+Затем подтвердите passkey ещё раз: так проверяется, что он умеет выдавать ключ для базы.
+
+Ваши базы тест не затрагивает. Но тестовый passkey останется там, где вы его сохранили: в списке паролей это запись для сайта «localhost» с именем «KeePass: PRF diagnostics». Он ничего не открывает, его можно удалить:
+• Связка ключей iCloud — приложение «Пароли», поиск «localhost»;
+• Google Password Manager — в Chrome откройте chrome://password-manager, поиск «localhost»;
+• телефон — его менеджер паролей (iPhone: Настройки → Пароли; Android: Google Password Manager), поиск «localhost»;
+• ключ безопасности — в Chrome откройте chrome://settings/securityKeys → «Данные для входа» или приложение производителя (Yubico Authenticator).
 
 Продолжить тест?</value>
 	</data>
@@ -264,32 +356,29 @@
 	<data name="DiagRecommendations" xml:space="preserve">
 		<value>Рекомендации:</value>
 	</data>
+	<data name="DiagResultSuitable" xml:space="preserve">
+		<value>Результат: устройство подходит — им можно открывать базу KeePass.</value>
+	</data>
+	<data name="DiagResultUnsuitable" xml:space="preserve">
+		<value>Результат: устройство не подходит — оно не выдаёт надёжно ключ, нужный KeePass (PRF).</value>
+	</data>
 	<data name="DiagSecretLength" xml:space="preserve">
 		<value>  Длина: {0} байт</value>
 	</data>
 	<data name="DiagSecretMatches" xml:space="preserve">
-		<value>  ✓ Секрет совпадает с полученным при создании (PRF детерминирован)</value>
+		<value>  ✓ Он совпадает с ключом, полученным при создании: устройство выдаёт его стабильно.</value>
 	</data>
 	<data name="DiagSecretMismatch" xml:space="preserve">
-		<value>  ❌ Секрет НЕ совпадает с полученным при создании: на этот аутентификатор нельзя положиться!</value>
+		<value>  ❌ Он не совпадает с ключом, полученным при создании: устройство выдаёт его нестабильно.</value>
 	</data>
 	<data name="DiagStartingPrfTest" xml:space="preserve">
 		<value>&gt;&gt;&gt; Начало теста PRF (Pseudo-Random Function)...</value>
 	</data>
-	<data name="DiagStep1" xml:space="preserve">
-		<value>1. Нажмите 'Проверить API' для проверки доступности WebAuthn API</value>
-	</data>
 	<data name="DiagStep1Creating" xml:space="preserve">
 		<value>Шаг 1: Создание тестового credential с PRF extension...</value>
 	</data>
-	<data name="DiagStep2" xml:space="preserve">
-		<value>2. Нажмите 'Тест PRF' для создания тестового credential и проверки PRF</value>
-	</data>
 	<data name="DiagStep2Getting" xml:space="preserve">
 		<value>Шаг 2: Получение PRF secret от аутентификатора...</value>
-	</data>
-	<data name="DiagSteps" xml:space="preserve">
-		<value>Шаги:</value>
 	</data>
 	<data name="DiagSystemReady" xml:space="preserve">
 		<value>Система готова к работе с FIDO2‑аутентификаторами.</value>
@@ -307,7 +396,7 @@
 		<value>  Ожидание {0} с: Windows Hello предлагает ключ доступа не сразу после создания...</value>
 	</data>
 	<data name="DiagnosticsTitle" xml:space="preserve">
-		<value>FIDO2 Диагностика - Проверка поддержки PRF</value>
+		<value>Проверка устройства для KeePass</value>
 	</data>
 	<data name="Done" xml:space="preserve">
 		<value>Готово</value>
@@ -357,6 +446,9 @@
 	</data>
 	<data name="Open" xml:space="preserve">
 		<value>Открыть</value>
+	</data>
+	<data name="OpenInBrowserQuestion" xml:space="preserve">
+		<value>Открыть базу passkey в браузере?</value>
 	</data>
 	<data name="OpenWithRecoveryPhrase" xml:space="preserve">
 		<value>Открыть базу фразой восстановления?</value>
@@ -500,6 +592,9 @@
 	<data name="TransportPhone" xml:space="preserve">
 		<value>Телефон</value>
 	</data>
+	<data name="TransportThisComputer" xml:space="preserve">
+		<value>Passkey этого компьютера</value>
+	</data>
 	<data name="TransportUsb" xml:space="preserve">
 		<value>USB‑ключ</value>
 	</data>
@@ -512,6 +607,9 @@
 	<data name="UnknownCredential" xml:space="preserve">
 		<value>Аутентификатор предъявил credential, не зарегистрированный в этой базе</value>
 	</data>
+	<data name="UnknownDeviceKind" xml:space="preserve">
+		<value>В записях устройств есть устройство неизвестного типа. Обновите плагин.</value>
+	</data>
 	<data name="Unnamed" xml:space="preserve">
 		<value>(без названия)</value>
 	</data>
@@ -520,6 +618,9 @@
 	</data>
 	<data name="UnusedCredentialsHint" xml:space="preserve">
 		<value>Не найдены в открытых и недавних базах и по сохранённому пути. Перемещённая или переименованная база не обнаруживается: удаляйте только заведомо ненужные credential.</value>
+	</data>
+	<data name="UseBrowserCheckBox" xml:space="preserve">
+		<value>Создать в браузере (passkey будет работать и в macOS, и в Linux)</value>
 	</data>
 	<data name="VerifyPhraseDescription" xml:space="preserve">
 		<value>Для проверки введите слова фразы с указанными номерами.</value>
@@ -540,6 +641,14 @@
 	</data>
 	<data name="WebAuthnUnavailableShort" xml:space="preserve">
 		<value>Windows WebAuthn API недоступен (требуется API v4+, Windows 11 22H2 и новее).</value>
+	</data>
+	<data name="WindowsDevicesOnly" xml:space="preserve">
+		<value>Устройства этой базы работают только в Windows (Windows WebAuthn API).
+
+Чтобы открывать базу в этой системе, добавьте в Windows устройство через браузер: Файл → Параметры базы → вкладка «FIDO2».</value>
+	</data>
+	<data name="WindowsDeviceSuffix" xml:space="preserve">
+		<value>(только Windows)</value>
 	</data>
 	<data name="WordMismatch" xml:space="preserve">
 		<value>Слово №{0} не совпадает. Нажмите «Назад», чтобы посмотреть фразу ещё раз.</value>

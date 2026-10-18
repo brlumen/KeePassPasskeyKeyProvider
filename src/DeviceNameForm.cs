@@ -5,8 +5,8 @@ using System.Windows.Forms;
 namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
-	/// Dialog shown before creating a credential for the master key: explanation, device name and — when changing
-	/// the master key of a database with devices — the choice whether to keep them
+	/// Dialog shown before creating a credential for the master key: explanation, device name, the choice of the
+	/// Windows dialog or the browser and — when changing the master key of a database with devices — whether to keep them
 	/// </summary>
 	public partial class DeviceNameForm : Form
 	{
@@ -15,10 +15,14 @@ namespace KeePassPasskeyKeyProvider
 
 		/// <summary>Asks for the name of a new device</summary>
 		/// <param name="existingDevices">Labels of the devices of the database whose master key is being changed; empty for a new database</param>
-		public DeviceNameForm(IList<string> existingDevices)
+		/// <param name="windowsWebAuthn">Windows WebAuthn API is available; otherwise only the browser can be used</param>
+		public DeviceNameForm(IList<string> existingDevices, bool windowsWebAuthn)
 		{
 			InitializeComponent();
-			labelDescription.Text = Strings.CreateCredentialDescription;
+			checkBoxBrowser.Checked = !windowsWebAuthn;
+			checkBoxBrowser.Visible = windowsWebAuthn;
+			checkBoxBrowser.CheckedChanged += (s, e) => UpdateDescription();
+			UpdateDescription();
 
 			changingKey = existingDevices != null && existingDevices.Count > 0;
 			checkBoxKeepDevices.Visible = changingKey;
@@ -36,6 +40,14 @@ namespace KeePassPasskeyKeyProvider
 
 		/// <summary>Keep the other database devices (re-encrypt their wrapped keys for the new key)</summary>
 		public bool KeepDevices { get; private set; }
+
+		/// <summary>Create the passkey in the browser (<see cref="DeviceKind.Browser"/>)</summary>
+		public bool UseBrowser { get; private set; }
+
+		private void UpdateDescription()
+		{
+			labelDescription.Text = checkBoxBrowser.Checked ? Strings.CreateCredentialDescriptionBrowser : Strings.CreateCredentialDescription;
+		}
 
 		private void UpdateKeepDevicesText()
 		{
@@ -55,6 +67,7 @@ namespace KeePassPasskeyKeyProvider
 		{
 			DeviceName = textBoxDeviceName.Text.Trim();
 			KeepDevices = changingKey && checkBoxKeepDevices.Checked;
+			UseBrowser = checkBoxBrowser.Checked;
 			base.OnFormClosing(e);
 		}
 	}

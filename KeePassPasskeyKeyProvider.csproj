@@ -49,6 +49,11 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="src\Browser\BrowserWaitForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\Browser\BrowserWebAuthn.cs" />
+    <Compile Include="src\Browser\LoopbackServer.cs" />
     <Compile Include="src\BusyIndicator.cs" />
     <Compile Include="src\DeviceKeyStore.cs" />
     <Compile Include="src\Ecc\AppleP256.cs" />
@@ -108,6 +113,9 @@
     <Content Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="src\Browser\webauthn.html">
+      <LogicalName>KeePassPasskeyKeyProvider.Browser.webauthn.html</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\bip39-english.txt">
       <LogicalName>KeePassPasskeyKeyProvider.bip39-english.txt</LogicalName>
     </EmbeddedResource>

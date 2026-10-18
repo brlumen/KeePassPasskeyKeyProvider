@@ -135,6 +135,40 @@ namespace KeePassPasskeyKeyProvider.Tests
 		}
 
 		[TestMethod]
+		public void RecordsWithoutBrowserDevicesKeepVersion4()
+		{
+			// Plugin versions before browser devices read only v4
+			byte[] records = CreateDatabase().PublicCustomData.GetByteArray(RecordsKey);
+
+			Assert.AreEqual((byte)4, records[0]);
+			Assert.AreEqual(DeviceKind.WindowsWebAuthn, ReadFromFile(records).Devices[0].Kind);
+		}
+
+		[TestMethod]
+		public void BrowserDevicesAreSavedAsVersion5()
+		{
+			byte[] records = CreateDatabase(DeviceKind.Browser).PublicCustomData.GetByteArray(RecordsKey);
+
+			DeviceRecordSet set = ReadFromFile(records);
+
+			Assert.AreEqual((byte)5, records[0]);
+			Assert.IsTrue(set.VerifySignature());
+			Assert.AreEqual(DeviceKind.WindowsWebAuthn, set.Devices[0].Kind);
+			Assert.AreEqual(DeviceKind.Browser, set.Devices[1].Kind);
+			Assert.AreEqual("Browser device", set.Devices[1].Label);
+			CollectionAssert.AreEqual(key, set.Devices[1].Wrap.Open(deviceSecret, set.VerificationKey));
+		}
+
+		[TestMethod]
+		public void UnknownDeviceKindIsRejected()
+		{
+			byte[] records = CreateDatabase(DeviceKind.Browser).PublicCustomData.GetByteArray(RecordsKey);
+			records[1 + KeyWrap.PublicKeyLength + 2] = 7; // kind of the first device
+
+			Assert.ThrowsException<InvalidDataException>(() => ReadFromFile(records));
+		}
+
+		[TestMethod]
 		public void FileWithoutRecordsYieldsEmptySet()
 		{
 			TestData.WriteKdbxHeader(path, null);
@@ -171,8 +205,11 @@ namespace KeePassPasskeyKeyProvider.Tests
 			Assert.ThrowsException<InvalidDataException>(() => DeviceKeyStore.LoadAllFromFile(IOConnectionInfo.FromPath(path)));
 		}
 
-		/// <summary>Open database with one device and a recovery phrase, as after creation by the plugin</summary>
-		private PwDatabase CreateDatabase()
+		/// <summary>
+		/// Open database with one Windows device and a recovery phrase, as after creation by the plugin,
+		/// plus devices of the given kinds
+		/// </summary>
+		private PwDatabase CreateDatabase(params DeviceKind[] moreDevices)
 		{
 			var db = new PwDatabase();
 			using (SigningKey signingKey = SigningKey.Generate())
@@ -189,6 +226,16 @@ namespace KeePassPasskeyKeyProvider.Tests
 					Wrap = KeyWrap.Create(key, deviceSecret, signingKey.VerificationKey),
 					Label = "Device"
 				});
+				foreach (DeviceKind kind in moreDevices)
+				{
+					set.Devices.Add(new DeviceRecord
+					{
+						Kind = kind,
+						CredentialId = TestData.Random(16),
+						Wrap = KeyWrap.Create(key, deviceSecret, signingKey.VerificationKey),
+						Label = kind + " device"
+					});
+				}
 				DeviceKeyStore.Save(db, set);
 			}
 			return db;
