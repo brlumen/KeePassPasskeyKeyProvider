@@ -288,6 +288,9 @@ Passkey на телефоне или ключе безопасности отк�
 	<data name="DiagKeyMayNotSupport" xml:space="preserve">
 		<value>  Возможно, аутентификатор не поддерживает PRF.</value>
 	</data>
+	<data name="DiagLibfido2Loaded" xml:space="preserve">
+		<value>✓ libfido2 установлена: USB‑ключи безопасности работают без браузера.</value>
+	</data>
 	<data name="DiagPinAgain" xml:space="preserve">
 		<value>  (снова потребуется подтверждение на аутентификаторе)</value>
 	</data>

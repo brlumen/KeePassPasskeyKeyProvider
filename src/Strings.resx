@@ -288,6 +288,9 @@ If a deleted credential is the only device of such a database and it has no reco
 	<data name="DiagKeyMayNotSupport" xml:space="preserve">
 		<value>  The authenticator may not support PRF.</value>
 	</data>
+	<data name="DiagLibfido2Loaded" xml:space="preserve">
+		<value>✓ libfido2 is installed: USB security keys work without the browser.</value>
+	</data>
 	<data name="DiagPinAgain" xml:space="preserve">
 		<value>  (confirmation on the authenticator will be required again)</value>
 	</data>

@@ -2,6 +2,7 @@
 using System.Text;
 using System.Windows.Forms;
 using KeePassPasskeyKeyProvider.Browser;
+using KeePassPasskeyKeyProvider.Fido2;
 using KeePassPasskeyKeyProvider.WebAuthn;
 
 namespace KeePassPasskeyKeyProvider
@@ -110,6 +111,12 @@ namespace KeePassPasskeyKeyProvider
 			if (!browser)
 			{
 				Log(Strings.DiagCheckApiHint);
+				Log("");
+			}
+			else
+			{
+				// Opening databases with a security key without the browser
+				Log(Fido2Authenticator.IsAvailable ? Strings.DiagLibfido2Loaded : "• " + Strings.Fido2LibraryMissing);
 				Log("");
 			}
 			Log(Strings.DiagReady);

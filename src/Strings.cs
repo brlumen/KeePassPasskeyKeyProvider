@@ -106,6 +106,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string DiagIntro2 => Get();
 		public static string DiagIntro3 => Get();
 		public static string DiagKeyMayNotSupport => Get();
+		public static string DiagLibfido2Loaded => Get();
 		public static string DiagPinAgain => Get();
 		public static string DiagPlatformAvailable => Get();
 		public static string DiagPlatformCheckFailed => Get();
