@@ -11,6 +11,9 @@ namespace KeePassPasskeyKeyProvider.Browser
 	internal sealed class BrowserWaitForm : Form
 	{
 		private readonly Timer timeout;
+		private readonly object sync = new object();
+		private bool shown;
+		private DialogResult earlyResult = DialogResult.None;
 
 		public BrowserWaitForm(string message, int timeoutMs)
 		{
@@ -51,9 +54,18 @@ namespace KeePassPasskeyKeyProvider.Browser
 		/// <summary>Page of the ceremony, opened when the dialog is shown</summary>
 		public string Url { get; set; }
 
-		/// <summary>Closes the dialog with the result; may be called from any thread</summary>
+		/// <summary>Closes the dialog with the result; may be called from any thread, also before the dialog is shown</summary>
 		public void Finish(DialogResult result)
 		{
+			lock (sync)
+			{
+				// Before the handle exists BeginInvoke fails: the result is applied when the dialog is shown
+				if (!shown)
+				{
+					earlyResult = result;
+					return;
+				}
+			}
 			try
 			{
 				BeginInvoke((Action)(() => DialogResult = result));
@@ -67,6 +79,17 @@ namespace KeePassPasskeyKeyProvider.Browser
 		protected override void OnShown(EventArgs e)
 		{
 			base.OnShown(e);
+			DialogResult result;
+			lock (sync)
+			{
+				shown = true;
+				result = earlyResult;
+			}
+			if (result != DialogResult.None)
+			{
+				DialogResult = result; // the ceremony ended before the browser was opened
+				return;
+			}
 			timeout.Start();
 			OpenBrowser();
 		}
