@@ -3,11 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace KeePassPasskeyKeyProvider.Ecc
 {
-	/// <summary>
-	/// OpenSSL 3 libcrypto functions for <see cref="OpenSslP256"/>, bound at run time with dlopen/dlsym: distributions ship
-	/// only the versioned library (the unversioned libcrypto.so comes with the development package), and its name differs
-	/// by OS, which a DllImport name cannot express. The library stays loaded for the process lifetime.
-	/// </summary>
+	/// <summary>OpenSSL 3 libcrypto functions for <see cref="OpenSslP256"/>, bound at run time (see <see cref="DynamicLibrary"/>)</summary>
 	internal sealed class LibCrypto
 	{
 		// Linux; Homebrew on macOS (Apple silicon, Intel) for development
@@ -17,12 +13,6 @@ namespace KeePassPasskeyKeyProvider.Ecc
 			"/opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib",
 			"/usr/local/opt/openssl@3/lib/libcrypto.3.dylib"
 		};
-
-		private const int RTLD_NOW = 2;
-
-		// dlopen and dlsym: libdl.so.2 exists with every glibc (since 2.34 a stub over libc.so.6);
-		// elsewhere they are in the C library, which Mono maps from "libc"
-		private static readonly bool linux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
 		public readonly NewContextFromName EVP_PKEY_CTX_new_from_name;
 		public readonly NewContextFromKey EVP_PKEY_CTX_new_from_pkey;
@@ -47,26 +37,26 @@ namespace KeePassPasskeyKeyProvider.Ecc
 		/// <exception cref="PlatformNotSupportedException">OpenSSL 3 is not installed</exception>
 		public LibCrypto()
 		{
-			IntPtr library = Load();
-			EVP_PKEY_CTX_new_from_name = Bind<NewContextFromName>(library, nameof(EVP_PKEY_CTX_new_from_name));
-			EVP_PKEY_CTX_new_from_pkey = Bind<NewContextFromKey>(library, nameof(EVP_PKEY_CTX_new_from_pkey));
-			EVP_PKEY_CTX_free = Bind<Free>(library, nameof(EVP_PKEY_CTX_free));
-			EVP_PKEY_free = Bind<Free>(library, nameof(EVP_PKEY_free));
-			EVP_PKEY_keygen_init = Bind<Init>(library, nameof(EVP_PKEY_keygen_init));
-			EVP_PKEY_CTX_set_group_name = Bind<SetName>(library, nameof(EVP_PKEY_CTX_set_group_name));
-			EVP_PKEY_generate = Bind<Generate>(library, nameof(EVP_PKEY_generate));
-			EVP_PKEY_fromdata_init = Bind<Init>(library, nameof(EVP_PKEY_fromdata_init));
-			EVP_PKEY_fromdata = Bind<FromData>(library, nameof(EVP_PKEY_fromdata));
-			EVP_PKEY_get_params = Bind<GetParams>(library, nameof(EVP_PKEY_get_params));
-			EVP_PKEY_derive_init = Bind<Init>(library, nameof(EVP_PKEY_derive_init));
-			EVP_PKEY_derive_set_peer = Bind<SetPeer>(library, nameof(EVP_PKEY_derive_set_peer));
-			EVP_PKEY_derive = Bind<Derive>(library, nameof(EVP_PKEY_derive));
-			EVP_PKEY_sign_init = Bind<Init>(library, nameof(EVP_PKEY_sign_init));
-			EVP_PKEY_sign = Bind<Sign>(library, nameof(EVP_PKEY_sign));
-			EVP_PKEY_verify_init = Bind<Init>(library, nameof(EVP_PKEY_verify_init));
-			EVP_PKEY_verify = Bind<Verify>(library, nameof(EVP_PKEY_verify));
-			ERR_get_error = Bind<GetError>(library, nameof(ERR_get_error));
-			ERR_clear_error = Bind<ClearError>(library, nameof(ERR_clear_error));
+			var library = new DynamicLibrary("libcrypto", Candidates, "OpenSSL 3 (libcrypto.so.3) is required for elliptic curve cryptography");
+			EVP_PKEY_CTX_new_from_name = library.Bind<NewContextFromName>(nameof(EVP_PKEY_CTX_new_from_name));
+			EVP_PKEY_CTX_new_from_pkey = library.Bind<NewContextFromKey>(nameof(EVP_PKEY_CTX_new_from_pkey));
+			EVP_PKEY_CTX_free = library.Bind<Free>(nameof(EVP_PKEY_CTX_free));
+			EVP_PKEY_free = library.Bind<Free>(nameof(EVP_PKEY_free));
+			EVP_PKEY_keygen_init = library.Bind<Init>(nameof(EVP_PKEY_keygen_init));
+			EVP_PKEY_CTX_set_group_name = library.Bind<SetName>(nameof(EVP_PKEY_CTX_set_group_name));
+			EVP_PKEY_generate = library.Bind<Generate>(nameof(EVP_PKEY_generate));
+			EVP_PKEY_fromdata_init = library.Bind<Init>(nameof(EVP_PKEY_fromdata_init));
+			EVP_PKEY_fromdata = library.Bind<FromData>(nameof(EVP_PKEY_fromdata));
+			EVP_PKEY_get_params = library.Bind<GetParams>(nameof(EVP_PKEY_get_params));
+			EVP_PKEY_derive_init = library.Bind<Init>(nameof(EVP_PKEY_derive_init));
+			EVP_PKEY_derive_set_peer = library.Bind<SetPeer>(nameof(EVP_PKEY_derive_set_peer));
+			EVP_PKEY_derive = library.Bind<Derive>(nameof(EVP_PKEY_derive));
+			EVP_PKEY_sign_init = library.Bind<Init>(nameof(EVP_PKEY_sign_init));
+			EVP_PKEY_sign = library.Bind<Sign>(nameof(EVP_PKEY_sign));
+			EVP_PKEY_verify_init = library.Bind<Init>(nameof(EVP_PKEY_verify_init));
+			EVP_PKEY_verify = library.Bind<Verify>(nameof(EVP_PKEY_verify));
+			ERR_get_error = library.Bind<GetError>(nameof(ERR_get_error));
+			ERR_clear_error = library.Bind<ClearError>(nameof(ERR_clear_error));
 		}
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -113,37 +103,6 @@ namespace KeePassPasskeyKeyProvider.Ecc
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate void ClearError();
-
-		private static IntPtr Load()
-		{
-			foreach (string name in Candidates)
-			{
-				IntPtr library = linux ? LinuxOpen(name, RTLD_NOW) : LibcOpen(name, RTLD_NOW);
-				if (library != IntPtr.Zero)
-					return library;
-			}
-			throw new PlatformNotSupportedException("OpenSSL 3 (libcrypto.so.3) is required for elliptic curve cryptography");
-		}
-
-		private static T Bind<T>(IntPtr library, string name) where T : Delegate
-		{
-			IntPtr function = linux ? LinuxSymbol(library, name) : LibcSymbol(library, name);
-			if (function == IntPtr.Zero)
-				throw new PlatformNotSupportedException($"{name} is missing in libcrypto");
-			return Marshal.GetDelegateForFunctionPointer<T>(function);
-		}
-
-		[DllImport("libdl.so.2", EntryPoint = "dlopen")]
-		private static extern IntPtr LinuxOpen(string fileName, int flags);
-
-		[DllImport("libdl.so.2", EntryPoint = "dlsym")]
-		private static extern IntPtr LinuxSymbol(IntPtr handle, string symbol);
-
-		[DllImport("libc", EntryPoint = "dlopen")]
-		private static extern IntPtr LibcOpen(string fileName, int flags);
-
-		[DllImport("libc", EntryPoint = "dlsym")]
-		private static extern IntPtr LibcSymbol(IntPtr handle, string symbol);
 	}
 
 	/// <summary>OSSL_PARAM: a named value passed to or returned by OpenSSL; an array ends with a null key</summary>
