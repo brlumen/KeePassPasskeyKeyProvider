@@ -11,8 +11,9 @@ using System.Threading;
 namespace KeePassPasskeyKeyProvider.Browser
 {
 	/// <summary>
-	/// One-shot HTTP server for a WebAuthn ceremony in the browser. Listens on the same port of 127.0.0.1 and ::1:
-	/// the browser resolves "localhost" to either, and a foreign server on the other address would get the page.
+	/// One-shot HTTP server for a WebAuthn ceremony in the browser, at http://hostName:port. Listens on the same port of
+	/// 127.0.0.1 and ::1: the browser resolves a *.localhost name to either, and a foreign server on the other address
+	/// would get the page.
 	/// Serves one page at a secret path (<see cref="Url"/>) and accepts one form POST to the same path, which ends
 	/// the session. Requests are accepted only with the expected Host (no DNS rebinding) and, for POST,
 	/// the page's own Origin.
@@ -32,16 +33,17 @@ namespace KeePassPasskeyKeyProvider.Browser
 		private readonly string origin;
 		private int completed;
 
+		/// <param name="hostName">Host of the page: a *.localhost name, which browsers resolve to loopback</param>
 		/// <param name="page">HTML served at the secret path</param>
 		/// <param name="onResult">Called once, on a background thread, with the fields of the accepted POST</param>
-		public LoopbackServer(string page, Action<Dictionary<string, string>> onResult)
+		public LoopbackServer(string hostName, string page, Action<Dictionary<string, string>> onResult)
 		{
 			this.page = Encoding.UTF8.GetBytes(page);
 			this.onResult = onResult;
 			listeners = Listen();
 			Port = ((IPEndPoint)listeners[0].LocalEndpoint).Port;
 			path = "/" + NewToken();
-			host = "localhost:" + Port;
+			host = hostName + ":" + Port;
 			origin = "http://" + host;
 
 			foreach (TcpListener listener in listeners)

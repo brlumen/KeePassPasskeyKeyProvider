@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using KeePassPasskeyKeyProvider.Browser;
@@ -17,15 +16,16 @@ namespace KeePassPasskeyKeyProvider
 		private Button btnCheckApiVersion;
 		private Button btnClose;
 		private readonly StringBuilder logBuilder;
-		// The Windows WebAuthn API check makes sense only on Windows; elsewhere the PRF test runs in the browser
-		private readonly bool windows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+		// The test credential is portable, like new devices: through the Windows WebAuthn API on Windows, elsewhere in
+		// the browser (where the Windows WebAuthn API check makes no sense)
+		private readonly bool browser = FIDO2KeyProvider.UsesBrowser;
 
 		public FIDO2DiagnosticsForm()
 		{
 			InitializeComponent();
 			logBuilder = new StringBuilder();
 
-			if (!windows)
+			if (browser)
 			{
 				btnCheckApiVersion.Visible = false;
 				btnTestHmacSecret.Left = btnCheckApiVersion.Left;
@@ -107,7 +107,7 @@ namespace KeePassPasskeyKeyProvider
 			Log("");
 			Log(Strings.DiagIntro3);
 			Log("");
-			if (windows)
+			if (!browser)
 			{
 				Log(Strings.DiagCheckApiHint);
 				Log("");
@@ -168,9 +168,6 @@ namespace KeePassPasskeyKeyProvider
 				Log(Strings.DiagStartingPrfTest);
 				Log("");
 
-				// Without the Windows WebAuthn API (other OS) the test runs in the browser, like browser devices
-				bool browser = !WebAuthnHelper.IsWebAuthnAvailable();
-
 				// Warn the user
 				var result = MessageBox.Show(
 					browser ? Strings.DiagPrfTestConfirmBrowser : Strings.DiagPrfTestConfirm,
@@ -208,7 +205,7 @@ namespace KeePassPasskeyKeyProvider
 				{
 					var created = browser
 						? BrowserWebAuthn.CreateCredential(this, testUserId, "KeePass: PRF diagnostics", null, null)
-						: WebAuthnHelper.CreateCredential(this.Handle, testUserId, "KeePass: PRF diagnostics");
+						: WebAuthnHelper.CreateCredential(this.Handle, DeviceKind.Portable, testUserId, "KeePass: PRF diagnostics");
 					credentialId = created.CredentialId;
 					creationSecret = created.PrfSecret;
 					transport = created.Transport;
@@ -246,7 +243,7 @@ namespace KeePassPasskeyKeyProvider
 					// allowList contains only the test credential, so real database credentials are not involved
 					PrfResult assertion = browser
 						? BrowserWebAuthn.GetPrfSecret(this, new[] { credentialId }, null)
-						: WebAuthnHelper.GetPrfSecret(this.Handle, new[] { credentialId });
+						: WebAuthnHelper.GetPrfSecret(this.Handle, DeviceKind.Portable, new[] { credentialId });
 					prfSecret = assertion.PrfSecret;
 
 					if (prfSecret != null && prfSecret.Length > 0)

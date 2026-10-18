@@ -20,7 +20,7 @@ namespace KeePassPasskeyKeyProvider
 		{
 			InitializeComponent();
 			host = pluginHost;
-			groupBoxHello.Text = string.Format(Strings.HelloCredentialsGroup, WebAuthnHelper.RpId);
+			groupBoxHello.Text = string.Format(Strings.HelloCredentialsGroup, string.Join(", ", HelloCredentialAudit.RpIds));
 
 			if (!WebAuthnHelper.IsWebAuthnAvailable())
 			{

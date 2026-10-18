@@ -12,19 +12,20 @@ namespace KeePassPasskeyKeyProvider.Tests
 	[TestClass]
 	public class LoopbackServerTests
 	{
+		private const string HostName = "keepass-fido2.localhost";
 		private const string Page = "<p>page</p>";
 
 		[TestMethod]
-		public void ServesPageOnlyAtSecretPathForLocalhost()
+		public void ServesPageOnlyAtSecretPathForItsHost()
 		{
-			using (var server = new LoopbackServer(Page, _ => { }))
+			using (var server = new LoopbackServer(HostName, Page, _ => { }))
 			{
 				string path = new Uri(server.Url).AbsolutePath;
 
-				string page = Send(IPAddress.Loopback, server.Port, Get(path, "localhost:" + server.Port));
+				string page = Send(IPAddress.Loopback, server.Port, Get(path, HostName + ":" + server.Port));
 				Assert.IsTrue(page.StartsWith("HTTP/1.1 200 ", StringComparison.Ordinal));
 				Assert.IsTrue(page.EndsWith(Page, StringComparison.Ordinal));
-				Assert.AreEqual("HTTP/1.1 404 Not Found", StatusLine(Send(IPAddress.Loopback, server.Port, Get("/", "localhost:" + server.Port))));
+				Assert.AreEqual("HTTP/1.1 404 Not Found", StatusLine(Send(IPAddress.Loopback, server.Port, Get("/", HostName + ":" + server.Port))));
 				// A web page whose domain was rebound to 127.0.0.1 sends its own Host
 				Assert.AreEqual("HTTP/1.1 400 Bad Request", StatusLine(Send(IPAddress.Loopback, server.Port, Get(path, "attacker.example:" + server.Port))));
 			}
@@ -34,11 +35,11 @@ namespace KeePassPasskeyKeyProvider.Tests
 		public void ListensOnBothLoopbackAddresses()
 		{
 			if (!Socket.OSSupportsIPv6) return;
-			using (var server = new LoopbackServer(Page, _ => { }))
+			using (var server = new LoopbackServer(HostName, Page, _ => { }))
 			{
 				string path = new Uri(server.Url).AbsolutePath;
 
-				Assert.AreEqual("HTTP/1.1 200 OK", StatusLine(Send(IPAddress.IPv6Loopback, server.Port, Get(path, "localhost:" + server.Port))));
+				Assert.AreEqual("HTTP/1.1 200 OK", StatusLine(Send(IPAddress.IPv6Loopback, server.Port, Get(path, HostName + ":" + server.Port))));
 			}
 		}
 
@@ -46,10 +47,10 @@ namespace KeePassPasskeyKeyProvider.Tests
 		public void AcceptsOnePostFromThePage()
 		{
 			var results = new List<Dictionary<string, string>>();
-			using (var server = new LoopbackServer(Page, results.Add))
+			using (var server = new LoopbackServer(HostName, Page, results.Add))
 			{
 				string path = new Uri(server.Url).AbsolutePath;
-				string host = "localhost:" + server.Port;
+				string host = HostName + ":" + server.Port;
 				string origin = "http://" + host;
 				const string body = "credentialId=AQID&prf=a+b%2Fc";
 

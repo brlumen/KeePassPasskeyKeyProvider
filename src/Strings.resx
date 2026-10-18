@@ -72,9 +72,6 @@
 
 This window closes by itself.</value>
 	</data>
-	<data name="BrowserDeviceSuffix" xml:space="preserve">
-		<value>(browser)</value>
-	</data>
 	<data name="BrowserInvalidAnswer" xml:space="preserve">
 		<value>The browser returned an invalid answer.</value>
 	</data>
@@ -173,7 +170,7 @@ In the "Windows Security" window, choose:
 • Windows Hello — PIN, face or fingerprint;
 • a phone or tablet — scan the QR code and confirm on the phone.
 
-Other devices: File → Database Settings → "FIDO2" tab.</value>
+A passkey on a phone or a security key can also open the database on macOS and Linux (in the browser). Other devices: File → Database Settings → "FIDO2" tab.</value>
 	</data>
 	<data name="CreateCredentialDescriptionBrowser" xml:space="preserve">
 		<value>A new passkey (FIDO2 credential) will now be created for this database in the browser.
@@ -330,10 +327,10 @@ A page opens in the browser. Click "Continue" and choose where to save the passk
 • a security key (YubiKey, etc.) — insert the key and touch it.
 Then confirm the passkey once more: this checks that it can produce the key for a database.
 
-The test does not touch your databases. But the test passkey stays where you saved it: in the password list it is an entry for the site "localhost" named "KeePass: PRF diagnostics". It opens nothing and can be deleted:
-• iCloud Keychain — the Passwords app, search for "localhost";
-• Google Password Manager — open chrome://password-manager in Chrome, search for "localhost";
-• phone — its password manager (iPhone: Settings → Passwords; Android: Google Password Manager), search for "localhost";
+The test does not touch your databases. But the test passkey stays where you saved it: in the password list it is an entry for the site "keepass-fido2.localhost" named "KeePass: PRF diagnostics". It opens nothing and can be deleted:
+• iCloud Keychain — the Passwords app, search for "keepass-fido2";
+• Google Password Manager — open chrome://password-manager in Chrome, search for "keepass-fido2";
+• phone — its password manager (iPhone: Settings → Passwords; Android: Google Password Manager), search for "keepass-fido2";
 • security key — in Chrome open chrome://settings/securityKeys → "Sign-in data", or use the manufacturer's app (Yubico Authenticator).
 
 Continue the test?</value>
@@ -446,9 +443,6 @@ File → Change Master Key → "{0}".</value>
 	</data>
 	<data name="Open" xml:space="preserve">
 		<value>Open</value>
-	</data>
-	<data name="OpenInBrowserQuestion" xml:space="preserve">
-		<value>Open the database with a passkey in the browser?</value>
 	</data>
 	<data name="OpenWithRecoveryPhrase" xml:space="preserve">
 		<value>Open the database with the recovery phrase?</value>
@@ -598,6 +592,9 @@ The database master key will be replaced and the database saved. The old phrase 
 	<data name="TransportUsb" xml:space="preserve">
 		<value>USB security key</value>
 	</data>
+	<data name="TryOtherDevicesQuestion" xml:space="preserve">
+		<value>Try the other devices of this database?</value>
+	</data>
 	<data name="UnexpectedError" xml:space="preserve">
 		<value>Unexpected error:
 {0}
@@ -618,9 +615,6 @@ Type: {1}</value>
 	</data>
 	<data name="UnusedCredentialsHint" xml:space="preserve">
 		<value>Not found in open or recently used databases or at the saved path. A moved or renamed database is not detected: delete only credentials you are sure are unused.</value>
-	</data>
-	<data name="UseBrowserCheckBox" xml:space="preserve">
-		<value>Create in the browser (the passkey will work on macOS and Linux too)</value>
 	</data>
 	<data name="VerifyPhraseDescription" xml:space="preserve">
 		<value>To verify, enter the phrase words with the given numbers.</value>
@@ -643,9 +637,9 @@ Requires WebAuthn API v4 or later (Windows 11 22H2 or later).</value>
 		<value>Windows WebAuthn API is not available (requires API v4+, Windows 11 22H2 or later).</value>
 	</data>
 	<data name="WindowsDevicesOnly" xml:space="preserve">
-		<value>The devices of this database work only on Windows (Windows WebAuthn API).
+		<value>The devices of this database work only on Windows: they were added by an earlier version of the plugin.
 
-To open the database on this system, add a browser device on Windows: File → Database Settings → "FIDO2" tab.</value>
+To open the database on this system, add a device to it on Windows: File → Database Settings → "FIDO2" tab. A passkey on a phone or a security key added there works on this system too.</value>
 	</data>
 	<data name="WindowsDeviceSuffix" xml:space="preserve">
 		<value>(Windows only)</value>

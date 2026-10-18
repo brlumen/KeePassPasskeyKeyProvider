@@ -42,7 +42,6 @@ namespace KeePassPasskeyKeyProvider
 		public static string Back => Get();
 		public static string BrowserCancelled => Get();
 		public static string BrowserCreateWaiting => Get();
-		public static string BrowserDeviceSuffix => Get();
 		public static string BrowserInvalidAnswer => Get();
 		public static string BrowserOpenAgain => Get();
 		public static string BrowserOpenFailed => Get();
@@ -151,7 +150,6 @@ namespace KeePassPasskeyKeyProvider
 		public static string NoRecoveryPhrase => Get();
 		public static string NoUnusedCredentials => Get();
 		public static string Open => Get();
-		public static string OpenInBrowserQuestion => Get();
 		public static string OpenWithRecoveryPhrase => Get();
 		public static string PhraseChecksumMismatch => Get();
 		public static string PhraseUnknownWord => Get();
@@ -196,13 +194,13 @@ namespace KeePassPasskeyKeyProvider
 		public static string TransportPhone => Get();
 		public static string TransportThisComputer => Get();
 		public static string TransportUsb => Get();
+		public static string TryOtherDevicesQuestion => Get();
 		public static string UnexpectedError => Get();
 		public static string UnknownCredential => Get();
 		public static string UnknownDeviceKind => Get();
 		public static string Unnamed => Get();
 		public static string UnsupportedDeviceRecordsVersion => Get();
 		public static string UnusedCredentialsHint => Get();
-		public static string UseBrowserCheckBox => Get();
 		public static string VerifyPhraseDescription => Get();
 		public static string WebAuthnAvailableInfo => Get();
 		public static string WebAuthnUnavailable => Get();

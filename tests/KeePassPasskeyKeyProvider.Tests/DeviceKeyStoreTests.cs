@@ -135,34 +135,37 @@ namespace KeePassPasskeyKeyProvider.Tests
 		}
 
 		[TestMethod]
-		public void RecordsWithoutBrowserDevicesKeepVersion4()
+		public void RecordsWithOnlyClassicDevicesKeepVersion4()
 		{
-			// Plugin versions before browser devices read only v4
-			byte[] records = CreateDatabase().PublicCustomData.GetByteArray(RecordsKey);
+			// Plugin versions before portable devices read only v4
+			byte[] records = CreateDatabase(DeviceKind.Classic).PublicCustomData.GetByteArray(RecordsKey);
+
+			DeviceRecordSet set = ReadFromFile(records);
 
 			Assert.AreEqual((byte)4, records[0]);
-			Assert.AreEqual(DeviceKind.WindowsWebAuthn, ReadFromFile(records).Devices[0].Kind);
+			Assert.AreEqual(DeviceKind.Classic, set.Devices[0].Kind);
+			Assert.AreEqual(DeviceKind.Classic, set.Devices[1].Kind);
 		}
 
 		[TestMethod]
-		public void BrowserDevicesAreSavedAsVersion5()
+		public void PortableDevicesAreSavedAsVersion5()
 		{
-			byte[] records = CreateDatabase(DeviceKind.Browser).PublicCustomData.GetByteArray(RecordsKey);
+			byte[] records = CreateDatabase(DeviceKind.Portable).PublicCustomData.GetByteArray(RecordsKey);
 
 			DeviceRecordSet set = ReadFromFile(records);
 
 			Assert.AreEqual((byte)5, records[0]);
 			Assert.IsTrue(set.VerifySignature());
-			Assert.AreEqual(DeviceKind.WindowsWebAuthn, set.Devices[0].Kind);
-			Assert.AreEqual(DeviceKind.Browser, set.Devices[1].Kind);
-			Assert.AreEqual("Browser device", set.Devices[1].Label);
+			Assert.AreEqual(DeviceKind.Classic, set.Devices[0].Kind);
+			Assert.AreEqual(DeviceKind.Portable, set.Devices[1].Kind);
+			Assert.AreEqual("Portable device", set.Devices[1].Label);
 			CollectionAssert.AreEqual(key, set.Devices[1].Wrap.Open(deviceSecret, set.VerificationKey));
 		}
 
 		[TestMethod]
 		public void UnknownDeviceKindIsRejected()
 		{
-			byte[] records = CreateDatabase(DeviceKind.Browser).PublicCustomData.GetByteArray(RecordsKey);
+			byte[] records = CreateDatabase(DeviceKind.Portable).PublicCustomData.GetByteArray(RecordsKey);
 			records[1 + KeyWrap.PublicKeyLength + 2] = 7; // kind of the first device
 
 			Assert.ThrowsException<InvalidDataException>(() => ReadFromFile(records));
@@ -206,8 +209,8 @@ namespace KeePassPasskeyKeyProvider.Tests
 		}
 
 		/// <summary>
-		/// Open database with one Windows device and a recovery phrase, as after creation by the plugin,
-		/// plus devices of the given kinds
+		/// Open database with one classic device and a recovery phrase, as after creation by plugin versions before
+		/// portable devices, plus devices of the given kinds
 		/// </summary>
 		private PwDatabase CreateDatabase(params DeviceKind[] moreDevices)
 		{

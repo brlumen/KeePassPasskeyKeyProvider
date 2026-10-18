@@ -14,11 +14,15 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 	/// </summary>
 	public static class WebAuthnHelper
 	{
-		// IMPORTANT: RP_ID and PRF_SALT are part of the key "format". Changing them makes existing databases unopenable!
-		// Unique RP ID: with discoverable credentials an empty allowList shows ALL credentials for the RP,
+		// IMPORTANT: RP_ID, PORTABLE_RP_ID and PRF_SALT are part of the key "format". Changing them makes existing databases unopenable!
+		// Unique RP IDs: with discoverable credentials an empty allowList shows ALL credentials for the RP,
 		// and with "localhost" the list would include passkeys from local web development.
+		// RP ID of classic devices (DeviceKind.Classic): only native WebAuthn clients accept it, browsers do not.
 		private const string RP_ID = "keepass-fido2.local";
-		public static string RpId => RP_ID;
+		// RP ID of portable devices (DeviceKind.Portable): browsers accept it on a page at http://keepass-fido2.localhost:port
+		// (*.localhost is loopback and a secure context), so the same passkey works through webauthn.dll and in a browser.
+		// Pages on "localhost" or other *.localhost hosts cannot claim it.
+		private const string PORTABLE_RP_ID = "keepass-fido2.localhost";
 		private const string RP_NAME = "KeePassPasskeyKeyProvider";
 		private const uint TIMEOUT_MS = 120000; // 2 minutes: hybrid (phone) needs time for QR/BLE
 
@@ -35,8 +39,11 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 		};
 
-		/// <summary>PRF salt, also used by browser devices</summary>
+		/// <summary>PRF salt, the same for both device kinds and also used in the browser</summary>
 		internal static byte[] PrfSalt => (byte[])PRF_SALT.Clone();
+
+		/// <summary>RP ID of the credentials of a device kind</summary>
+		public static string RpId(DeviceKind kind) => kind == DeviceKind.Portable ? PORTABLE_RP_ID : RP_ID;
 
 		/// <summary>Logging delegate (the diagnostics form subscribes to it)</summary>
 		public static Action<string> Logger { get; set; }
@@ -100,18 +107,21 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		/// The credential is discoverable (resident): the key stores it itself, and on GetAssertion
 		/// with an empty allowList the authenticator returns the credential ID in the response.
 		/// </summary>
+		/// <param name="kind">Device kind: determines the RP ID</param>
 		/// <param name="userName">User/database name shown in Windows dialogs and on the phone</param>
 		/// <param name="displayName">Full database path, used by cleanup to find orphaned credentials</param>
 		/// <returns>Credential ID and, if API ≥ 8, the PRF secret right away (otherwise null)</returns>
-		public static PrfResult CreateCredential(IntPtr windowHandle, byte[] userId, string userName, string displayName = null)
+		public static PrfResult CreateCredential(IntPtr windowHandle, DeviceKind kind, byte[] userId, string userName,
+			string displayName = null)
 		{
 			if (userId == null || userId.Length == 0)
 				throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
 			if (string.IsNullOrWhiteSpace(userName))
 				throw new ArgumentException("User name cannot be empty", nameof(userName));
 
+			string rpId = RpId(kind);
 			uint apiVersion = GetApiVersion();
-			Log($"Creating credential: RP ID=\"{RP_ID}\", user=\"{userName}\", API v{apiVersion}, userId {userId.Length} bytes");
+			Log($"Creating credential: RP ID=\"{rpId}\", user=\"{userName}\", API v{apiVersion}, userId {userId.Length} bytes");
 
 			IntPtr pUserId = IntPtr.Zero;
 			IntPtr pClientDataJson = IntPtr.Zero;
@@ -129,7 +139,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				var rpInfo = new WebAuthnApi.WEBAUTHN_RP_ENTITY_INFORMATION
 				{
 					dwVersion = 1,
-					pwszId = RP_ID,
+					pwszId = rpId,
 					pwszName = RP_NAME
 				};
 
@@ -142,7 +152,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 					pwszDisplayName = string.IsNullOrEmpty(displayName) ? userName : displayName
 				};
 
-				byte[] clientDataJson = Encoding.UTF8.GetBytes(CreateClientDataJson("webauthn.create"));
+				byte[] clientDataJson = Encoding.UTF8.GetBytes(CreateClientDataJson("webauthn.create", rpId));
 				pClientDataJson = AllocBytes(clientDataJson);
 				var clientData = new WebAuthnApi.WEBAUTHN_CLIENT_DATA
 				{
@@ -297,14 +307,16 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		/// <summary>
 		/// Gets the PRF secret (32 bytes, deterministic) from the authenticator.
 		/// </summary>
+		/// <param name="kind">Device kind of the credentials: determines the RP ID</param>
 		/// <param name="allowList">Credential IDs the authenticator chooses from (Windows opens
 		/// Hello directly if one of them is on this PC). null/empty means discoverable mode: the authenticator presents
 		/// a credential for the RP itself; if there are several, Windows shows a picker</param>
 		/// <returns>PRF secret and the credential ID it was obtained with</returns>
-		public static PrfResult GetPrfSecret(IntPtr windowHandle, IList<byte[]> allowList = null)
+		public static PrfResult GetPrfSecret(IntPtr windowHandle, DeviceKind kind, IList<byte[]> allowList = null)
 		{
+			string rpId = RpId(kind);
 			bool discoverable = allowList == null || allowList.Count == 0;
-			Log($"Getting hmac-secret: RP ID=\"{RP_ID}\", API v{GetApiVersion()}, " +
+			Log($"Getting hmac-secret: RP ID=\"{rpId}\", API v{GetApiVersion()}, " +
 			    (discoverable ? "discoverable (allowList empty)" : $"allowList of {allowList.Count} credential(s)"));
 
 			IntPtr pClientDataJson = IntPtr.Zero;
@@ -317,7 +329,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 
 			try
 			{
-				byte[] clientDataJson = Encoding.UTF8.GetBytes(CreateClientDataJson("webauthn.get"));
+				byte[] clientDataJson = Encoding.UTF8.GetBytes(CreateClientDataJson("webauthn.get", rpId));
 				pClientDataJson = AllocBytes(clientDataJson);
 				var clientData = new WebAuthnApi.WEBAUTHN_CLIENT_DATA
 				{
@@ -379,7 +391,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				IntPtr hWnd = PrepareOwnerWindow(windowHandle);
 				IntPtr pResult = IntPtr.Zero;
 				int hr = RunNativeCall(hWnd, () => WebAuthnApi.WebAuthNAuthenticatorGetAssertion(
-					hWnd, RP_ID, ref clientData, ref options, out pResult));
+					hWnd, rpId, ref clientData, ref options, out pResult));
 				pAssertion = pResult;
 
 				if (hr != 0)
@@ -446,15 +458,16 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		/// <summary>
-		/// Windows Hello discoverable credentials for our RP (API 4+). Empty list if there are none.
+		/// Windows Hello discoverable credentials for the RP of the device kind (API 4+). Empty list if there are none.
 		/// </summary>
-		public static List<PlatformCredential> ListPlatformCredentials()
+		public static List<PlatformCredential> ListPlatformCredentials(DeviceKind kind)
 		{
+			string rpId = RpId(kind);
 			var result = new List<PlatformCredential>();
 			var options = new WebAuthnApi.WEBAUTHN_GET_CREDENTIALS_OPTIONS
 			{
 				dwVersion = WebAuthnApi.WEBAUTHN_GET_CREDENTIALS_OPTIONS_VERSION_1,
-				pwszRpId = RP_ID
+				pwszRpId = rpId
 			};
 
 			IntPtr pList;
@@ -483,7 +496,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 						DisplayName = user.pwszDisplayName ?? string.Empty
 					});
 				}
-				Log($"GetPlatformCredentialList: {result.Count} credential(s) for {RP_ID}");
+				Log($"GetPlatformCredentialList: {result.Count} credential(s) for {rpId}");
 				return result;
 			}
 			finally
@@ -507,7 +520,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		/// <summary>
 		/// Creates the ClientData JSON with a random challenge
 		/// </summary>
-		private static string CreateClientDataJson(string type)
+		private static string CreateClientDataJson(string type, string rpId)
 		{
 			byte[] challenge = new byte[32];
 			using (var rng = new RNGCryptoServiceProvider())
@@ -520,7 +533,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				.Replace('+', '-')
 				.Replace('/', '_');
 
-			return $"{{\"type\":\"{type}\",\"challenge\":\"{challengeBase64}\",\"origin\":\"https://{RP_ID}\"}}";
+			return $"{{\"type\":\"{type}\",\"challenge\":\"{challengeBase64}\",\"origin\":\"https://{rpId}\"}}";
 		}
 
 		/// <summary>
