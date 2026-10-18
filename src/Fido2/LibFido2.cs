@@ -35,6 +35,8 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		public const int FIDO_ERR_ACTION_TIMEOUT = 0x3a;
 		public const int FIDO_ERR_UV_BLOCKED = 0x3c;
 		public const int FIDO_ERR_UV_INVALID = 0x3f;
+		public const int FIDO_ERR_TX = -1;
+		public const int FIDO_ERR_RX = -2; // also when the timeout of the device expires
 
 		// fido/param.h, fido/types.h (fido_opt_t)
 		public const int FIDO_EXT_HMAC_SECRET = 0x01;

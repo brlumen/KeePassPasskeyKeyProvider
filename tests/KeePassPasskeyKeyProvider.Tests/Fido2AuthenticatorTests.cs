@@ -61,7 +61,7 @@ namespace KeePassPasskeyKeyProvider.Tests
 		[TestMethod]
 		public void SkipsOnlyKeysThatCannotHoldTheCredential()
 		{
-			var skipped = new[] { Fido2Error.NoCredential, Fido2Error.Unsupported, Fido2Error.PinNotSet };
+			var skipped = new[] { Fido2Error.NoCredential, Fido2Error.NoAnswer, Fido2Error.Unsupported, Fido2Error.PinNotSet };
 			foreach (Fido2Error error in Enum.GetValues(typeof(Fido2Error)))
 				Assert.AreEqual(skipped.Contains(error), Fido2Authenticator.IsSkipped(error));
 		}
@@ -83,7 +83,7 @@ namespace KeePassPasskeyKeyProvider.Tests
 		[TestMethod]
 		public void KeyNotFoundOnlyWhenTheUserWasNotAsked()
 		{
-			var notFound = new[] { Fido2Error.NoDevice, Fido2Error.NoCredential, Fido2Error.Unsupported, Fido2Error.PinNotSet };
+			var notFound = new[] { Fido2Error.NoDevice, Fido2Error.NoCredential, Fido2Error.NoAnswer, Fido2Error.Unsupported, Fido2Error.PinNotSet };
 			foreach (Fido2Error error in Enum.GetValues(typeof(Fido2Error)))
 				Assert.AreEqual(notFound.Contains(error), new Fido2Exception(error).KeyNotFound);
 		}

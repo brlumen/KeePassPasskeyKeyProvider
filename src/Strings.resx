@@ -417,6 +417,9 @@ Continue the test?</value>
 	<data name="Fido2LibraryMissing" xml:space="preserve">
 		<value>USB security keys need libfido2 1.7 or later: install it (package libfido2-1 on Debian and Ubuntu) and restart KeePass.</value>
 	</data>
+	<data name="Fido2NoAnswer" xml:space="preserve">
+		<value>The security key does not answer: remove it, insert it again and retry.</value>
+	</data>
 	<data name="Fido2NoCredential" xml:space="preserve">
 		<value>No connected security key is a device of this database.</value>
 	</data>

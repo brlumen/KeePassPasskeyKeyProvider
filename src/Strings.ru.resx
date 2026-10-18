@@ -417,6 +417,9 @@ Passkey на телефоне или ключе безопасности отк�
 	<data name="Fido2LibraryMissing" xml:space="preserve">
 		<value>Для USB‑ключей безопасности нужна libfido2 версии 1.7 или новее: установите её (пакет libfido2-1 в Debian и Ubuntu) и перезапустите KeePass.</value>
 	</data>
+	<data name="Fido2NoAnswer" xml:space="preserve">
+		<value>Ключ безопасности не отвечает: извлеките его, вставьте снова и повторите.</value>
+	</data>
 	<data name="Fido2NoCredential" xml:space="preserve">
 		<value>Ни один подключённый ключ безопасности не является устройством этой базы.</value>
 	</data>

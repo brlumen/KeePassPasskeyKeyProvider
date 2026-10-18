@@ -219,9 +219,10 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			}
 		}
 
-		/// <summary>Errors after which the next connected key is tried: this key cannot hold the credential</summary>
+		/// <summary>Errors after which the next connected key is tried: this key cannot hold the credential or does not answer</summary>
 		internal static bool IsSkipped(Fido2Error error) =>
-			error == Fido2Error.NoCredential || error == Fido2Error.Unsupported || error == Fido2Error.PinNotSet;
+			error == Fido2Error.NoCredential || error == Fido2Error.NoAnswer || error == Fido2Error.Unsupported ||
+			error == Fido2Error.PinNotSet;
 
 		private static List<DeviceInfo> Enumerate(LibFido2 lib)
 		{
@@ -295,7 +296,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				if (result != LibFido2.FIDO_OK)
 				{
 					lib.fido_dev_free(ref handle);
-					throw Error(result);
+					throw NoUserError(result);
 				}
 			}
 
@@ -385,6 +386,9 @@ namespace KeePassPasskeyKeyProvider.Fido2
 						int result = lib.fido_dev_get_assert(handle, assert.Handle, null);
 						if (result == LibFido2.FIDO_ERR_NO_CREDENTIALS)
 							continue;
+						// After a timeout the descriptor is out of step with the key: no fallback through it
+						if (IsNoAnswer(result))
+							throw NoUserError(result);
 						byte[] found = result == LibFido2.FIDO_OK ? MatchCredential(assert.CredentialId(), batch) : null;
 						Log(found != null ? $"{info.Name}: holds a credential of the allowList"
 							: $"{info.Name}: no answer to a silent request ({Describe(lib, result)}), sending the whole allowList");
@@ -451,7 +455,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				{
 					int result = lib.fido_dev_get_cbor_info(handle, ci);
 					if (result != LibFido2.FIDO_OK)
-						throw Error(result);
+						throw NoUserError(result);
 
 					hmacSecret = false;
 					IntPtr extensions = lib.fido_cbor_info_extensions_ptr(ci);
@@ -472,6 +476,20 @@ namespace KeePassPasskeyKeyProvider.Fido2
 
 			/// <summary>PIN attempts left; null if the key does not tell</summary>
 			private int? PinRetries() => lib.fido_dev_get_retry_count(handle, out int retries) == LibFido2.FIDO_OK ? retries : (int?)null;
+
+			/// <summary>
+			/// Error of a command that needs no user (before the request that waits for the user): a key that does not
+			/// answer is skipped
+			/// </summary>
+			private Fido2Exception NoUserError(int result)
+			{
+				if (!IsNoAnswer(result))
+					return Error(result);
+				Log($"{info.Name}: does not answer ({Describe(lib, result)}), skipped");
+				return new Fido2Exception(Fido2Error.NoAnswer);
+			}
+
+			private static bool IsNoAnswer(int result) => result == LibFido2.FIDO_ERR_RX || result == LibFido2.FIDO_ERR_TX;
 
 			private Fido2Exception Error(int result, CancellationToken cancellation = default(CancellationToken))
 			{

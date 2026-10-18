@@ -16,6 +16,9 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		/// <summary>No connected key holds a credential from the allowList</summary>
 		NoCredential,
 
+		/// <summary>The key did not answer (in time) a command that needs no user: it is skipped</summary>
+		NoAnswer,
+
 		/// <summary>The key cannot be used: U2F only, no hmac-secret, or it rejected the request options</summary>
 		Unsupported,
 
@@ -73,6 +76,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				// On Linux a key without access rights is not listed at all
 				case Fido2Error.NoDevice: return linux ? Strings.Fido2NoDevice + " " + Strings.Fido2AccessHint : Strings.Fido2NoDevice;
 				case Fido2Error.NoCredential: return Strings.Fido2NoCredential;
+				case Fido2Error.NoAnswer: return Strings.Fido2NoAnswer;
 				case Fido2Error.Unsupported: return Strings.Fido2Unsupported;
 				case Fido2Error.PinNotSet: return Strings.Fido2PinNotSet;
 				case Fido2Error.PinInvalid:
