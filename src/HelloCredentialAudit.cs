@@ -51,19 +51,25 @@ namespace KeePassPasskeyKeyProvider
 	}
 
 	/// <summary>
-	/// Matches the plugin's Windows Hello credentials to databases: the path comes from the credential's displayName,
-	/// membership from the device records in the header (the database need not be opened). Open databases and
-	/// KeePass's recently used files are checked too, since a database may have been moved or renamed.
+	/// Matches the plugin's Windows Hello credentials (for the RP IDs of all device kinds) to databases: the path comes
+	/// from the credential's displayName, membership from the device records in the header (the database need not be
+	/// opened). Open databases and KeePass's recently used files are checked too, since a database may have been moved
+	/// or renamed.
 	/// </summary>
 	public static class HelloCredentialAudit
 	{
+		private static readonly DeviceKind[] kinds = (DeviceKind[])Enum.GetValues(typeof(DeviceKind));
+
+		/// <summary>RP IDs whose credentials are checked</summary>
+		public static IEnumerable<string> RpIds => kinds.Select(WebAuthnHelper.RpId);
+
 		public static List<HelloCredentialInfo> Run(IPluginHost host)
 		{
 			var result = new List<HelloCredentialInfo>();
 			var headerCache = new Dictionary<string, List<DeviceRecord>>(StringComparer.OrdinalIgnoreCase);
 			List<DeviceRecord> recentRecords = null;
 
-			foreach (PlatformCredential cred in WebAuthnHelper.ListPlatformCredentials())
+			foreach (PlatformCredential cred in kinds.SelectMany(WebAuthnHelper.ListPlatformCredentials))
 			{
 				string path = LooksLikePath(cred.DisplayName) ? cred.DisplayName : null;
 				HelloCredentialStatus status;

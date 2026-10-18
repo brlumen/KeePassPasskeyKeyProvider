@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KeePassPasskeyKeyProvider</title>
+<link rel="icon" href="data:,">
 <style>
 	:root { color-scheme: light dark; --bg: #f5f5f7; --card: #fff; --fg: #1d1d1f; --muted: #6e6e73; --accent: #0a66c2; --ok: #1a7f37; --bad: #c62828; }
 	@media (prefers-color-scheme: dark) { :root { --bg: #000; --card: #1c1c1e; --fg: #f5f5f7; --muted: #a1a1a6; --accent: #4ea1ff; --ok: #4ac26b; --bad: #ff6b6b; } }
@@ -122,7 +123,7 @@ async function run() {
 			result = await get(request.allow);
 		}
 
-		const response = await fetch(location.pathname, {
+		const response = await fetch(request.resultPath, {
 			method: "POST",
 			headers: { "Content-Type": "application/x-www-form-urlencoded" },
 			body: new URLSearchParams(result)

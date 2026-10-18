@@ -24,7 +24,6 @@ namespace KeePassPasskeyKeyProvider
 			this.labelDescription = new System.Windows.Forms.Label();
 			this.labelDeviceName = new System.Windows.Forms.Label();
 			this.textBoxDeviceName = new System.Windows.Forms.TextBox();
-			this.checkBoxBrowser = new System.Windows.Forms.CheckBox();
 			this.checkBoxKeepDevices = new System.Windows.Forms.CheckBox();
 			this.labelKeepDevices = new System.Windows.Forms.Label();
 			this.buttons = new System.Windows.Forms.FlowLayoutPanel();
@@ -43,8 +42,7 @@ namespace KeePassPasskeyKeyProvider
 			this.layout.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.layout.Name = "layout";
 			this.layout.Padding = new System.Windows.Forms.Padding(9);
-			this.layout.RowCount = 7;
-			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
+			this.layout.RowCount = 6;
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -54,10 +52,9 @@ namespace KeePassPasskeyKeyProvider
 			this.layout.Controls.Add(this.labelDescription, 0, 0);
 			this.layout.Controls.Add(this.labelDeviceName, 0, 1);
 			this.layout.Controls.Add(this.textBoxDeviceName, 0, 2);
-			this.layout.Controls.Add(this.checkBoxBrowser, 0, 3);
-			this.layout.Controls.Add(this.checkBoxKeepDevices, 0, 4);
-			this.layout.Controls.Add(this.labelKeepDevices, 0, 5);
-			this.layout.Controls.Add(this.buttons, 0, 6);
+			this.layout.Controls.Add(this.checkBoxKeepDevices, 0, 3);
+			this.layout.Controls.Add(this.labelKeepDevices, 0, 4);
+			this.layout.Controls.Add(this.buttons, 0, 5);
 			//
 			// labelDescription
 			//
@@ -81,22 +78,13 @@ namespace KeePassPasskeyKeyProvider
 			this.textBoxDeviceName.Name = "textBoxDeviceName";
 			this.textBoxDeviceName.TabIndex = 0;
 			//
-			// checkBoxBrowser
-			//
-			this.checkBoxBrowser.AutoSize = true;
-			this.checkBoxBrowser.Margin = new System.Windows.Forms.Padding(3, 0, 3, 12);
-			this.checkBoxBrowser.Name = "checkBoxBrowser";
-			this.checkBoxBrowser.TabIndex = 1;
-			this.checkBoxBrowser.Text = Strings.UseBrowserCheckBox;
-			this.checkBoxBrowser.UseVisualStyleBackColor = true;
-			//
 			// checkBoxKeepDevices
 			//
 			this.checkBoxKeepDevices.AutoSize = true;
 			this.checkBoxKeepDevices.Checked = true;
 			this.checkBoxKeepDevices.Margin = new System.Windows.Forms.Padding(3, 0, 3, 3);
 			this.checkBoxKeepDevices.Name = "checkBoxKeepDevices";
-			this.checkBoxKeepDevices.TabIndex = 2;
+			this.checkBoxKeepDevices.TabIndex = 1;
 			this.checkBoxKeepDevices.Text = Strings.KeepDevicesCheckBox;
 			this.checkBoxKeepDevices.UseVisualStyleBackColor = true;
 			//
@@ -123,7 +111,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.buttonCancel.Name = "buttonCancel";
 			this.buttonCancel.Size = new System.Drawing.Size(90, 25);
-			this.buttonCancel.TabIndex = 4;
+			this.buttonCancel.TabIndex = 3;
 			this.buttonCancel.Text = Strings.Cancel;
 			this.buttonCancel.UseVisualStyleBackColor = true;
 			//
@@ -132,7 +120,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonOK.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.buttonOK.Name = "buttonOK";
 			this.buttonOK.Size = new System.Drawing.Size(90, 25);
-			this.buttonOK.TabIndex = 3;
+			this.buttonOK.TabIndex = 2;
 			this.buttonOK.Text = Strings.Continue;
 			this.buttonOK.UseVisualStyleBackColor = true;
 			//
@@ -164,7 +152,6 @@ namespace KeePassPasskeyKeyProvider
 		private System.Windows.Forms.Label labelDescription;
 		private System.Windows.Forms.Label labelDeviceName;
 		private System.Windows.Forms.TextBox textBoxDeviceName;
-		private System.Windows.Forms.CheckBox checkBoxBrowser;
 		private System.Windows.Forms.CheckBox checkBoxKeepDevices;
 		private System.Windows.Forms.Label labelKeepDevices;
 		private System.Windows.Forms.FlowLayoutPanel buttons;

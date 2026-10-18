@@ -12,18 +12,19 @@ using KeePassPasskeyKeyProvider.WebAuthn;
 namespace KeePassPasskeyKeyProvider.Browser
 {
 	/// <summary>
-	/// WebAuthn with PRF in the system browser, for any OS: the plugin serves a page from <see cref="LoopbackServer"/>
-	/// at http://localhost:port (a secure context), the page calls navigator.credentials and posts the credential ID
-	/// and the PRF result back. The browser offers its own authenticators: this computer (iCloud Keychain, Google
-	/// Password Manager, Windows Hello), a phone by QR code or a security key.
-	/// The result is not authenticated beyond the secret path of the page: a wrong PRF secret does not match the owner
-	/// tag of any wrap (see <see cref="KeyWrap.Open"/>), so a forged answer cannot open a database.
+	/// WebAuthn with PRF in the system browser, for systems other than Windows: the plugin serves a page
+	/// from <see cref="LoopbackServer"/> at http://keepass-fido2.localhost:port (loopback, a secure context), the page
+	/// calls navigator.credentials for portable devices and posts the credential ID and the PRF result back.
+	/// The browser offers its own authenticators: this computer (the passkey manager of the browser or system),
+	/// a phone by QR code or a security key.
+	/// The result is not authenticated beyond the secrets of the server (see <see cref="LoopbackServer"/>): a wrong PRF
+	/// secret does not match the owner tag of any wrap (see <see cref="KeyWrap.Open"/>), so a forged answer cannot open
+	/// a database.
 	/// </summary>
 	public static class BrowserWebAuthn
 	{
-		// IMPORTANT: RP ID of browser devices is part of the format (the PRF salt is shared with WebAuthnHelper).
-		// Browsers allow only the page's host (or its registrable suffix) as RP ID; localhost is the only host of a local page.
-		public const string RpId = "localhost";
+		// Browsers allow only the page's host (or its registrable suffix) as RP ID, so the page is served on this host
+		private static string RpId => WebAuthnHelper.RpId(DeviceKind.Portable);
 		private const string RpName = "KeePassPasskeyKeyProvider";
 		private const string PageResource = "KeePassPasskeyKeyProvider.Browser.webauthn.html";
 		private const string RequestPlaceholder = "{{REQUEST}}";
@@ -31,7 +32,7 @@ namespace KeePassPasskeyKeyProvider.Browser
 		private const int MaxCredentialIdLength = 1023; // WebAuthn limit
 
 		/// <summary>Creates a credential with PRF; the PRF secret is obtained in the same session</summary>
-		/// <param name="excludeList">Credentials of the database's browser devices: the browser refuses to register the same authenticator twice</param>
+		/// <param name="excludeList">Credentials of the database's portable devices: the browser refuses to register the same authenticator twice</param>
 		/// <param name="databaseName">File name shown on the page; null if there is none</param>
 		/// <exception cref="WebAuthnException">Cancelled, timed out or an invalid answer</exception>
 		public static PrfResult CreateCredential(IWin32Window owner, byte[] userId, string userName, IList<byte[]> excludeList,
@@ -81,21 +82,26 @@ namespace KeePassPasskeyKeyProvider.Browser
 			AppendText(request, "cancelled", Strings.BrowserPageCancelled);
 			AppendText(request, "exists", Strings.BrowserPageExists);
 			AppendText(request, "failed", Strings.BrowserPageFailed);
-			request.Append("}}");
+			request.Append('}');
 
 			Dictionary<string, string> fields = null;
 			using (var form = new BrowserWaitForm(waitText, TimeoutMs))
-			using (var server = new LoopbackServer(LoadPage(request.ToString()), result =>
-			{
-				fields = result;
-				form.Complete();
-			}))
+			using (var server = new LoopbackServer(RpId,
+				resultPath => LoadPage(request.ToString() + ",\"resultPath\":" + Json(resultPath) + "}"),
+				result =>
+				{
+					fields = result;
+					form.Finish(DialogResult.OK);
+				},
+				() => form.Finish(DialogResult.No)))
 			{
 				form.Url = server.Url;
 				DialogResult answer = form.ShowDialog(owner);
 				if (answer == DialogResult.OK && fields != null)
 					return ToPrfResult(fields);
-				throw new WebAuthnException(answer == DialogResult.Abort ? Strings.BrowserTimedOut : Strings.BrowserCancelled);
+				throw new WebAuthnException(answer == DialogResult.Abort ? Strings.BrowserTimedOut
+					: answer == DialogResult.No ? Strings.BrowserRejected
+					: Strings.BrowserCancelled);
 			}
 		}
 

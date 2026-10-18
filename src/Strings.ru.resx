@@ -72,14 +72,11 @@
 
 Это окно закроется само.</value>
 	</data>
-	<data name="BrowserDeviceSuffix" xml:space="preserve">
-		<value>(браузер)</value>
-	</data>
 	<data name="BrowserInvalidAnswer" xml:space="preserve">
 		<value>Браузер вернул некорректный ответ.</value>
 	</data>
 	<data name="BrowserOpenAgain" xml:space="preserve">
-		<value>Открыть страницу ещё раз</value>
+		<value>Страница не открылась? Открыть ещё раз</value>
 	</data>
 	<data name="BrowserOpenFailed" xml:space="preserve">
 		<value>Не удалось открыть браузер: {0}
@@ -129,6 +126,9 @@
 	<data name="BrowserPageWorking" xml:space="preserve">
 		<value>Следуйте подсказкам в появившемся окне…</value>
 	</data>
+	<data name="BrowserRejected" xml:space="preserve">
+		<value>Операция остановлена: страница KeePass получила неожиданный запрос. Так бывает, если страницу обновить или открыть второй раз, или если её пытается использовать другая программа на этом компьютере. Повторите попытку.</value>
+	</data>
 	<data name="BrowserTimedOut" xml:space="preserve">
 		<value>Браузер не ответил вовремя.</value>
 	</data>
@@ -173,18 +173,18 @@
 • Windows Hello — PIN‑код, распознавание лица или отпечаток пальца;
 • телефон или планшет — отсканируйте QR‑код и подтвердите на телефоне.
 
-Другие устройства: Файл → Параметры базы → вкладка «FIDO2».</value>
+Passkey на телефоне или ключе безопасности может открывать базу и в других системах, например в Linux (в браузере). Другие устройства: Файл → Параметры базы → вкладка «FIDO2».</value>
 	</data>
 	<data name="CreateCredentialDescriptionBrowser" xml:space="preserve">
 		<value>Сейчас для этой базы в браузере будет создан новый passkey (FIDO2 credential).
 Введите ниже название устройства, которым создаётся ключ, — оно отличает его от других в списке устройств базы. Если оставить поле пустым, название будет составлено из типа устройства, имени компьютера и даты.
 
 На открывшейся странице нажмите «Продолжить» и выберите:
-• этот компьютер — менеджер passkey системы или браузера (Связка ключей iCloud, Google Password Manager);
+• этот компьютер — менеджер passkey браузера или системы (например, Google Password Manager);
 • телефон или планшет — отсканируйте QR‑код и подтвердите на телефоне;
 • ключ безопасности с поддержкой PRF (hmac-secret).
 
-Такой passkey открывает базу в Windows, macOS и Linux. Другие устройства: Файл → Параметры базы → вкладка «FIDO2».</value>
+Passkey на телефоне или ключе безопасности открывает базу и в Windows, и в других системах. Другие устройства: Файл → Параметры базы → вкладка «FIDO2».</value>
 	</data>
 	<data name="CreateCredentialFailed" xml:space="preserve">
 		<value>Не удалось создать credential: {0} (HRESULT: 0x{1:X8})</value>
@@ -325,15 +325,14 @@
 		<value>Сейчас будет создан тестовый passkey — чтобы проверить, подходит ли ваше устройство для защиты базы KeePass.
 
 В браузере откроется страница. Нажмите «Продолжить» и выберите, где сохранить passkey:
-• на этом Mac — в Связке ключей iCloud (Safari) или в Google Password Manager (Chrome);
+• на этом компьютере — в менеджере passkey браузера или системы (например, в Google Password Manager в Chrome);
 • на телефоне — отсканируйте QR‑код, passkey сохранится на телефоне;
 • на ключе безопасности (YubiKey и т. п.) — вставьте ключ и коснитесь его.
 Затем подтвердите passkey ещё раз: так проверяется, что он умеет выдавать ключ для базы.
 
-Ваши базы тест не затрагивает. Но тестовый passkey останется там, где вы его сохранили: в списке паролей это запись для сайта «localhost» с именем «KeePass: PRF diagnostics». Он ничего не открывает, его можно удалить:
-• Связка ключей iCloud — приложение «Пароли», поиск «localhost»;
-• Google Password Manager — в Chrome откройте chrome://password-manager, поиск «localhost»;
-• телефон — его менеджер паролей (iPhone: Настройки → Пароли; Android: Google Password Manager), поиск «localhost»;
+Ваши базы тест не затрагивает. Но тестовый passkey останется там, где вы его сохранили: в списке паролей это запись для сайта «keepass-fido2.localhost» с именем «KeePass: PRF diagnostics». Он ничего не открывает, его можно удалить:
+• Google Password Manager — в Chrome откройте chrome://password-manager, поиск «keepass-fido2»;
+• телефон — его менеджер паролей (iPhone: Настройки → Пароли; Android: Google Password Manager), поиск «keepass-fido2»;
 • ключ безопасности — в Chrome откройте chrome://settings/securityKeys → «Данные для входа» или приложение производителя (Yubico Authenticator).
 
 Продолжить тест?</value>
@@ -446,9 +445,6 @@
 	</data>
 	<data name="Open" xml:space="preserve">
 		<value>Открыть</value>
-	</data>
-	<data name="OpenInBrowserQuestion" xml:space="preserve">
-		<value>Открыть базу passkey в браузере?</value>
 	</data>
 	<data name="OpenWithRecoveryPhrase" xml:space="preserve">
 		<value>Открыть базу фразой восстановления?</value>
@@ -598,6 +594,9 @@
 	<data name="TransportUsb" xml:space="preserve">
 		<value>USB‑ключ</value>
 	</data>
+	<data name="TryOtherDevicesQuestion" xml:space="preserve">
+		<value>Попробовать другие устройства этой базы?</value>
+	</data>
 	<data name="UnexpectedError" xml:space="preserve">
 		<value>Неожиданная ошибка:
 {0}
@@ -618,9 +617,6 @@
 	</data>
 	<data name="UnusedCredentialsHint" xml:space="preserve">
 		<value>Не найдены в открытых и недавних базах и по сохранённому пути. Перемещённая или переименованная база не обнаруживается: удаляйте только заведомо ненужные credential.</value>
-	</data>
-	<data name="UseBrowserCheckBox" xml:space="preserve">
-		<value>Создать в браузере (passkey будет работать и в macOS, и в Linux)</value>
 	</data>
 	<data name="VerifyPhraseDescription" xml:space="preserve">
 		<value>Для проверки введите слова фразы с указанными номерами.</value>
@@ -643,9 +639,9 @@
 		<value>Windows WebAuthn API недоступен (требуется API v4+, Windows 11 22H2 и новее).</value>
 	</data>
 	<data name="WindowsDevicesOnly" xml:space="preserve">
-		<value>Устройства этой базы работают только в Windows (Windows WebAuthn API).
+		<value>Устройства этой базы работают только в Windows: они добавлены предыдущей версией плагина.
 
-Чтобы открывать базу в этой системе, добавьте в Windows устройство через браузер: Файл → Параметры базы → вкладка «FIDO2».</value>
+Чтобы открывать базу в этой системе, добавьте к ней устройство в Windows: Файл → Параметры базы → вкладка «FIDO2». Добавленный там passkey на телефоне или ключе безопасности работает и в этой системе.</value>
 	</data>
 	<data name="WindowsDeviceSuffix" xml:space="preserve">
 		<value>(только Windows)</value>

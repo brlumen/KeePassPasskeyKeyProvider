@@ -13,14 +13,23 @@ using KeePassPasskeyKeyProvider.WebAuthn;
 
 namespace KeePassPasskeyKeyProvider
 {
-	/// <summary>How the plugin talks to the authenticator of a device; each kind has its own RP ID and credentials</summary>
+	/// <summary>
+	/// RP ID of the credential of a device (see <see cref="WebAuthnHelper.RpId"/>), which decides where the device works.
+	/// The PRF salt is the same for both kinds.
+	/// </summary>
 	public enum DeviceKind : byte
 	{
-		/// <summary>Windows WebAuthn API (webauthn.dll), RP ID <see cref="WebAuthnHelper.RpId"/></summary>
-		WindowsWebAuthn = 0,
+		/// <summary>
+		/// RP ID "keepass-fido2.local": browsers do not accept it, so the device works only through the Windows WebAuthn
+		/// API. Devices of plugin versions before portable devices (records v4).
+		/// </summary>
+		Classic = 0,
 
-		/// <summary>System browser through the plugin's local web server, RP ID <see cref="BrowserWebAuthn.RpId"/>; any OS</summary>
-		Browser = 1
+		/// <summary>
+		/// RP ID "keepass-fido2.localhost": the device works through the Windows WebAuthn API on Windows and in the
+		/// system browser on any OS (see <see cref="BrowserWebAuthn"/>). New devices are portable.
+		/// </summary>
+		Portable = 1
 	}
 
 	/// <summary>
@@ -80,7 +89,7 @@ namespace KeePassPasskeyKeyProvider
 	/// can extract SK from that copy and still forge records, because rotation does not change SK (the tags of the
 	/// remaining owners are bound to VK, and their secrets are not available to re-tag them).
 	/// Database key K is random and exists only wrapped for each device and the recovery phrase; the database
-	/// cannot be opened without the records. Credential IDs of all records are passed in allowList so that
+	/// cannot be opened without the records. Credential IDs of the records of a kind are passed in allowList so that
 	/// Windows does not show a credential picker.
 	/// </summary>
 	public static class DeviceKeyStore
@@ -94,8 +103,8 @@ namespace KeePassPasskeyKeyProvider
 		//   byte recovery flag (0/1); if 1: KeyWrap
 		//   byte[64] ECDSA P‑256 / SHA‑256 signature (r ‖ s) over all preceding bytes
 		// KeyWrap: Q (65) ‖ d ⊕ S (32) ‖ ephemeral public key (65) ‖ wrapped K (32) ‖ owner tag (32)
-		// v5 = v4 with a DeviceKind byte before each credential ID (v4 devices are WindowsWebAuthn). Records without
-		// browser devices are still written as v4, so that plugin versions before v5 keep opening such databases.
+		// v5 = v4 with a DeviceKind byte before each credential ID (v4 devices are Classic). Records with only classic
+		// devices are still written as v4, so that plugin versions before v5 keep opening such databases.
 		private const string CustomDataKey = "KeePassFIDO2.Devices";
 		private const byte FormatVersion4 = 4;
 		private const byte FormatVersion5 = 5;
@@ -328,7 +337,7 @@ namespace KeePassPasskeyKeyProvider
 			using (var ms = new MemoryStream())
 			using (var bw = new BinaryWriter(ms))
 			{
-				bool withKinds = set.Devices.Exists(r => r.Kind != DeviceKind.WindowsWebAuthn);
+				bool withKinds = set.Devices.Exists(r => r.Kind != DeviceKind.Classic);
 				bw.Write(withKinds ? FormatVersion5 : FormatVersion4);
 				bw.Write(set.VerificationKey);
 				bw.Write(checked((ushort)set.Devices.Count));
@@ -374,7 +383,7 @@ namespace KeePassPasskeyKeyProvider
 					int count = br.ReadUInt16();
 					for (int i = 0; i < count; i++)
 					{
-						var kind = version == FormatVersion5 ? (DeviceKind)br.ReadByte() : DeviceKind.WindowsWebAuthn;
+						var kind = version == FormatVersion5 ? (DeviceKind)br.ReadByte() : DeviceKind.Classic;
 						if (!Enum.IsDefined(typeof(DeviceKind), kind))
 							throw new InvalidDataException(Strings.UnknownDeviceKind);
 						var record = new DeviceRecord

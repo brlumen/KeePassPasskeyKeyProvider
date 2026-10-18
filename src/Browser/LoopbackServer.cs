@@ -11,11 +11,16 @@ using System.Threading;
 namespace KeePassPasskeyKeyProvider.Browser
 {
 	/// <summary>
-	/// One-shot HTTP server for a WebAuthn ceremony in the browser. Listens on the same port of 127.0.0.1 and ::1:
-	/// the browser resolves "localhost" to either, and a foreign server on the other address would get the page.
-	/// Serves one page at a secret path (<see cref="Url"/>) and accepts one form POST to the same path, which ends
-	/// the session. Requests are accepted only with the expected Host (no DNS rebinding) and, for POST,
-	/// the page's own Origin.
+	/// One-shot HTTP server for a WebAuthn ceremony in the browser, at http://hostName:port. Listens on the same port of
+	/// 127.0.0.1 and ::1: the browser resolves a *.localhost name to either, and a foreign server on the other address
+	/// would get the page.
+	/// The secret path of <see cref="Url"/> reaches the browser on a command line that other local users can read, so
+	/// it is single-use: the first GET gets the page. The page carries a second secret, the path of its result: one
+	/// form POST there with the page's Origin is accepted and ends the session. Any other request with the expected
+	/// Host (a second GET of the page, a wrong secret, a foreign Origin) means that someone else races the browser:
+	/// it stops the ceremony, so that they get a visible failure, not a result accepted from them. This does not cover
+	/// someone who gets the page and posts a result before the browser asks for the page.
+	/// Requests with another Host (DNS rebinding) and for files (icons) are refused without stopping the ceremony.
 	/// </summary>
 	internal sealed class LoopbackServer : IDisposable
 	{
@@ -26,22 +31,32 @@ namespace KeePassPasskeyKeyProvider.Browser
 
 		private readonly byte[] page;
 		private readonly Action<Dictionary<string, string>> onResult;
+		private readonly Action onRejected;
 		private readonly List<TcpListener> listeners;
-		private readonly string path;
+		private readonly string pagePath;
+		private readonly string resultPath;
 		private readonly string host;
 		private readonly string origin;
-		private int completed;
+		private int pageServed;
+		private int finished;
 
-		/// <param name="page">HTML served at the secret path</param>
-		/// <param name="onResult">Called once, on a background thread, with the fields of the accepted POST</param>
-		public LoopbackServer(string page, Action<Dictionary<string, string>> onResult)
+		/// <param name="hostName">Host of the page: a *.localhost name, which browsers resolve to loopback</param>
+		/// <param name="page">HTML served once at the secret path of <see cref="Url"/>, built for the secret path that
+		/// the page posts its result to</param>
+		/// <param name="onResult">Called on a background thread with the fields of the accepted POST</param>
+		/// <param name="onRejected">Called on a background thread when an unexpected request stops the ceremony.
+		/// Only one of the two callbacks is called, once.</param>
+		public LoopbackServer(string hostName, Func<string, string> page, Action<Dictionary<string, string>> onResult,
+			Action onRejected)
 		{
-			this.page = Encoding.UTF8.GetBytes(page);
+			pagePath = "/" + NewToken();
+			resultPath = "/" + NewToken();
+			this.page = Encoding.UTF8.GetBytes(page(resultPath));
 			this.onResult = onResult;
-			listeners = Listen();
+			this.onRejected = onRejected;
+			listeners = Listen(Start);
 			Port = ((IPEndPoint)listeners[0].LocalEndpoint).Port;
-			path = "/" + NewToken();
-			host = "localhost:" + Port;
+			host = hostName + ":" + Port;
 			origin = "http://" + host;
 
 			foreach (TcpListener listener in listeners)
@@ -50,42 +65,56 @@ namespace KeePassPasskeyKeyProvider.Browser
 
 		public int Port { get; }
 
-		/// <summary>Address of the page; the path is a random token</summary>
-		public string Url => origin + path;
+		/// <summary>Address of the page; the path is a random single-use token</summary>
+		public string Url => origin + pagePath;
 
 		public void Dispose()
 		{
-			Interlocked.Exchange(ref completed, 1);
+			Interlocked.Exchange(ref finished, 1);
 			foreach (TcpListener listener in listeners)
 				listener.Stop();
 		}
 
-		private static List<TcpListener> Listen()
+		/// <summary>
+		/// Listeners on the same port of 127.0.0.1 and ::1. If ::1 cannot be bound on the port (another process may
+		/// listen there and get the browser's requests), another port is tried. 127.0.0.1 alone only on a system without
+		/// IPv6 loopback, where browsers cannot connect to ::1 either.
+		/// </summary>
+		/// <param name="start">Starts a listener on the address and port (0: any free port)</param>
+		/// <exception cref="IOException">No port could be bound on both addresses</exception>
+		internal static List<TcpListener> Listen(Func<IPAddress, int, TcpListener> start)
 		{
 			for (int attempt = 0; attempt < PortAttempts; attempt++)
 			{
-				TcpListener v4 = Start(IPAddress.Loopback, 0);
+				TcpListener v4 = start(IPAddress.Loopback, 0);
 				if (!Socket.OSSupportsIPv6)
 					return new List<TcpListener> { v4 };
 
 				int port = ((IPEndPoint)v4.LocalEndpoint).Port;
 				try
 				{
-					return new List<TcpListener> { v4, Start(IPAddress.IPv6Loopback, port) };
+					return new List<TcpListener> { v4, start(IPAddress.IPv6Loopback, port) };
 				}
-				catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
+				catch (SocketException ex) when (IsMissingAddress(ex.SocketErrorCode))
 				{
-					v4.Stop(); // the port is taken on ::1: try another one
+					return new List<TcpListener> { v4 };
 				}
 				catch (SocketException)
 				{
-					return new List<TcpListener> { v4 }; // no IPv6 loopback: the browser uses 127.0.0.1
+					v4.Stop(); // taken or refused on ::1: another port
 				}
 			}
-			throw new IOException("No free port on both 127.0.0.1 and ::1");
+			throw new IOException("No port could be bound on both 127.0.0.1 and ::1");
 		}
 
-		private static TcpListener Start(IPAddress address, int port)
+		/// <summary>The address does not exist on this system, so nobody can listen on it</summary>
+		private static bool IsMissingAddress(SocketError error)
+		{
+			return error == SocketError.AddressNotAvailable || error == SocketError.AddressFamilyNotSupported ||
+			       error == SocketError.ProtocolFamilyNotSupported || error == SocketError.ProtocolNotSupported;
+		}
+
+		internal static TcpListener Start(IPAddress address, int port)
 		{
 			var listener = new TcpListener(address, port);
 			// Windows lets another process bind the same address and port unless the socket is exclusive
@@ -140,27 +169,40 @@ namespace KeePassPasskeyKeyProvider.Browser
 
 		private Response Handle(Request request)
 		{
+			// Another site whose name resolves to loopback (DNS rebinding) knows no secrets: it does not stop the ceremony
 			if (request.Header("Host") != host)
 				return Response.Status(400, "Bad Request");
-			if (!KeyWrap.FixedTimeEquals(Encoding.ASCII.GetBytes(request.Path), Encoding.ASCII.GetBytes(path)))
-				return Response.Status(404, "Not Found");
-			if (Volatile.Read(ref completed) != 0)
+			if (Volatile.Read(ref finished) != 0)
 				return Response.Status(410, "Gone");
+			// Browsers ask for icons by themselves; the secrets have no dot
+			if (request.Method == "GET" && request.Path.IndexOf('.') >= 0)
+				return Response.Status(404, "Not Found");
 
-			switch (request.Method)
+			if (request.Method == "GET" && IsSecret(request.Path, pagePath) && Interlocked.Exchange(ref pageServed, 1) == 0)
+				return Response.Page(page);
+			if (request.Method == "POST" && IsSecret(request.Path, resultPath) && request.Header("Origin") == origin)
 			{
-				case "GET":
-					return Response.Page(page);
-				case "POST":
-					if (request.Header("Origin") != origin)
-						return Response.Status(403, "Forbidden");
-					if (Interlocked.Exchange(ref completed, 1) != 0)
-						return Response.Status(410, "Gone");
-					onResult(ParseForm(request.Body));
-					return Response.Status(204, "No Content");
-				default:
-					return Response.Status(405, "Method Not Allowed");
+				if (!Finish())
+					return Response.Status(410, "Gone");
+				onResult(ParseForm(request.Body));
+				return Response.Status(204, "No Content");
 			}
+
+			// A second GET of the page, a wrong secret or a foreign Origin
+			if (Finish())
+				onRejected();
+			return Response.Status(403, "Forbidden");
+		}
+
+		/// <summary>Ends the session; false if it has already ended</summary>
+		private bool Finish()
+		{
+			return Interlocked.Exchange(ref finished, 1) == 0;
+		}
+
+		private static bool IsSecret(string path, string secretPath)
+		{
+			return KeyWrap.FixedTimeEquals(Encoding.ASCII.GetBytes(path), Encoding.ASCII.GetBytes(secretPath));
 		}
 
 		/// <summary>application/x-www-form-urlencoded fields</summary>
@@ -194,7 +236,7 @@ namespace KeePassPasskeyKeyProvider.Browser
 			head.Append("X-Content-Type-Options: nosniff\r\n");
 			head.Append("X-Frame-Options: DENY\r\n");
 			head.Append("Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
-			            "connect-src 'self'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'\r\n");
+			            "img-src data:; connect-src 'self'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'\r\n");
 			head.Append("Connection: close\r\n\r\n");
 
 			byte[] headBytes = Encoding.ASCII.GetBytes(head.ToString());
