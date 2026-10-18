@@ -33,6 +33,12 @@ namespace KeePassPasskeyKeyProvider.Fido2
 	{
 		private const int HashLength = 32; // SHA‑256: client data hash and hmac-secret output
 		private const int MaxDevices = 64;
+
+		// Commands that need no user (opening, GetInfo, silent requests) give up on a key that does not answer, so
+		// the UI thread waiting for them is not blocked; the request that waits for the user has no timeout
+		private const int QuickTimeoutMs = 5000;
+		private const int NoTimeout = -1;
+
 		private const string HmacSecretExtension = "hmac-secret";
 
 		// CTAP PIN limits in UTF-8: at least 4 code points, at most 63 bytes. A shorter or longer PIN is rejected
@@ -284,6 +290,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				handle = lib.fido_dev_new();
 				if (handle == IntPtr.Zero)
 					throw new OutOfMemoryException();
+				SetTimeout(QuickTimeoutMs);
 				int result = lib.fido_dev_open(handle, info.Path);
 				if (result != LibFido2.FIDO_OK)
 				{
@@ -366,7 +373,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 
 			/// <summary>
 			/// Silent assertions (no user presence, no verification) with parts of the allowList: the credential this key
-			/// holds; null if the key does not answer silent requests
+			/// holds; null if the key does not answer silent requests (in time)
 			/// </summary>
 			/// <exception cref="Fido2Exception">The key holds none of the credentials (<see cref="Fido2Error.NoCredential"/>)</exception>
 			private byte[] FindCredential(string rpId, List<byte[]> usable, ulong maxListLength)
@@ -402,11 +409,19 @@ namespace KeePassPasskeyKeyProvider.Fido2
 
 					prompt.TouchRequested(info.Name);
 					int result;
-					// Dispose of the registration waits for a running cancel: the device is not closed under it
-					using (cancellation.Register(() => lib.fido_dev_cancel(handle)))
+					SetTimeout(NoTimeout);
+					try
 					{
-						ThrowIfCancelled(cancellation);
-						result = lib.fido_dev_get_assert(handle, assert.Handle, pin);
+						// Dispose of the registration waits for a running cancel: the device is not closed under it
+						using (cancellation.Register(() => lib.fido_dev_cancel(handle)))
+						{
+							ThrowIfCancelled(cancellation);
+							result = lib.fido_dev_get_assert(handle, assert.Handle, pin);
+						}
+					}
+					finally
+					{
+						SetTimeout(QuickTimeoutMs);
 					}
 					Log($"{info.Name}: assertion with {(pin != null ? "PIN" : "built-in UV")}: {Describe(lib, result)}");
 					if (result != LibFido2.FIDO_OK)
@@ -451,6 +466,9 @@ namespace KeePassPasskeyKeyProvider.Fido2
 					lib.fido_cbor_info_free(ref ci);
 				}
 			}
+
+			/// <summary>Timeout of the following commands (FIDO_ERR_RX when it expires); libfido2 before 1.9 waits without limit</summary>
+			private void SetTimeout(int ms) => lib.fido_dev_set_timeout?.Invoke(handle, ms);
 
 			/// <summary>PIN attempts left; null if the key does not tell</summary>
 			private int? PinRetries() => lib.fido_dev_get_retry_count(handle, out int retries) == LibFido2.FIDO_OK ? retries : (int?)null;

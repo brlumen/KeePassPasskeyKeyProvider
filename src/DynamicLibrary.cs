@@ -46,10 +46,14 @@ namespace KeePassPasskeyKeyProvider
 		/// <exception cref="PlatformNotSupportedException">The library has no such function</exception>
 		public T Bind<T>(string function) where T : Delegate
 		{
+			return TryBind<T>(function) ?? throw new PlatformNotSupportedException($"{function} is missing in {name}");
+		}
+
+		/// <summary>The function, or null if the library has none (a function of newer versions)</summary>
+		public T TryBind<T>(string function) where T : Delegate
+		{
 			IntPtr pointer = linux ? LinuxSymbol(handle, function) : LibcSymbol(handle, function);
-			if (pointer == IntPtr.Zero)
-				throw new PlatformNotSupportedException($"{function} is missing in {name}");
-			return Marshal.GetDelegateForFunctionPointer<T>(pointer);
+			return pointer == IntPtr.Zero ? null : Marshal.GetDelegateForFunctionPointer<T>(pointer);
 		}
 
 		[DllImport("libdl.so.2", EntryPoint = "dlopen")]

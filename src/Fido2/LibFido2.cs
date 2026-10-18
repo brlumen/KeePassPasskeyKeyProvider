@@ -55,6 +55,8 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		public readonly DevOpen fido_dev_open;
 		public readonly DevCommand fido_dev_close;
 		public readonly DevCommand fido_dev_cancel;
+		/// <summary>libfido2 1.9+; null in older versions</summary>
+		public readonly SetInt fido_dev_set_timeout;
 		public readonly DevFlag fido_dev_is_fido2;
 		public readonly DevFlag fido_dev_has_pin;
 		public readonly DevFlag fido_dev_has_uv;
@@ -99,6 +101,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			fido_dev_open = library.Bind<DevOpen>(nameof(fido_dev_open));
 			fido_dev_close = library.Bind<DevCommand>(nameof(fido_dev_close));
 			fido_dev_cancel = library.Bind<DevCommand>(nameof(fido_dev_cancel));
+			fido_dev_set_timeout = library.TryBind<SetInt>(nameof(fido_dev_set_timeout));
 			fido_dev_is_fido2 = library.Bind<DevFlag>(nameof(fido_dev_is_fido2));
 			fido_dev_has_pin = library.Bind<DevFlag>(nameof(fido_dev_has_pin));
 			fido_dev_has_uv = library.Bind<DevFlag>(nameof(fido_dev_has_uv));
@@ -193,7 +196,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		public delegate int SetBytes(IntPtr assert, byte[] data, UIntPtr length);
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate int SetInt(IntPtr assert, int value);
+		public delegate int SetInt(IntPtr handle, int value);
 
 		/// <summary>pin: NUL-terminated UTF-8 or null; blocks until the authenticator answers</summary>
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
