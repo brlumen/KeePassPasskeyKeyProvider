@@ -64,9 +64,6 @@
 	<data name="Back" xml:space="preserve">
 		<value>Back</value>
 	</data>
-	<data name="BrowserCancelled" xml:space="preserve">
-		<value>The operation was cancelled.</value>
-	</data>
 	<data name="BrowserCreateWaiting" xml:space="preserve">
 		<value>Continue on the KeePass page that opened in the browser: click "Continue" and choose where to keep the passkey — this computer, your phone (QR code) or a security key.
 
@@ -403,6 +400,39 @@ Continue the test?</value>
 	<data name="EnterDeviceName" xml:space="preserve">
 		<value>Enter a device name.</value>
 	</data>
+	<data name="Fido2AccessHint" xml:space="preserve">
+		<value>If it is connected, the system may not give access to it: this needs udev 244 or later or udev rules for FIDO keys.</value>
+	</data>
+	<data name="Fido2DeviceError" xml:space="preserve">
+		<value>Security key error: {0}</value>
+	</data>
+	<data name="Fido2LibraryMissing" xml:space="preserve">
+		<value>USB security keys need libfido2 1.7 or later: install it (package libfido2-1 on Debian and Ubuntu) and restart KeePass.</value>
+	</data>
+	<data name="Fido2NoCredential" xml:space="preserve">
+		<value>No connected security key is a device of this database.</value>
+	</data>
+	<data name="Fido2NoDevice" xml:space="preserve">
+		<value>No security key is connected.</value>
+	</data>
+	<data name="Fido2PinAuthBlocked" xml:space="preserve">
+		<value>Too many wrong PINs in a row: remove the security key, insert it again and retry.</value>
+	</data>
+	<data name="Fido2PinBlocked" xml:space="preserve">
+		<value>The PIN of the security key is blocked after too many wrong attempts.</value>
+	</data>
+	<data name="Fido2PinNotSet" xml:space="preserve">
+		<value>The security key has no PIN, and the database needs user verification.</value>
+	</data>
+	<data name="Fido2Timeout" xml:space="preserve">
+		<value>The security key was not touched in time.</value>
+	</data>
+	<data name="Fido2Unsupported" xml:space="preserve">
+		<value>The security key does not support the PRF feature (hmac-secret).</value>
+	</data>
+	<data name="Fido2UserVerificationFailed" xml:space="preserve">
+		<value>The security key did not verify the user (for example, it did not recognize the fingerprint).</value>
+	</data>
 	<data name="GetAssertionFailed" xml:space="preserve">
 		<value>Failed to get assertion: {0} (HRESULT: 0x{1:X8})</value>
 	</data>
@@ -449,6 +479,9 @@ File → Change Master Key → "{0}".</value>
 	<data name="OpenWithRecoveryPhrase" xml:space="preserve">
 		<value>Open the database with the recovery phrase?</value>
 	</data>
+	<data name="OperationCancelled" xml:space="preserve">
+		<value>The operation was cancelled.</value>
+	</data>
 	<data name="PhraseChecksumMismatch" xml:space="preserve">
 		<value>The phrase contains an error: checksum mismatch. Check the words and their order.</value>
 	</data>
@@ -457,6 +490,12 @@ File → Change Master Key → "{0}".</value>
 	</data>
 	<data name="PhraseWordCount" xml:space="preserve">
 		<value>The phrase must consist of {0} words (entered: {1}).</value>
+	</data>
+	<data name="PinAttemptsLeft" xml:space="preserve">
+		<value>Attempts left: {0}.</value>
+	</data>
+	<data name="PinWrong" xml:space="preserve">
+		<value>Wrong PIN.</value>
 	</data>
 	<data name="PrfDiagnosticsButton" xml:space="preserve">
 		<value>🔍 PRF diagnostics</value>

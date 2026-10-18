@@ -70,13 +70,22 @@ namespace KeePassPasskeyKeyProvider.Tests
 		public void ExceptionMessageHasRetriesAndDetail()
 		{
 			var ex = new Fido2Exception(Fido2Error.PinInvalid, 3);
-			Assert.AreEqual("Wrong PIN (3 attempts left)", ex.Message);
+			Assert.AreEqual(Strings.PinWrong + " " + string.Format(Strings.PinAttemptsLeft, 3), ex.Message);
 			Assert.AreEqual(3, ex.RetriesLeft.Value);
 			Assert.IsTrue(ex is WebAuthnException);
 
-			Assert.AreEqual("Security key error: FIDO_ERR_RX (-2)", new Fido2Exception(Fido2Error.DeviceError, detail: "FIDO_ERR_RX (-2)").Message);
+			Assert.AreEqual(string.Format(Strings.Fido2DeviceError, "FIDO_ERR_RX (-2)"),
+				new Fido2Exception(Fido2Error.DeviceError, detail: "FIDO_ERR_RX (-2)").Message);
 			foreach (Fido2Error error in Enum.GetValues(typeof(Fido2Error)))
 				Assert.IsTrue(new Fido2Exception(error).Message.Length > 0);
+		}
+
+		[TestMethod]
+		public void KeyNotFoundOnlyWhenTheUserWasNotAsked()
+		{
+			var notFound = new[] { Fido2Error.NoDevice, Fido2Error.NoCredential, Fido2Error.Unsupported, Fido2Error.PinNotSet };
+			foreach (Fido2Error error in Enum.GetValues(typeof(Fido2Error)))
+				Assert.AreEqual(notFound.Contains(error), new Fido2Exception(error).KeyNotFound);
 		}
 
 		[TestMethod]

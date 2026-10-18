@@ -37,13 +37,13 @@ namespace KeePassPasskeyKeyProvider.Fido2
 
 		// CTAP PIN limits in UTF-8: at least 4 code points, at most 63 bytes. A shorter or longer PIN is rejected
 		// here instead of spending an attempt on the key
-		private const int MinPinLength = 4;
+		internal const int MinPinLength = 4;
 		private const int MaxPinLength = 63;
 
 		private static readonly byte[] PrfLabel = Encoding.ASCII.GetBytes("WebAuthn PRF\0");
 
 		// Loaded on first use: a missing library must not break the type initialization
-		private static readonly Lazy<LibFido2> library = new Lazy<LibFido2>(() => new LibFido2());
+		private static readonly Lazy<LibFido2> library = new Lazy<LibFido2>(Load);
 
 		/// <summary>libfido2 is installed (loads it on first use)</summary>
 		public static bool IsAvailable
@@ -96,7 +96,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				}
 				catch (Fido2Exception ex) when (IsSkipped(ex.Error))
 				{
-					Log($"{info.Name}: skipped, {ex.Message}");
+					Log($"{info.Name}: skipped, {ex.Error}");
 					// "No credential" means a usable key was asked: more useful than why other keys were not
 					if (skipped == null || skipped.Error != Fido2Error.NoCredential)
 						skipped = ex;
@@ -115,8 +115,21 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				}
 				catch (PlatformNotSupportedException ex)
 				{
-					throw new Fido2Exception(Fido2Error.LibraryMissing, detail: ex.Message, innerException: ex);
+					throw new Fido2Exception(Fido2Error.LibraryMissing, innerException: ex);
 				}
+			}
+		}
+
+		private static LibFido2 Load()
+		{
+			try
+			{
+				return new LibFido2();
+			}
+			catch (PlatformNotSupportedException ex)
+			{
+				Log(ex.Message);
+				throw;
 			}
 		}
 
@@ -291,7 +304,10 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				CancellationToken cancellation)
 			{
 				if (!lib.fido_dev_is_fido2(handle))
-					throw new Fido2Exception(Fido2Error.Unsupported, detail: "U2F only");
+				{
+					Log($"{info.Name} ({info.Path}): U2F only");
+					throw new Fido2Exception(Fido2Error.Unsupported);
+				}
 				ReadInfo(out bool hmacSecret, out ulong maxIdLength, out ulong maxListLength);
 				bool pin = lib.fido_dev_has_pin(handle);
 				bool uv = lib.fido_dev_has_uv(handle);
@@ -401,7 +417,10 @@ namespace KeePassPasskeyKeyProvider.Fido2
 						throw new Fido2Exception(Fido2Error.DeviceError, detail: "the key answered with another credential");
 					byte[] prf = assert.HmacSecret();
 					if (prf == null)
-						throw new Fido2Exception(Fido2Error.Unsupported, detail: "no hmac-secret output");
+					{
+						Log($"{info.Name}: no hmac-secret output");
+						throw new Fido2Exception(Fido2Error.Unsupported);
+					}
 					secret = new PrfResult { CredentialId = credentialId, PrfSecret = prf };
 					return result;
 				}

@@ -64,9 +64,6 @@
 	<data name="Back" xml:space="preserve">
 		<value>Назад</value>
 	</data>
-	<data name="BrowserCancelled" xml:space="preserve">
-		<value>Операция отменена.</value>
-	</data>
 	<data name="BrowserCreateWaiting" xml:space="preserve">
 		<value>Продолжите на странице KeePass, которая открылась в браузере: нажмите «Продолжить» и выберите, где хранить ключ доступа, — на этом компьютере, на телефоне (QR‑код) или на ключе безопасности.
 
@@ -403,6 +400,39 @@ Passkey на телефоне или ключе безопасности отк�
 	<data name="EnterDeviceName" xml:space="preserve">
 		<value>Укажите название устройства.</value>
 	</data>
+	<data name="Fido2AccessHint" xml:space="preserve">
+		<value>Если он подключён, система может не давать к нему доступа: для этого нужен udev 244 или новее либо правила udev для ключей FIDO.</value>
+	</data>
+	<data name="Fido2DeviceError" xml:space="preserve">
+		<value>Ошибка ключа безопасности: {0}</value>
+	</data>
+	<data name="Fido2LibraryMissing" xml:space="preserve">
+		<value>Для USB‑ключей безопасности нужна libfido2 версии 1.7 или новее: установите её (пакет libfido2-1 в Debian и Ubuntu) и перезапустите KeePass.</value>
+	</data>
+	<data name="Fido2NoCredential" xml:space="preserve">
+		<value>Ни один подключённый ключ безопасности не является устройством этой базы.</value>
+	</data>
+	<data name="Fido2NoDevice" xml:space="preserve">
+		<value>Ключ безопасности не подключён.</value>
+	</data>
+	<data name="Fido2PinAuthBlocked" xml:space="preserve">
+		<value>Слишком много неверных PIN подряд: извлеките ключ безопасности, вставьте его снова и повторите.</value>
+	</data>
+	<data name="Fido2PinBlocked" xml:space="preserve">
+		<value>PIN ключа безопасности заблокирован после слишком многих неверных попыток.</value>
+	</data>
+	<data name="Fido2PinNotSet" xml:space="preserve">
+		<value>У ключа безопасности не задан PIN, а для базы нужна проверка пользователя.</value>
+	</data>
+	<data name="Fido2Timeout" xml:space="preserve">
+		<value>Время ожидания касания ключа безопасности истекло.</value>
+	</data>
+	<data name="Fido2Unsupported" xml:space="preserve">
+		<value>Ключ безопасности не поддерживает функцию PRF (hmac-secret).</value>
+	</data>
+	<data name="Fido2UserVerificationFailed" xml:space="preserve">
+		<value>Ключ безопасности не подтвердил пользователя (например, не распознал отпечаток).</value>
+	</data>
 	<data name="GetAssertionFailed" xml:space="preserve">
 		<value>Не удалось получить assertion: {0} (HRESULT: 0x{1:X8})</value>
 	</data>
@@ -449,6 +479,9 @@ Passkey на телефоне или ключе безопасности отк�
 	<data name="OpenWithRecoveryPhrase" xml:space="preserve">
 		<value>Открыть базу фразой восстановления?</value>
 	</data>
+	<data name="OperationCancelled" xml:space="preserve">
+		<value>Операция отменена.</value>
+	</data>
 	<data name="PhraseChecksumMismatch" xml:space="preserve">
 		<value>Фраза введена с ошибкой: не сходится контрольная сумма. Проверьте слова и их порядок.</value>
 	</data>
@@ -457,6 +490,12 @@ Passkey на телефоне или ключе безопасности отк�
 	</data>
 	<data name="PhraseWordCount" xml:space="preserve">
 		<value>Фраза должна состоять из {0} слов (введено: {1}).</value>
+	</data>
+	<data name="PinAttemptsLeft" xml:space="preserve">
+		<value>Осталось попыток: {0}.</value>
+	</data>
+	<data name="PinWrong" xml:space="preserve">
+		<value>Неверный PIN.</value>
 	</data>
 	<data name="PrfDiagnosticsButton" xml:space="preserve">
 		<value>🔍 Диагностика PRF</value>

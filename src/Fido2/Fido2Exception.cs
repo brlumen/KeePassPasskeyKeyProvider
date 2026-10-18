@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using KeePassPasskeyKeyProvider.WebAuthn;
 
 namespace KeePassPasskeyKeyProvider.Fido2
@@ -9,7 +10,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		/// <summary>libfido2 is not installed or too old</summary>
 		LibraryMissing,
 
-		/// <summary>No FIDO2 security key is connected (on Linux also: no access to it, see the udev rules of libfido2)</summary>
+		/// <summary>No FIDO2 security key is connected (on Linux also: the user has no access to it)</summary>
 		NoDevice,
 
 		/// <summary>No connected key holds a credential from the allowList</summary>
@@ -43,10 +44,12 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		DeviceError
 	}
 
-	/// <summary>FIDO2 security key error; the message is English and holds no secrets</summary>
+	/// <summary>FIDO2 security key error with a message for the user (in the KeePass UI language, no secrets)</summary>
 	public sealed class Fido2Exception : WebAuthnException
 	{
-		/// <param name="detail">Appended to the message of the error, for example the libfido2 error</param>
+		private static readonly bool linux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
+		/// <param name="detail">libfido2 error for <see cref="Fido2Error.DeviceError"/></param>
 		public Fido2Exception(Fido2Error error, int? retriesLeft = null, string detail = null, Exception innerException = null)
 			: base(Describe(error, retriesLeft, detail), innerException)
 		{
@@ -59,30 +62,27 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		/// <summary>PIN attempts left; null if unknown</summary>
 		public int? RetriesLeft { get; }
 
-		private static string Describe(Fido2Error error, int? retriesLeft, string detail)
-		{
-			string message = DefaultMessage(error);
-			if (retriesLeft != null)
-				message += $" ({retriesLeft} attempts left)";
-			return detail == null ? message : message + ": " + detail;
-		}
+		/// <summary>No connected key holds a credential of the allowList: the user was not asked for anything</summary>
+		public bool KeyNotFound => Error == Fido2Error.NoDevice || Fido2Authenticator.IsSkipped(Error);
 
-		private static string DefaultMessage(Fido2Error error)
+		private static string Describe(Fido2Error error, int? retriesLeft, string detail)
 		{
 			switch (error)
 			{
-				case Fido2Error.LibraryMissing: return "libfido2 is not available";
-				case Fido2Error.NoDevice: return "No FIDO2 security key is connected";
-				case Fido2Error.NoCredential: return "No connected security key holds a credential of this database";
-				case Fido2Error.Unsupported: return "The security key does not support FIDO2 hmac-secret";
-				case Fido2Error.PinNotSet: return "The security key has no PIN and no built-in user verification";
-				case Fido2Error.PinInvalid: return "Wrong PIN";
-				case Fido2Error.PinBlocked: return "The PIN is blocked after too many wrong attempts";
-				case Fido2Error.PinAuthBlocked: return "Too many wrong PINs in a row: remove and reinsert the security key";
-				case Fido2Error.UserVerificationFailed: return "User verification failed";
-				case Fido2Error.Timeout: return "The security key was not touched in time";
-				case Fido2Error.Cancelled: return "Cancelled";
-				default: return "Security key error";
+				case Fido2Error.LibraryMissing: return Strings.Fido2LibraryMissing;
+				// On Linux a key without access rights is not listed at all
+				case Fido2Error.NoDevice: return linux ? Strings.Fido2NoDevice + " " + Strings.Fido2AccessHint : Strings.Fido2NoDevice;
+				case Fido2Error.NoCredential: return Strings.Fido2NoCredential;
+				case Fido2Error.Unsupported: return Strings.Fido2Unsupported;
+				case Fido2Error.PinNotSet: return Strings.Fido2PinNotSet;
+				case Fido2Error.PinInvalid:
+					return retriesLeft == null ? Strings.PinWrong : Strings.PinWrong + " " + string.Format(Strings.PinAttemptsLeft, retriesLeft);
+				case Fido2Error.PinBlocked: return Strings.Fido2PinBlocked;
+				case Fido2Error.PinAuthBlocked: return Strings.Fido2PinAuthBlocked;
+				case Fido2Error.UserVerificationFailed: return Strings.Fido2UserVerificationFailed;
+				case Fido2Error.Timeout: return Strings.Fido2Timeout;
+				case Fido2Error.Cancelled: return Strings.OperationCancelled;
+				default: return string.Format(Strings.Fido2DeviceError, detail);
 			}
 		}
 	}

@@ -101,7 +101,7 @@ namespace KeePassPasskeyKeyProvider.Browser
 					return ToPrfResult(fields);
 				throw new WebAuthnException(answer == DialogResult.Abort ? Strings.BrowserTimedOut
 					: answer == DialogResult.No ? Strings.BrowserRejected
-					: Strings.BrowserCancelled);
+					: Strings.OperationCancelled);
 			}
 		}
 
