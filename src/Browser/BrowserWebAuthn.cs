@@ -17,8 +17,9 @@ namespace KeePassPasskeyKeyProvider.Browser
 	/// calls navigator.credentials for portable devices and posts the credential ID and the PRF result back.
 	/// The browser offers its own authenticators: this computer (iCloud Keychain, Google Password Manager),
 	/// a phone by QR code or a security key.
-	/// The result is not authenticated beyond the secret path of the page: a wrong PRF secret does not match the owner
-	/// tag of any wrap (see <see cref="KeyWrap.Open"/>), so a forged answer cannot open a database.
+	/// The result is not authenticated beyond the secrets of the server (see <see cref="LoopbackServer"/>): a wrong PRF
+	/// secret does not match the owner tag of any wrap (see <see cref="KeyWrap.Open"/>), so a forged answer cannot open
+	/// a database.
 	/// </summary>
 	public static class BrowserWebAuthn
 	{
@@ -81,21 +82,26 @@ namespace KeePassPasskeyKeyProvider.Browser
 			AppendText(request, "cancelled", Strings.BrowserPageCancelled);
 			AppendText(request, "exists", Strings.BrowserPageExists);
 			AppendText(request, "failed", Strings.BrowserPageFailed);
-			request.Append("}}");
+			request.Append('}');
 
 			Dictionary<string, string> fields = null;
 			using (var form = new BrowserWaitForm(waitText, TimeoutMs))
-			using (var server = new LoopbackServer(RpId, LoadPage(request.ToString()), result =>
-			{
-				fields = result;
-				form.Complete();
-			}))
+			using (var server = new LoopbackServer(RpId,
+				resultPath => LoadPage(request.ToString() + ",\"resultPath\":" + Json(resultPath) + "}"),
+				result =>
+				{
+					fields = result;
+					form.Finish(DialogResult.OK);
+				},
+				() => form.Finish(DialogResult.No)))
 			{
 				form.Url = server.Url;
 				DialogResult answer = form.ShowDialog(owner);
 				if (answer == DialogResult.OK && fields != null)
 					return ToPrfResult(fields);
-				throw new WebAuthnException(answer == DialogResult.Abort ? Strings.BrowserTimedOut : Strings.BrowserCancelled);
+				throw new WebAuthnException(answer == DialogResult.Abort ? Strings.BrowserTimedOut
+					: answer == DialogResult.No ? Strings.BrowserRejected
+					: Strings.BrowserCancelled);
 			}
 		}
 

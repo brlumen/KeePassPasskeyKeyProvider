@@ -76,7 +76,7 @@
 		<value>Браузер вернул некорректный ответ.</value>
 	</data>
 	<data name="BrowserOpenAgain" xml:space="preserve">
-		<value>Открыть страницу ещё раз</value>
+		<value>Страница не открылась? Открыть ещё раз</value>
 	</data>
 	<data name="BrowserOpenFailed" xml:space="preserve">
 		<value>Не удалось открыть браузер: {0}
@@ -125,6 +125,9 @@
 	</data>
 	<data name="BrowserPageWorking" xml:space="preserve">
 		<value>Следуйте подсказкам в появившемся окне…</value>
+	</data>
+	<data name="BrowserRejected" xml:space="preserve">
+		<value>Операция остановлена: страница KeePass получила неожиданный запрос. Так бывает, если страницу обновить или открыть второй раз, или если её пытается использовать другая программа на этом компьютере. Повторите попытку.</value>
 	</data>
 	<data name="BrowserTimedOut" xml:space="preserve">
 		<value>Браузер не ответил вовремя.</value>

@@ -76,7 +76,7 @@ This window closes by itself.</value>
 		<value>The browser returned an invalid answer.</value>
 	</data>
 	<data name="BrowserOpenAgain" xml:space="preserve">
-		<value>Open the page again</value>
+		<value>The page did not open? Open it again</value>
 	</data>
 	<data name="BrowserOpenFailed" xml:space="preserve">
 		<value>Could not open the browser: {0}
@@ -125,6 +125,9 @@ Open this address in a browser manually:
 	</data>
 	<data name="BrowserPageWorking" xml:space="preserve">
 		<value>Follow the prompts in the window that appeared…</value>
+	</data>
+	<data name="BrowserRejected" xml:space="preserve">
+		<value>The operation was stopped: the KeePass page received an unexpected request. This happens when the page is reloaded or opened a second time, or when another program on this computer tries to use it. Try again.</value>
 	</data>
 	<data name="BrowserTimedOut" xml:space="preserve">
 		<value>The browser did not answer in time.</value>

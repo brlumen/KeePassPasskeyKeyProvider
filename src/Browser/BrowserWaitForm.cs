@@ -5,8 +5,8 @@ using System.Windows.Forms;
 namespace KeePassPasskeyKeyProvider.Browser
 {
 	/// <summary>
-	/// Modal "continue in the browser" dialog: opens <see cref="Url"/> when shown and closes with OK on
-	/// <see cref="Complete"/>, with Cancel on the button and with Abort on timeout
+	/// Modal "continue in the browser" dialog: opens <see cref="Url"/> when shown and closes with the result of
+	/// <see cref="Finish"/>, with Cancel on the button and with Abort on timeout
 	/// </summary>
 	internal sealed class BrowserWaitForm : Form
 	{
@@ -51,12 +51,12 @@ namespace KeePassPasskeyKeyProvider.Browser
 		/// <summary>Page of the ceremony, opened when the dialog is shown</summary>
 		public string Url { get; set; }
 
-		/// <summary>Closes the dialog with OK; may be called from any thread</summary>
-		public void Complete()
+		/// <summary>Closes the dialog with the result; may be called from any thread</summary>
+		public void Finish(DialogResult result)
 		{
 			try
 			{
-				BeginInvoke((Action)(() => DialogResult = DialogResult.OK));
+				BeginInvoke((Action)(() => DialogResult = result));
 			}
 			catch (InvalidOperationException)
 			{

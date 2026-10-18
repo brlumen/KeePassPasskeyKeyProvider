@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using KeePassPasskeyKeyProvider.Browser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -13,21 +14,22 @@ namespace KeePassPasskeyKeyProvider.Tests
 	public class LoopbackServerTests
 	{
 		private const string HostName = "keepass-fido2.localhost";
-		private const string Page = "<p>page</p>";
+		private const string Body = "credentialId=AQID&prf=a+b%2Fc";
 
 		[TestMethod]
-		public void ServesPageOnlyAtSecretPathForItsHost()
+		public void ServesPageWithResultPathForItsHost()
 		{
-			using (var server = new LoopbackServer(HostName, Page, _ => { }))
+			using (var ceremony = new Ceremony())
 			{
-				string path = new Uri(server.Url).AbsolutePath;
-
-				string page = Send(IPAddress.Loopback, server.Port, Get(path, HostName + ":" + server.Port));
-				Assert.IsTrue(page.StartsWith("HTTP/1.1 200 ", StringComparison.Ordinal));
-				Assert.IsTrue(page.EndsWith(Page, StringComparison.Ordinal));
-				Assert.AreEqual("HTTP/1.1 404 Not Found", StatusLine(Send(IPAddress.Loopback, server.Port, Get("/", HostName + ":" + server.Port))));
 				// A web page whose domain was rebound to 127.0.0.1 sends its own Host
-				Assert.AreEqual("HTTP/1.1 400 Bad Request", StatusLine(Send(IPAddress.Loopback, server.Port, Get(path, "attacker.example:" + server.Port))));
+				Assert.AreEqual("HTTP/1.1 400 Bad Request", StatusLine(ceremony.Get(ceremony.PagePath, "attacker.example:" + ceremony.Port)));
+				// Browsers ask for an icon by themselves
+				Assert.AreEqual("HTTP/1.1 404 Not Found", StatusLine(ceremony.Get("/favicon.ico")));
+
+				string resultPath = ceremony.OpenPage();
+
+				Assert.IsTrue(resultPath.StartsWith("/", StringComparison.Ordinal) && resultPath != ceremony.PagePath);
+				Assert.AreEqual(0, ceremony.Rejections);
 			}
 		}
 
@@ -35,34 +37,90 @@ namespace KeePassPasskeyKeyProvider.Tests
 		public void ListensOnBothLoopbackAddresses()
 		{
 			if (!Socket.OSSupportsIPv6) return;
-			using (var server = new LoopbackServer(HostName, Page, _ => { }))
-			{
-				string path = new Uri(server.Url).AbsolutePath;
+			using (var ceremony = new Ceremony())
+				Assert.AreEqual("HTTP/1.1 200 OK", StatusLine(ceremony.Get(ceremony.PagePath, address: IPAddress.IPv6Loopback)));
+		}
 
-				Assert.AreEqual("HTTP/1.1 200 OK", StatusLine(Send(IPAddress.IPv6Loopback, server.Port, Get(path, HostName + ":" + server.Port))));
+		[TestMethod]
+		public void AcceptsOneResultWithThePageSecret()
+		{
+			using (var ceremony = new Ceremony())
+			{
+				string resultPath = ceremony.OpenPage();
+
+				Assert.AreEqual("HTTP/1.1 204 No Content", StatusLine(ceremony.Post(resultPath, ceremony.Origin)));
+				Assert.AreEqual("HTTP/1.1 410 Gone", StatusLine(ceremony.Post(resultPath, ceremony.Origin)));
+				Assert.AreEqual(1, ceremony.Results.Count);
+				Assert.AreEqual("AQID", ceremony.Results[0]["credentialId"]);
+				Assert.AreEqual("a b/c", ceremony.Results[0]["prf"]);
+				Assert.AreEqual(0, ceremony.Rejections);
 			}
 		}
 
 		[TestMethod]
-		public void AcceptsOnePostFromThePage()
+		public void SecondGetOfThePageStopsTheCeremony()
 		{
-			var results = new List<Dictionary<string, string>>();
-			using (var server = new LoopbackServer(HostName, Page, results.Add))
+			// Whoever gets the page first has its secret: if it was not the browser, the browser's request fails visibly
+			using (var ceremony = new Ceremony())
 			{
-				string path = new Uri(server.Url).AbsolutePath;
-				string host = HostName + ":" + server.Port;
-				string origin = "http://" + host;
-				const string body = "credentialId=AQID&prf=a+b%2Fc";
+				string resultPath = ceremony.OpenPage();
 
-				Assert.AreEqual("HTTP/1.1 403 Forbidden", StatusLine(Send(IPAddress.Loopback, server.Port, Post(path, host, null, body))));
-				Assert.AreEqual("HTTP/1.1 403 Forbidden", StatusLine(Send(IPAddress.Loopback, server.Port, Post(path, host, "http://attacker.example", body))));
-				Assert.AreEqual(0, results.Count);
+				Assert.AreEqual("HTTP/1.1 403 Forbidden", StatusLine(ceremony.Get(ceremony.PagePath)));
+				ceremony.AssertStopped(resultPath);
+			}
+		}
 
-				Assert.AreEqual("HTTP/1.1 204 No Content", StatusLine(Send(IPAddress.Loopback, server.Port, Post(path, host, origin, body))));
-				Assert.AreEqual("HTTP/1.1 410 Gone", StatusLine(Send(IPAddress.Loopback, server.Port, Post(path, host, origin, body))));
-				Assert.AreEqual(1, results.Count);
-				Assert.AreEqual("AQID", results[0]["credentialId"]);
-				Assert.AreEqual("a b/c", results[0]["prf"]);
+		[TestMethod]
+		public void WrongUrlTokenStopsTheCeremony()
+		{
+			foreach (string path in new[] { "/", "/" + BrowserWebAuthn.Base64Url(TestData.Random(32)) })
+			{
+				using (var ceremony = new Ceremony())
+				{
+					Assert.AreEqual("HTTP/1.1 403 Forbidden", StatusLine(ceremony.Get(path)));
+					Assert.AreEqual("HTTP/1.1 410 Gone", StatusLine(ceremony.Get(ceremony.PagePath)));
+					Assert.AreEqual(1, ceremony.Rejections);
+				}
+			}
+		}
+
+		[TestMethod]
+		public void PostWithoutPageSecretStopsTheCeremony()
+		{
+			// The URL token is on a command line that other local users can read; it does not authorize a result
+			using (var ceremony = new Ceremony())
+			{
+				string resultPath = ceremony.OpenPage();
+
+				Assert.AreEqual("HTTP/1.1 403 Forbidden", StatusLine(ceremony.Post(ceremony.PagePath, ceremony.Origin)));
+				ceremony.AssertStopped(resultPath);
+			}
+		}
+
+		[TestMethod]
+		public void PostWithWrongPageSecretStopsTheCeremony()
+		{
+			using (var ceremony = new Ceremony())
+			{
+				string resultPath = ceremony.OpenPage();
+
+				Assert.AreEqual("HTTP/1.1 403 Forbidden", StatusLine(ceremony.Post("/" + BrowserWebAuthn.Base64Url(TestData.Random(32)), ceremony.Origin)));
+				ceremony.AssertStopped(resultPath);
+			}
+		}
+
+		[TestMethod]
+		public void PostFromAnotherOriginStopsTheCeremony()
+		{
+			foreach (string origin in new[] { null, "http://attacker.example", "http://localhost" })
+			{
+				using (var ceremony = new Ceremony())
+				{
+					string resultPath = ceremony.OpenPage();
+
+					Assert.AreEqual("HTTP/1.1 403 Forbidden", StatusLine(ceremony.Post(resultPath, origin)));
+					ceremony.AssertStopped(resultPath);
+				}
 			}
 		}
 
@@ -83,34 +141,83 @@ namespace KeePassPasskeyKeyProvider.Tests
 			Assert.IsNull(BrowserWebAuthn.FromBase64Url("ab$d"));
 		}
 
-		private static string Get(string path, string host)
-		{
-			return $"GET {path} HTTP/1.1\r\nHost: {host}\r\n\r\n";
-		}
-
-		private static string Post(string path, string host, string origin, string body)
-		{
-			string originHeader = origin != null ? $"Origin: {origin}\r\n" : string.Empty;
-			return $"POST {path} HTTP/1.1\r\nHost: {host}\r\n{originHeader}Content-Type: application/x-www-form-urlencoded\r\n" +
-			       $"Content-Length: {body.Length}\r\n\r\n{body}";
-		}
-
-		private static string Send(IPAddress address, int port, string request)
-		{
-			using (var client = new TcpClient(address.AddressFamily))
-			{
-				client.Connect(address, port);
-				NetworkStream stream = client.GetStream();
-				byte[] data = Encoding.ASCII.GetBytes(request);
-				stream.Write(data, 0, data.Length);
-				using (var reader = new StreamReader(stream, Encoding.UTF8))
-					return reader.ReadToEnd();
-			}
-		}
-
 		private static string StatusLine(string response)
 		{
 			return response.Substring(0, response.IndexOf("\r\n", StringComparison.Ordinal));
+		}
+
+		/// <summary>Server with a page that shows its result path, and the callbacks it made</summary>
+		private sealed class Ceremony : IDisposable
+		{
+			private const string PagePrefix = "<p>";
+			private const string PageSuffix = "</p>";
+
+			private readonly LoopbackServer server;
+			private int rejections;
+
+			public Ceremony()
+			{
+				server = new LoopbackServer(HostName, resultPath => PagePrefix + resultPath + PageSuffix, Results.Add,
+					() => Interlocked.Increment(ref rejections));
+			}
+
+			public List<Dictionary<string, string>> Results { get; } = new List<Dictionary<string, string>>();
+
+			public int Rejections => Volatile.Read(ref rejections);
+
+			public int Port => server.Port;
+
+			public string Origin => "http://" + HostName + ":" + Port;
+
+			public string PagePath => new Uri(server.Url).AbsolutePath;
+
+			/// <summary>Gets the page as the browser does; returns the result path it carries</summary>
+			public string OpenPage()
+			{
+				string response = Get(PagePath);
+				Assert.AreEqual("HTTP/1.1 200 OK", StatusLine(response));
+				Assert.IsTrue(response.EndsWith(PageSuffix, StringComparison.Ordinal));
+				int start = response.LastIndexOf(PagePrefix, StringComparison.Ordinal) + PagePrefix.Length;
+				return response.Substring(start, response.Length - PageSuffix.Length - start);
+			}
+
+			/// <summary>The ceremony ended with one rejection: the page's own result is no longer accepted</summary>
+			public void AssertStopped(string resultPath)
+			{
+				Assert.AreEqual("HTTP/1.1 410 Gone", StatusLine(Post(resultPath, Origin)));
+				Assert.AreEqual(1, Rejections);
+				Assert.AreEqual(0, Results.Count);
+			}
+
+			public string Get(string path, string host = null, IPAddress address = null)
+			{
+				return Send(address ?? IPAddress.Loopback, $"GET {path} HTTP/1.1\r\nHost: {host ?? HostName + ":" + Port}\r\n\r\n");
+			}
+
+			public string Post(string path, string origin)
+			{
+				string originHeader = origin != null ? $"Origin: {origin}\r\n" : string.Empty;
+				return Send(IPAddress.Loopback, $"POST {path} HTTP/1.1\r\nHost: {HostName}:{Port}\r\n{originHeader}" +
+				                                $"Content-Type: application/x-www-form-urlencoded\r\nContent-Length: {Body.Length}\r\n\r\n{Body}");
+			}
+
+			public void Dispose()
+			{
+				server.Dispose();
+			}
+
+			private string Send(IPAddress address, string request)
+			{
+				using (var client = new TcpClient(address.AddressFamily))
+				{
+					client.Connect(address, Port);
+					NetworkStream stream = client.GetStream();
+					byte[] data = Encoding.ASCII.GetBytes(request);
+					stream.Write(data, 0, data.Length);
+					using (var reader = new StreamReader(stream, Encoding.UTF8))
+						return reader.ReadToEnd();
+				}
+			}
 		}
 	}
 }
