@@ -42,6 +42,63 @@ namespace KeePassPasskeyKeyProvider.Tests
 		}
 
 		[TestMethod]
+		public void PortTakenOnIPv6LoopbackIsNotUsed()
+		{
+			if (!Socket.OSSupportsIPv6) return;
+			// Another process listens on ::1 on the port the server got on 127.0.0.1
+			TcpListener squatter = null;
+			List<TcpListener> listeners = LoopbackServer.Listen((address, port) =>
+			{
+				if (address.AddressFamily == AddressFamily.InterNetworkV6 && squatter == null)
+				{
+					squatter = new TcpListener(IPAddress.IPv6Loopback, port);
+					squatter.Start();
+				}
+				return LoopbackServer.Start(address, port);
+			});
+			try
+			{
+				int port = ((IPEndPoint)listeners[0].LocalEndpoint).Port;
+				Assert.AreEqual(2, listeners.Count);
+				Assert.AreEqual(port, ((IPEndPoint)listeners[1].LocalEndpoint).Port);
+				Assert.IsTrue(port != ((IPEndPoint)squatter.LocalEndpoint).Port);
+			}
+			finally
+			{
+				listeners.ForEach(l => l.Stop());
+				squatter.Stop();
+			}
+		}
+
+		[TestMethod]
+		public void RefusedIPv6LoopbackFailsInsteadOfIPv4Only()
+		{
+			if (!Socket.OSSupportsIPv6) return;
+			Assert.ThrowsException<IOException>(() => LoopbackServer.Listen((address, port) =>
+				address.AddressFamily == AddressFamily.InterNetworkV6
+					? throw new SocketException((int)SocketError.AccessDenied)
+					: LoopbackServer.Start(address, port)));
+		}
+
+		[TestMethod]
+		public void MissingIPv6LoopbackLeavesIPv4Only()
+		{
+			List<TcpListener> listeners = LoopbackServer.Listen((address, port) =>
+				address.AddressFamily == AddressFamily.InterNetworkV6
+					? throw new SocketException((int)SocketError.AddressNotAvailable)
+					: LoopbackServer.Start(address, port));
+			try
+			{
+				Assert.AreEqual(1, listeners.Count);
+				Assert.AreEqual(AddressFamily.InterNetwork, listeners[0].LocalEndpoint.AddressFamily);
+			}
+			finally
+			{
+				listeners.ForEach(l => l.Stop());
+			}
+		}
+
+		[TestMethod]
 		public void AcceptsOneResultWithThePageSecret()
 		{
 			using (var ceremony = new Ceremony())

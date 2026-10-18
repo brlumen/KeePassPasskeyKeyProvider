@@ -54,7 +54,7 @@ namespace KeePassPasskeyKeyProvider.Browser
 			this.page = Encoding.UTF8.GetBytes(page(resultPath));
 			this.onResult = onResult;
 			this.onRejected = onRejected;
-			listeners = Listen();
+			listeners = Listen(Start);
 			Port = ((IPEndPoint)listeners[0].LocalEndpoint).Port;
 			host = hostName + ":" + Port;
 			origin = "http://" + host;
@@ -75,32 +75,46 @@ namespace KeePassPasskeyKeyProvider.Browser
 				listener.Stop();
 		}
 
-		private static List<TcpListener> Listen()
+		/// <summary>
+		/// Listeners on the same port of 127.0.0.1 and ::1. If ::1 cannot be bound on the port (another process may
+		/// listen there and get the browser's requests), another port is tried. 127.0.0.1 alone only on a system without
+		/// IPv6 loopback, where browsers cannot connect to ::1 either.
+		/// </summary>
+		/// <param name="start">Starts a listener on the address and port (0: any free port)</param>
+		/// <exception cref="IOException">No port could be bound on both addresses</exception>
+		internal static List<TcpListener> Listen(Func<IPAddress, int, TcpListener> start)
 		{
 			for (int attempt = 0; attempt < PortAttempts; attempt++)
 			{
-				TcpListener v4 = Start(IPAddress.Loopback, 0);
+				TcpListener v4 = start(IPAddress.Loopback, 0);
 				if (!Socket.OSSupportsIPv6)
 					return new List<TcpListener> { v4 };
 
 				int port = ((IPEndPoint)v4.LocalEndpoint).Port;
 				try
 				{
-					return new List<TcpListener> { v4, Start(IPAddress.IPv6Loopback, port) };
+					return new List<TcpListener> { v4, start(IPAddress.IPv6Loopback, port) };
 				}
-				catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
+				catch (SocketException ex) when (IsMissingAddress(ex.SocketErrorCode))
 				{
-					v4.Stop(); // the port is taken on ::1: try another one
+					return new List<TcpListener> { v4 };
 				}
 				catch (SocketException)
 				{
-					return new List<TcpListener> { v4 }; // no IPv6 loopback: the browser uses 127.0.0.1
+					v4.Stop(); // taken or refused on ::1: another port
 				}
 			}
-			throw new IOException("No free port on both 127.0.0.1 and ::1");
+			throw new IOException("No port could be bound on both 127.0.0.1 and ::1");
 		}
 
-		private static TcpListener Start(IPAddress address, int port)
+		/// <summary>The address does not exist on this system, so nobody can listen on it</summary>
+		private static bool IsMissingAddress(SocketError error)
+		{
+			return error == SocketError.AddressNotAvailable || error == SocketError.AddressFamilyNotSupported ||
+			       error == SocketError.ProtocolFamilyNotSupported || error == SocketError.ProtocolNotSupported;
+		}
+
+		internal static TcpListener Start(IPAddress address, int port)
 		{
 			var listener = new TcpListener(address, port);
 			// Windows lets another process bind the same address and port unless the socket is exclusive
