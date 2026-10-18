@@ -56,11 +56,11 @@
     <Compile Include="src\Browser\LoopbackServer.cs" />
     <Compile Include="src\BusyIndicator.cs" />
     <Compile Include="src\DeviceKeyStore.cs" />
-    <Compile Include="src\Ecc\AppleP256.cs" />
     <Compile Include="src\Ecc\CngP256.cs" />
-    <Compile Include="src\Ecc\CoreFoundation.cs" />
     <Compile Include="src\Ecc\EcdsaSignature.cs" />
     <Compile Include="src\Ecc\IP256.cs" />
+    <Compile Include="src\Ecc\LibCrypto.cs" />
+    <Compile Include="src\Ecc\OpenSslP256.cs" />
     <Compile Include="src\Ecc\P256.cs" />
     <Compile Include="src\HelloCredentialAudit.cs" />
     <Compile Include="src\FIDO2KeyProvider.cs" />

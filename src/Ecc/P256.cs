@@ -11,17 +11,17 @@ namespace KeePassPasskeyKeyProvider.Ecc
 		public const int PublicKeyLength = 1 + 2 * PrivateKeyLength; // 0x04 ‖ X ‖ Y
 		public const int SignatureLength = 2 * PrivateKeyLength; // IEEE P1363: r ‖ s
 
-		private static readonly IP256 current = Create();
+		// Created on first use: a missing library must not break the type initialization
+		private static readonly Lazy<IP256> current = new Lazy<IP256>(Create);
 
-		/// <exception cref="PlatformNotSupportedException">No implementation for this OS</exception>
-		public static IP256 Current => current ?? throw new PlatformNotSupportedException("Elliptic curve cryptography is not supported on this platform");
+		/// <exception cref="PlatformNotSupportedException">The crypto library is missing (OpenSSL 3 outside Windows)</exception>
+		public static IP256 Current => current.Value;
 
 		private static IP256 Create()
 		{
-			// Mono has no ECC of its own, so every OS gets its system library (an OpenSSL implementation would cover Linux)
+			// Mono has no ECC of its own: Windows has CNG, other systems OpenSSL
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return new CngP256();
-			if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return new AppleP256();
-			return null;
+			return new OpenSslP256();
 		}
 
 		/// <summary>Checks the encoding of a public key; whether the point is on the curve is checked on import</summary>

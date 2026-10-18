@@ -5,7 +5,7 @@ namespace KeePassPasskeyKeyProvider.Ecc
 {
 	/// <summary>
 	/// ECDSA P‑256 signature encodings: IEEE P1363 r ‖ s (used by the plugin) and DER SEQUENCE { INTEGER r, INTEGER s }
-	/// (used by Security.framework and OpenSSL)
+	/// (used by OpenSSL)
 	/// </summary>
 	internal static class EcdsaSignature
 	{
