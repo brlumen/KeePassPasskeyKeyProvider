@@ -65,13 +65,20 @@
 		<value>Back</value>
 	</data>
 	<data name="BrowserCodeCaption" xml:space="preserve">
-		<value>Enter this code on the KeePass page in the browser:</value>
+		<value>Confirmation code to enter on the page:</value>
 	</data>
 	<data name="BrowserCodeRejected" xml:space="preserve">
 		<value>The operation was stopped: a wrong confirmation code was entered on the KeePass page too many times. Try again.</value>
 	</data>
 	<data name="BrowserCreateWaiting" xml:space="preserve">
 		<value>Continue on the KeePass page that opened in the browser: click "Continue" and choose where to keep the passkey — this computer, your phone (QR code) or a security key.
+
+This window closes by itself.</value>
+	</data>
+	<data name="BrowserCreateWaitingCode" xml:space="preserve">
+		<value>Remember the confirmation code below: the KeePass page will ask for it.
+
+Then open the page in the browser, enter the code, click "Continue" and choose where to keep the passkey — this computer, your phone (QR code) or a security key.
 
 This window closes by itself.</value>
 	</data>
@@ -86,6 +93,9 @@ This window closes by itself.</value>
 
 Open this address in a browser manually:
 {1}</value>
+	</data>
+	<data name="BrowserOpenPage" xml:space="preserve">
+		<value>Open the page in the browser</value>
 	</data>
 	<data name="BrowserPageButton" xml:space="preserve">
 		<value>Continue</value>

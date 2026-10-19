@@ -46,7 +46,7 @@ namespace KeePassPasskeyKeyProvider.Browser
 			request.Append(",\"userName\":").Append(Json(userName));
 			request.Append(",\"exclude\":").Append(JsonArray(excludeList));
 			request.Append(",\"code\":").Append(requireCode ? "true" : "false");
-			return Run(owner, request, Strings.BrowserCreateWaiting,
+			return Run(owner, request, requireCode ? Strings.BrowserCreateWaitingCode : Strings.BrowserCreateWaiting,
 				Title(Strings.BrowserPageTitleCreate, Strings.BrowserPageTitleCreateNamed, databaseName), requireCode);
 		}
 

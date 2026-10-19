@@ -43,9 +43,11 @@ namespace KeePassPasskeyKeyProvider
 		public static string BrowserCodeCaption => Get();
 		public static string BrowserCodeRejected => Get();
 		public static string BrowserCreateWaiting => Get();
+		public static string BrowserCreateWaitingCode => Get();
 		public static string BrowserInvalidAnswer => Get();
 		public static string BrowserOpenAgain => Get();
 		public static string BrowserOpenFailed => Get();
+		public static string BrowserOpenPage => Get();
 		public static string BrowserPageButton => Get();
 		public static string BrowserPageCancelled => Get();
 		public static string BrowserPageCodeFormat => Get();

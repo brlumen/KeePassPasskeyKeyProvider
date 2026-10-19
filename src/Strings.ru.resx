@@ -65,13 +65,20 @@
 		<value>Назад</value>
 	</data>
 	<data name="BrowserCodeCaption" xml:space="preserve">
-		<value>Введите этот код на странице KeePass в браузере:</value>
+		<value>Код подтверждения для ввода на странице:</value>
 	</data>
 	<data name="BrowserCodeRejected" xml:space="preserve">
 		<value>Операция остановлена: на странице KeePass слишком много раз введён неверный код подтверждения. Повторите попытку.</value>
 	</data>
 	<data name="BrowserCreateWaiting" xml:space="preserve">
 		<value>Продолжите на странице KeePass, которая открылась в браузере: нажмите «Продолжить» и выберите, где хранить ключ доступа, — на этом компьютере, на телефоне (QR‑код) или на ключе безопасности.
+
+Это окно закроется само.</value>
+	</data>
+	<data name="BrowserCreateWaitingCode" xml:space="preserve">
+		<value>Запомните код подтверждения ниже: страница KeePass попросит его ввести.
+
+Затем откройте страницу в браузере, введите код, нажмите «Продолжить» и выберите, где хранить ключ доступа, — на этом компьютере, на телефоне (QR‑код) или на ключе безопасности.
 
 Это окно закроется само.</value>
 	</data>
@@ -86,6 +93,9 @@
 
 Откройте этот адрес в браузере вручную:
 {1}</value>
+	</data>
+	<data name="BrowserOpenPage" xml:space="preserve">
+		<value>Открыть страницу в браузере</value>
 	</data>
 	<data name="BrowserPageButton" xml:space="preserve">
 		<value>Продолжить</value>
