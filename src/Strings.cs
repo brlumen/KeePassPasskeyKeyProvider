@@ -40,12 +40,17 @@ namespace KeePassPasskeyKeyProvider
 		public static string AuthenticationError => Get();
 		public static string AuthenticatorNoPrf => Get();
 		public static string Back => Get();
+		public static string BrowserCodeCaption => Get();
+		public static string BrowserCodeRejected => Get();
 		public static string BrowserCreateWaiting => Get();
 		public static string BrowserInvalidAnswer => Get();
 		public static string BrowserOpenAgain => Get();
 		public static string BrowserOpenFailed => Get();
 		public static string BrowserPageButton => Get();
 		public static string BrowserPageCancelled => Get();
+		public static string BrowserPageCodeFormat => Get();
+		public static string BrowserPageCodeLabel => Get();
+		public static string BrowserPageCodeWrong => Get();
 		public static string BrowserPageCreate => Get();
 		public static string BrowserPageDone => Get();
 		public static string BrowserPageExists => Get();
@@ -53,6 +58,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string BrowserPageGet => Get();
 		public static string BrowserPageNextStep => Get();
 		public static string BrowserPageNoPrf => Get();
+		public static string BrowserPageStopped => Get();
 		public static string BrowserPageTitleCreate => Get();
 		public static string BrowserPageTitleCreateNamed => Get();
 		public static string BrowserPageTitleGet => Get();

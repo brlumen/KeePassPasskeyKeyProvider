@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -182,6 +184,96 @@ namespace KeePassPasskeyKeyProvider.Tests
 		}
 
 		[TestMethod]
+		public void ResultWithoutCodeIsRefused()
+		{
+			using (var ceremony = new Ceremony(requireCode: true))
+			{
+				string resultPath = ceremony.OpenPage();
+
+				AssertWrongCode(ceremony.Post(resultPath, ceremony.Origin), 2);
+				Assert.AreEqual(0, ceremony.Results.Count);
+				Assert.AreEqual(0, ceremony.Rejections);
+			}
+		}
+
+		[TestMethod]
+		public void RightCodeIsCheckedAndAcceptedWithTheResult()
+		{
+			using (var ceremony = new Ceremony(requireCode: true))
+			{
+				string resultPath = ceremony.OpenPage();
+
+				// A check does not consume the result
+				for (int i = 0; i < 2; i++)
+					Assert.AreEqual("HTTP/1.1 204 No Content", StatusLine(ceremony.Post(resultPath, ceremony.Origin, "check=1&code=" + ceremony.Code)));
+				Assert.AreEqual(0, ceremony.Results.Count);
+
+				Assert.AreEqual("HTTP/1.1 204 No Content", StatusLine(ceremony.Post(resultPath, ceremony.Origin, "code=" + ceremony.Code + "&" + Body)));
+				Assert.AreEqual(1, ceremony.Results.Count);
+				Assert.AreEqual("AQID", ceremony.Results[0]["credentialId"]);
+				Assert.AreEqual(0, ceremony.Rejections);
+			}
+		}
+
+		[TestMethod]
+		public void ThirdWrongCodeStopsTheCeremony()
+		{
+			using (var ceremony = new Ceremony(requireCode: true))
+			{
+				string resultPath = ceremony.OpenPage();
+				string wrong = WrongCode(ceremony.Code);
+
+				// Checks and results count together
+				AssertWrongCode(ceremony.Post(resultPath, ceremony.Origin, "check=1&code=" + wrong), 2);
+				AssertWrongCode(ceremony.Post(resultPath, ceremony.Origin, "code=" + wrong + "&" + Body), 1);
+				Assert.AreEqual("HTTP/1.1 403 Forbidden", StatusLine(ceremony.Post(resultPath, ceremony.Origin, "check=1&code=" + wrong)));
+				Assert.AreEqual(LoopbackServer.Rejection.WrongCode, ceremony.Reason);
+
+				// The fourth attempt is refused even with the right code
+				Assert.AreEqual("HTTP/1.1 410 Gone", StatusLine(ceremony.Post(resultPath, ceremony.Origin, "code=" + ceremony.Code + "&" + Body)));
+				Assert.AreEqual(1, ceremony.Rejections);
+				Assert.AreEqual(0, ceremony.Results.Count);
+			}
+		}
+
+		[TestMethod]
+		public void CodeIsNeverSentToTheBrowser()
+		{
+			using (var ceremony = new Ceremony(requireCode: true))
+			{
+				string code = ceremony.Code;
+				string page = ceremony.Get(ceremony.PagePath);
+				string resultPath = Ceremony.ResultPath(page);
+				var responses = new[]
+				{
+					page,
+					ceremony.Post(resultPath, ceremony.Origin, "check=1&code=" + WrongCode(code)),
+					ceremony.Post(resultPath, ceremony.Origin, "check=1&code=" + code),
+					ceremony.Post(resultPath, ceremony.Origin, "code=" + code + "&" + Body)
+				};
+
+				Assert.IsFalse(ceremony.Url.Contains(code));
+				foreach (string response in responses)
+					Assert.IsFalse(response.Contains(code));
+				Assert.AreEqual(1, ceremony.Results.Count);
+			}
+		}
+
+		[TestMethod]
+		public void CodesAreSixRandomDigits()
+		{
+			var codes = new HashSet<string>();
+			for (int i = 0; i < 1000; i++)
+			{
+				string code = LoopbackServer.NewCode();
+				Assert.IsTrue(code.Length == 6 && code.All(c => c >= '0' && c <= '9'));
+				codes.Add(code);
+			}
+			// Two equal codes among 1000 are expected about once in two runs
+			Assert.IsTrue(codes.Count > 990);
+		}
+
+		[TestMethod]
 		public void JsonIsSafeInsideScriptElement()
 		{
 			Assert.AreEqual("\"\\u003c/script\\u003e \\u0026 \\\"\\\\ \\u000a\"", BrowserWebAuthn.Json("</script> & \"\\ \n"));
@@ -203,6 +295,18 @@ namespace KeePassPasskeyKeyProvider.Tests
 			return response.Substring(0, response.IndexOf("\r\n", StringComparison.Ordinal));
 		}
 
+		private static string WrongCode(string code)
+		{
+			return ((int.Parse(code, CultureInfo.InvariantCulture) + 1) % 1000000).ToString("D6", CultureInfo.InvariantCulture);
+		}
+
+		/// <summary>A wrong code: the page is told how many attempts are left</summary>
+		private static void AssertWrongCode(string response, int attemptsLeft)
+		{
+			Assert.AreEqual("HTTP/1.1 422 Unprocessable Entity", StatusLine(response));
+			Assert.IsTrue(response.EndsWith("\r\n\r\n" + attemptsLeft, StringComparison.Ordinal));
+		}
+
 		/// <summary>Server with a page that shows its result path, and the callbacks it made</summary>
 		private sealed class Ceremony : IDisposable
 		{
@@ -212,15 +316,26 @@ namespace KeePassPasskeyKeyProvider.Tests
 			private readonly LoopbackServer server;
 			private int rejections;
 
-			public Ceremony()
+			public Ceremony(bool requireCode = false)
 			{
 				server = new LoopbackServer(HostName, resultPath => PagePrefix + resultPath + PageSuffix, Results.Add,
-					() => Interlocked.Increment(ref rejections));
+					reason =>
+					{
+						Reason = reason;
+						Interlocked.Increment(ref rejections);
+					},
+					requireCode);
 			}
 
 			public List<Dictionary<string, string>> Results { get; } = new List<Dictionary<string, string>>();
 
 			public int Rejections => Volatile.Read(ref rejections);
+
+			public LoopbackServer.Rejection Reason { get; private set; }
+
+			public string Code => server.Code;
+
+			public string Url => server.Url;
 
 			public int Port => server.Port;
 
@@ -231,7 +346,12 @@ namespace KeePassPasskeyKeyProvider.Tests
 			/// <summary>Gets the page as the browser does; returns the result path it carries</summary>
 			public string OpenPage()
 			{
-				string response = Get(PagePath);
+				return ResultPath(Get(PagePath));
+			}
+
+			/// <summary>Result path from the response with the page</summary>
+			public static string ResultPath(string response)
+			{
 				Assert.AreEqual("HTTP/1.1 200 OK", StatusLine(response));
 				Assert.IsTrue(response.EndsWith(PageSuffix, StringComparison.Ordinal));
 				int start = response.LastIndexOf(PagePrefix, StringComparison.Ordinal) + PagePrefix.Length;
@@ -251,11 +371,11 @@ namespace KeePassPasskeyKeyProvider.Tests
 				return Send(address ?? IPAddress.Loopback, $"GET {path} HTTP/1.1\r\nHost: {host ?? HostName + ":" + Port}\r\n\r\n");
 			}
 
-			public string Post(string path, string origin)
+			public string Post(string path, string origin, string body = Body)
 			{
 				string originHeader = origin != null ? $"Origin: {origin}\r\n" : string.Empty;
 				return Send(IPAddress.Loopback, $"POST {path} HTTP/1.1\r\nHost: {HostName}:{Port}\r\n{originHeader}" +
-				                                $"Content-Type: application/x-www-form-urlencoded\r\nContent-Length: {Body.Length}\r\n\r\n{Body}");
+				                                $"Content-Type: application/x-www-form-urlencoded\r\nContent-Length: {body.Length}\r\n\r\n{body}");
 			}
 
 			public void Dispose()

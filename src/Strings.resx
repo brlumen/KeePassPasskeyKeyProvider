@@ -64,6 +64,12 @@
 	<data name="Back" xml:space="preserve">
 		<value>Back</value>
 	</data>
+	<data name="BrowserCodeCaption" xml:space="preserve">
+		<value>Enter this code on the KeePass page in the browser:</value>
+	</data>
+	<data name="BrowserCodeRejected" xml:space="preserve">
+		<value>The operation was stopped: a wrong confirmation code was entered on the KeePass page too many times. Try again.</value>
+	</data>
 	<data name="BrowserCreateWaiting" xml:space="preserve">
 		<value>Continue on the KeePass page that opened in the browser: click "Continue" and choose where to keep the passkey — this computer, your phone (QR code) or a security key.
 
@@ -87,6 +93,15 @@ Open this address in a browser manually:
 	<data name="BrowserPageCancelled" xml:space="preserve">
 		<value>Cancelled or timed out. Click "Continue" to try again.</value>
 	</data>
+	<data name="BrowserPageCodeFormat" xml:space="preserve">
+		<value>Enter the 6 digits shown in the KeePass window.</value>
+	</data>
+	<data name="BrowserPageCodeLabel" xml:space="preserve">
+		<value>Confirmation code from the KeePass window:</value>
+	</data>
+	<data name="BrowserPageCodeWrong" xml:space="preserve">
+		<value>Wrong code. Attempts left: {0}.</value>
+	</data>
 	<data name="BrowserPageCreate" xml:space="preserve">
 		<value>KeePass is setting up how you will open your password database. Click "Continue" and choose where to keep the passkey: this computer, your phone or a security key. You will open the database with it.</value>
 	</data>
@@ -107,6 +122,9 @@ Open this address in a browser manually:
 	</data>
 	<data name="BrowserPageNoPrf" xml:space="preserve">
 		<value>This option cannot protect a KeePass database. Choose another: this computer, your phone or another security key.</value>
+	</data>
+	<data name="BrowserPageStopped" xml:space="preserve">
+		<value>The operation was stopped. See the KeePass window for details.</value>
 	</data>
 	<data name="BrowserPageTitleCreate" xml:space="preserve">
 		<value>Protect KeePass database</value>

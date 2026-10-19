@@ -15,6 +15,10 @@
 	p { margin: 0 0 20px; color: var(--muted); }
 	button { font: inherit; font-weight: 600; width: 100%; padding: 10px; border: 0; border-radius: 9px; background: var(--accent); color: #fff; cursor: pointer; }
 	button:disabled { opacity: .5; cursor: default; }
+	label { display: block; margin: 0 0 6px; }
+	input { box-sizing: border-box; display: block; width: 100%; margin: 0 0 20px; padding: 8px 10px; border: 1px solid var(--muted); border-radius: 9px;
+		background: transparent; color: var(--fg); font: 600 24px/1.2 ui-monospace, Menlo, Consolas, monospace; letter-spacing: .2em; text-align: center; }
+	input:disabled { opacity: .5; }
 	#status { margin: 16px 0 0; min-height: 1.5em; color: var(--fg); }
 	#status.ok { color: var(--ok); font-weight: 600; }
 	#status.bad { color: var(--bad); }
@@ -24,6 +28,10 @@
 <main>
 	<h1 id="title"></h1>
 	<p id="intro"></p>
+	<div id="codeBox" hidden>
+		<label id="codeLabel" for="code"></label>
+		<input id="code" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="7" placeholder="000 000">
+	</div>
 	<button id="action" type="button"></button>
 	<div id="status" role="status"></div>
 </main>
@@ -34,6 +42,7 @@ const request = JSON.parse(document.getElementById("request").textContent);
 const text = request.text;
 const action = document.getElementById("action");
 const statusLine = document.getElementById("status");
+const codeInput = document.getElementById("code");
 
 const fromBase64Url = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
 const toBase64Url = buffer => btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -42,6 +51,13 @@ const prfInput = () => ({ prf: { eval: { first: fromBase64Url(request.salt) } } 
 
 // A credential created without a PRF result: its secret needs a second step (a new click: Safari requires a user gesture)
 let created = null;
+// The confirmation code once KeePass has accepted it; it is posted again with the result
+let code = null;
+// KeePass has stopped the ceremony: nothing on the page can continue it
+let stopped = false;
+
+// An error whose message is shown as is
+const fail = message => Object.assign(new Error(message), { plain: true });
 
 function show(message, kind) {
 	statusLine.textContent = message;
@@ -62,7 +78,7 @@ async function create() {
 	} });
 	const prf = credential.getClientExtensionResults().prf;
 	if (!prf || prf.enabled === false)
-		throw new Error(text.noPrf);
+		throw fail(text.noPrf);
 
 	const result = {
 		credentialId: toBase64Url(credential.rawId),
@@ -87,7 +103,7 @@ async function get(allow) {
 	} });
 	const prf = credential.getClientExtensionResults().prf;
 	if (!prf || !prf.results || !prf.results.first)
-		throw new Error(text.noPrf);
+		throw fail(text.noPrf);
 	return {
 		credentialId: toBase64Url(credential.rawId),
 		prf: toBase64Url(prf.results.first),
@@ -100,14 +116,43 @@ async function get(allow) {
 function describe(e) {
 	if (e && e.name === "NotAllowedError") return text.cancelled;
 	if (e && e.name === "InvalidStateError") return text.exists;
-	if (e && e.message === text.noPrf) return text.noPrf;
+	if (e && e.plain) return e.message;
 	return text.failed + " " + (e && e.message ? e.message : e);
+}
+
+// Form POST to KeePass: a code check or the result
+async function post(fields) {
+	const response = await fetch(request.resultPath, {
+		method: "POST",
+		headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		body: new URLSearchParams(fields)
+	});
+	if (response.status === 422)
+		throw fail(text.codeWrong.replace("{0}", await response.text()));
+	if (response.status === 403 || response.status === 410) {
+		stopped = true;
+		throw fail(text.stopped);
+	}
+	if (response.status !== 204)
+		throw new Error("HTTP " + response.status);
+}
+
+// KeePass checks the code first, so that a typo does not cost a passkey ceremony
+async function confirmCode() {
+	const digits = codeInput.value.replace(/\D/g, "");
+	if (digits.length !== 6)
+		throw fail(text.codeFormat);
+	await post({ check: "1", code: digits });
+	code = digits;
+	codeInput.disabled = true;
 }
 
 async function run() {
 	action.disabled = true;
 	show(text.working);
 	try {
+		if (request.code && code === null)
+			await confirmCode();
 		let result;
 		if (created) {
 			const assertion = await get([created.credentialId]);
@@ -123,13 +168,7 @@ async function run() {
 			result = await get(request.allow);
 		}
 
-		const response = await fetch(request.resultPath, {
-			method: "POST",
-			headers: { "Content-Type": "application/x-www-form-urlencoded" },
-			body: new URLSearchParams(result)
-		});
-		if (response.status !== 204)
-			throw new Error("HTTP " + response.status);
+		await post(code === null ? result : Object.assign({ code: code }, result));
 		action.hidden = true;
 		show(text.done, "ok");
 		// Browsers let a script close a tab whose history has only this page (a tab opened by KeePass);
@@ -137,8 +176,12 @@ async function run() {
 		setTimeout(() => window.close(), 1000);
 	} catch (e) {
 		show(describe(e), "bad");
+		if (stopped)
+			codeInput.disabled = true;
+		else if (request.code && code === null)
+			codeInput.select();
 	} finally {
-		action.disabled = false;
+		action.disabled = stopped;
 	}
 }
 
@@ -147,6 +190,14 @@ document.getElementById("title").textContent = text.title;
 document.getElementById("intro").textContent = request.mode === "create" ? text.create : text.get;
 action.textContent = text.button;
 action.addEventListener("click", run);
+if (request.code) {
+	document.getElementById("codeLabel").textContent = text.codeLabel;
+	document.getElementById("codeBox").hidden = false;
+	codeInput.addEventListener("keydown", e => {
+		if (e.key === "Enter" && !action.disabled) action.click();
+	});
+	codeInput.focus();
+}
 if (!window.isSecureContext || !window.PublicKeyCredential) {
 	action.disabled = true;
 	show(text.failed + " WebAuthn", "bad");

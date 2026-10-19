@@ -34,17 +34,20 @@ namespace KeePassPasskeyKeyProvider.Browser
 		/// <summary>Creates a credential with PRF; the PRF secret is obtained in the same session</summary>
 		/// <param name="excludeList">Credentials of the database's portable devices: the browser refuses to register the same authenticator twice</param>
 		/// <param name="databaseName">File name shown on the page; null if there is none</param>
+		/// <param name="requireCode">The page asks for a confirmation code shown in the wait dialog: needed when the
+		/// credential will protect a database, so that a result posted by another local user is not accepted</param>
 		/// <exception cref="WebAuthnException">Cancelled, timed out or an invalid answer</exception>
 		public static PrfResult CreateCredential(IWin32Window owner, byte[] userId, string userName, IList<byte[]> excludeList,
-			string databaseName)
+			string databaseName, bool requireCode)
 		{
 			var request = new StringBuilder();
 			request.Append("{\"mode\":\"create\"");
 			request.Append(",\"userId\":").Append(Json(Base64Url(userId)));
 			request.Append(",\"userName\":").Append(Json(userName));
 			request.Append(",\"exclude\":").Append(JsonArray(excludeList));
+			request.Append(",\"code\":").Append(requireCode ? "true" : "false");
 			return Run(owner, request, Strings.BrowserCreateWaiting,
-				Title(Strings.BrowserPageTitleCreate, Strings.BrowserPageTitleCreateNamed, databaseName));
+				Title(Strings.BrowserPageTitleCreate, Strings.BrowserPageTitleCreateNamed, databaseName), requireCode);
 		}
 
 		/// <summary>PRF secret of one of the credentials</summary>
@@ -55,8 +58,9 @@ namespace KeePassPasskeyKeyProvider.Browser
 			var request = new StringBuilder();
 			request.Append("{\"mode\":\"get\"");
 			request.Append(",\"allow\":").Append(JsonArray(allowList));
+			request.Append(",\"code\":false");
 			return Run(owner, request, Strings.BrowserUnlockWaiting,
-				Title(Strings.BrowserPageTitleGet, Strings.BrowserPageTitleGetNamed, databaseName));
+				Title(Strings.BrowserPageTitleGet, Strings.BrowserPageTitleGetNamed, databaseName), false);
 		}
 
 		private static string Title(string plain, string named, string databaseName)
@@ -64,7 +68,7 @@ namespace KeePassPasskeyKeyProvider.Browser
 			return string.IsNullOrEmpty(databaseName) ? plain : string.Format(named, databaseName);
 		}
 
-		private static PrfResult Run(IWin32Window owner, StringBuilder request, string waitText, string title)
+		private static PrfResult Run(IWin32Window owner, StringBuilder request, string waitText, string title, bool requireCode)
 		{
 			request.Append(",\"rpId\":").Append(Json(RpId));
 			request.Append(",\"rpName\":").Append(Json(RpName));
@@ -82,9 +86,14 @@ namespace KeePassPasskeyKeyProvider.Browser
 			AppendText(request, "cancelled", Strings.BrowserPageCancelled);
 			AppendText(request, "exists", Strings.BrowserPageExists);
 			AppendText(request, "failed", Strings.BrowserPageFailed);
+			AppendText(request, "codeLabel", Strings.BrowserPageCodeLabel);
+			AppendText(request, "codeFormat", Strings.BrowserPageCodeFormat);
+			AppendText(request, "codeWrong", Strings.BrowserPageCodeWrong);
+			AppendText(request, "stopped", Strings.BrowserPageStopped);
 			request.Append('}');
 
 			Dictionary<string, string> fields = null;
+			var rejection = LoopbackServer.Rejection.UnexpectedRequest;
 			using (var form = new BrowserWaitForm(waitText, TimeoutMs))
 			using (var server = new LoopbackServer(RpId,
 				resultPath => LoadPage(request.ToString() + ",\"resultPath\":" + Json(resultPath) + "}"),
@@ -93,15 +102,22 @@ namespace KeePassPasskeyKeyProvider.Browser
 					fields = result;
 					form.Finish(DialogResult.OK);
 				},
-				() => form.Finish(DialogResult.No)))
+				reason =>
+				{
+					rejection = reason;
+					form.Finish(DialogResult.No);
+				},
+				requireCode))
 			{
 				form.Url = server.Url;
+				form.ShowCode(server.Code);
 				DialogResult answer = form.ShowDialog(owner);
 				if (answer == DialogResult.OK && fields != null)
 					return ToPrfResult(fields);
 				throw new WebAuthnException(answer == DialogResult.Abort ? Strings.BrowserTimedOut
-					: answer == DialogResult.No ? Strings.BrowserRejected
-					: Strings.OperationCancelled);
+					: answer != DialogResult.No ? Strings.OperationCancelled
+					: rejection == LoopbackServer.Rejection.WrongCode ? Strings.BrowserCodeRejected
+					: Strings.BrowserRejected);
 			}
 		}
 

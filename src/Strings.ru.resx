@@ -64,6 +64,12 @@
 	<data name="Back" xml:space="preserve">
 		<value>Назад</value>
 	</data>
+	<data name="BrowserCodeCaption" xml:space="preserve">
+		<value>Введите этот код на странице KeePass в браузере:</value>
+	</data>
+	<data name="BrowserCodeRejected" xml:space="preserve">
+		<value>Операция остановлена: на странице KeePass слишком много раз введён неверный код подтверждения. Повторите попытку.</value>
+	</data>
 	<data name="BrowserCreateWaiting" xml:space="preserve">
 		<value>Продолжите на странице KeePass, которая открылась в браузере: нажмите «Продолжить» и выберите, где хранить ключ доступа, — на этом компьютере, на телефоне (QR‑код) или на ключе безопасности.
 
@@ -87,6 +93,15 @@
 	<data name="BrowserPageCancelled" xml:space="preserve">
 		<value>Действие отменено или время истекло. Нажмите «Продолжить», чтобы попробовать ещё раз.</value>
 	</data>
+	<data name="BrowserPageCodeFormat" xml:space="preserve">
+		<value>Введите 6 цифр, показанных в окне KeePass.</value>
+	</data>
+	<data name="BrowserPageCodeLabel" xml:space="preserve">
+		<value>Код подтверждения из окна KeePass:</value>
+	</data>
+	<data name="BrowserPageCodeWrong" xml:space="preserve">
+		<value>Неверный код. Осталось попыток: {0}.</value>
+	</data>
 	<data name="BrowserPageCreate" xml:space="preserve">
 		<value>KeePass настраивает вход в базу паролей. Нажмите «Продолжить» и выберите, где хранить ключ доступа (passkey): на этом компьютере, на телефоне или на ключе безопасности. Этим ключом вы будете открывать базу.</value>
 	</data>
@@ -107,6 +122,9 @@
 	</data>
 	<data name="BrowserPageNoPrf" xml:space="preserve">
 		<value>Этот способ не подходит для защиты базы KeePass. Выберите другой: этот компьютер, телефон или другой ключ безопасности.</value>
+	</data>
+	<data name="BrowserPageStopped" xml:space="preserve">
+		<value>Операция остановлена. Подробности — в окне KeePass.</value>
 	</data>
 	<data name="BrowserPageTitleCreate" xml:space="preserve">
 		<value>Защита базы KeePass</value>

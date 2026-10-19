@@ -211,7 +211,7 @@ namespace KeePassPasskeyKeyProvider
 				try
 				{
 					var created = browser
-						? BrowserWebAuthn.CreateCredential(this, testUserId, "KeePass: PRF diagnostics", null, null)
+						? BrowserWebAuthn.CreateCredential(this, testUserId, "KeePass: PRF diagnostics", null, null, false)
 						: WebAuthnHelper.CreateCredential(this.Handle, DeviceKind.Portable, testUserId, "KeePass: PRF diagnostics");
 					credentialId = created.CredentialId;
 					creationSecret = created.PrfSecret;

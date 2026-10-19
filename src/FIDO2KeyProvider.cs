@@ -338,9 +338,10 @@ namespace KeePassPasskeyKeyProvider
 
 			try
 			{
+				// The credential will protect the database: the browser's result is accepted only with the code shown in KeePass
 				if (UsesBrowser)
 					return BrowserWebAuthn.CreateCredential(owner, userId, $"KeePass: {dbName}",
-						DeviceKeyStore.GetAllowList(existing, DeviceKind.Portable), DatabaseName(databasePath));
+						DeviceKeyStore.GetAllowList(existing, DeviceKind.Portable), DatabaseName(databasePath), true);
 
 				// displayName = full path: cleanup in Tools → KeePassPasskeyKeyProvider uses it to find credentials of deleted databases
 				IntPtr windowHandle = owner?.Handle ?? IntPtr.Zero;
