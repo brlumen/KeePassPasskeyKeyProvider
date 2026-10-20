@@ -24,6 +24,9 @@ namespace KeePassPasskeyKeyProvider
 			this.labelDevices = new System.Windows.Forms.Label();
 			this.listBoxDevices = new System.Windows.Forms.ListBox();
 			this.buttonRemoveDevice = new System.Windows.Forms.Button();
+			this.portableButtons = new System.Windows.Forms.FlowLayoutPanel();
+			this.buttonMakePortable = new System.Windows.Forms.Button();
+			this.buttonMakeAllPortable = new System.Windows.Forms.Button();
 			this.labelDeviceName = new System.Windows.Forms.Label();
 			this.textBoxDeviceName = new System.Windows.Forms.TextBox();
 			this.buttonAddDevice = new System.Windows.Forms.Button();
@@ -34,6 +37,7 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonRemoveRecovery = new System.Windows.Forms.Button();
 			this.buttonHelloCleanup = new System.Windows.Forms.Button();
 			this.layout.SuspendLayout();
+			this.portableButtons.SuspendLayout();
 			this.recoveryButtons.SuspendLayout();
 			this.SuspendLayout();
 			//
@@ -45,7 +49,8 @@ namespace KeePassPasskeyKeyProvider
 			this.layout.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.layout.Name = "layout";
 			this.layout.Padding = new System.Windows.Forms.Padding(6);
-			this.layout.RowCount = 8;
+			this.layout.RowCount = 9;
+			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.layout.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -58,14 +63,16 @@ namespace KeePassPasskeyKeyProvider
 			this.layout.Controls.Add(this.listBoxDevices, 0, 1);
 			this.layout.Controls.Add(this.buttonRemoveDevice, 0, 2);
 			this.layout.Controls.Add(this.buttonHelloCleanup, 1, 2);
-			this.layout.Controls.Add(this.labelDeviceName, 0, 3);
-			this.layout.Controls.Add(this.textBoxDeviceName, 0, 4);
-			this.layout.Controls.Add(this.buttonAddDevice, 1, 4);
-			this.layout.Controls.Add(this.labelRecovery, 0, 5);
-			this.layout.Controls.Add(this.recoveryButtons, 0, 6);
-			this.layout.Controls.Add(this.labelStatus, 0, 7);
+			this.layout.Controls.Add(this.portableButtons, 0, 3);
+			this.layout.Controls.Add(this.labelDeviceName, 0, 4);
+			this.layout.Controls.Add(this.textBoxDeviceName, 0, 5);
+			this.layout.Controls.Add(this.buttonAddDevice, 1, 5);
+			this.layout.Controls.Add(this.labelRecovery, 0, 6);
+			this.layout.Controls.Add(this.recoveryButtons, 0, 7);
+			this.layout.Controls.Add(this.labelStatus, 0, 8);
 			this.layout.SetColumnSpan(this.labelDevices, 2);
 			this.layout.SetColumnSpan(this.listBoxDevices, 2);
+			this.layout.SetColumnSpan(this.portableButtons, 2);
 			this.layout.SetColumnSpan(this.labelDeviceName, 2);
 			this.layout.SetColumnSpan(this.labelRecovery, 2);
 			this.layout.SetColumnSpan(this.recoveryButtons, 2);
@@ -97,6 +104,37 @@ namespace KeePassPasskeyKeyProvider
 			this.buttonRemoveDevice.Text = Strings.RemoveSelectedDevice;
 			this.buttonRemoveDevice.UseVisualStyleBackColor = true;
 			this.buttonRemoveDevice.Click += new System.EventHandler(this.RemoveDeviceButtonClick);
+			//
+			// portableButtons
+			//
+			this.portableButtons.AutoSize = true;
+			this.portableButtons.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+			this.portableButtons.Margin = new System.Windows.Forms.Padding(0, 0, 0, 12);
+			this.portableButtons.Name = "portableButtons";
+			this.portableButtons.TabIndex = 1;
+			this.portableButtons.Visible = false;
+			this.portableButtons.Controls.Add(this.buttonMakePortable);
+			this.portableButtons.Controls.Add(this.buttonMakeAllPortable);
+			//
+			// buttonMakePortable
+			//
+			this.buttonMakePortable.AutoSize = true;
+			this.buttonMakePortable.Name = "buttonMakePortable";
+			this.buttonMakePortable.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
+			this.buttonMakePortable.TabIndex = 0;
+			this.buttonMakePortable.Text = Strings.MakePortable;
+			this.buttonMakePortable.UseVisualStyleBackColor = true;
+			this.buttonMakePortable.Click += new System.EventHandler(this.MakePortableButtonClick);
+			//
+			// buttonMakeAllPortable
+			//
+			this.buttonMakeAllPortable.AutoSize = true;
+			this.buttonMakeAllPortable.Name = "buttonMakeAllPortable";
+			this.buttonMakeAllPortable.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
+			this.buttonMakeAllPortable.TabIndex = 1;
+			this.buttonMakeAllPortable.Text = Strings.MakeAllPortable;
+			this.buttonMakeAllPortable.UseVisualStyleBackColor = true;
+			this.buttonMakeAllPortable.Click += new System.EventHandler(this.MakeAllPortableButtonClick);
 			//
 			// buttonHelloCleanup
 			//
@@ -183,6 +221,8 @@ namespace KeePassPasskeyKeyProvider
 			this.Controls.Add(this.layout);
 			this.Name = "FIDO2DevicesControl";
 			this.Size = new System.Drawing.Size(500, 300);
+			this.portableButtons.ResumeLayout(false);
+			this.portableButtons.PerformLayout();
 			this.recoveryButtons.ResumeLayout(false);
 			this.recoveryButtons.PerformLayout();
 			this.layout.ResumeLayout(false);
@@ -194,6 +234,9 @@ namespace KeePassPasskeyKeyProvider
 		private System.Windows.Forms.Label labelDevices;
 		private System.Windows.Forms.ListBox listBoxDevices;
 		private System.Windows.Forms.Button buttonRemoveDevice;
+		private System.Windows.Forms.FlowLayoutPanel portableButtons;
+		private System.Windows.Forms.Button buttonMakePortable;
+		private System.Windows.Forms.Button buttonMakeAllPortable;
 		private System.Windows.Forms.Label labelDeviceName;
 		private System.Windows.Forms.TextBox textBoxDeviceName;
 		private System.Windows.Forms.Button buttonAddDevice;

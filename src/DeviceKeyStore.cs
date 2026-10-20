@@ -327,6 +327,15 @@ namespace KeePassPasskeyKeyProvider
 			return records.Find(r => MemUtil.ArraysEqual(r.CredentialId, credentialId));
 		}
 
+		/// <summary>
+		/// The records are written as v5 (they have a device that is not classic): plugin versions before portable
+		/// devices cannot read them
+		/// </summary>
+		public static bool UsesVersion5(DeviceRecordSet set)
+		{
+			return set.Devices.Exists(r => r.Kind != DeviceKind.Classic);
+		}
+
 		/// <summary>Credential IDs of the records of one kind for allowList</summary>
 		public static List<byte[]> GetAllowList(List<DeviceRecord> records, DeviceKind kind)
 		{
@@ -338,7 +347,7 @@ namespace KeePassPasskeyKeyProvider
 			using (var ms = new MemoryStream())
 			using (var bw = new BinaryWriter(ms))
 			{
-				bool withKinds = set.Devices.Exists(r => r.Kind != DeviceKind.Classic);
+				bool withKinds = UsesVersion5(set);
 				bw.Write(withKinds ? FormatVersion5 : FormatVersion4);
 				bw.Write(set.VerificationKey);
 				bw.Write(checked((ushort)set.Devices.Count));

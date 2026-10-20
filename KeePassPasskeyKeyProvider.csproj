@@ -56,6 +56,7 @@
     <Compile Include="src\Browser\LoopbackServer.cs" />
     <Compile Include="src\BusyIndicator.cs" />
     <Compile Include="src\DeviceKeyStore.cs" />
+    <Compile Include="src\DeviceMigration.cs" />
     <Compile Include="src\DynamicLibrary.cs" />
     <Compile Include="src\Ecc\CngP256.cs" />
     <Compile Include="src\Ecc\EcdsaSignature.cs" />
@@ -94,6 +95,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\KeePassPasskeyKeyProviderExt.cs" />
+    <Compile Include="src\PortableReminder.cs" />
     <Compile Include="src\KeyWrap.cs" />
     <Compile Include="src\EmbeddedResourceManager.cs" />
     <Compile Include="src\RecoveryPhrase.cs" />

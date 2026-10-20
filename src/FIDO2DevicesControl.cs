@@ -19,6 +19,7 @@ namespace KeePassPasskeyKeyProvider
 		private IPluginHost host;
 		private PwDatabase database;
 		private DeviceRecordSet set = new DeviceRecordSet();
+		private bool canAdd;
 
 		public FIDO2DevicesControl()
 		{
@@ -39,6 +40,7 @@ namespace KeePassPasskeyKeyProvider
 			listBoxDevices.Items.Clear();
 			set = new DeviceRecordSet();
 			labelRecovery.Text = string.Empty;
+			portableButtons.Visible = false;
 
 			byte[] key = FIDO2KeyProvider.GetDatabaseKey(database);
 			if (key == null)
@@ -72,8 +74,9 @@ namespace KeePassPasskeyKeyProvider
 
 			// Only adding a device needs an authenticator; removal and the phrase work without WebAuthn.
 			// Outside Windows devices are added in the browser; Windows needs its WebAuthn API.
-			bool canAdd = FIDO2KeyProvider.CanUse(DeviceKind.Portable);
+			canAdd = FIDO2KeyProvider.CanUse(DeviceKind.Portable);
 			buttonHelloCleanup.Visible = canAdd && !FIDO2KeyProvider.UsesBrowser;
+			portableButtons.Visible = set.Devices.Exists(r => r.Kind == DeviceKind.Classic);
 			ShowStatus(canAdd ? Strings.DevicesTabInfo : Strings.WebAuthnUnavailableShort);
 			SetEnabled(true, canAdd);
 		}
@@ -112,6 +115,8 @@ namespace KeePassPasskeyKeyProvider
 			textBoxDeviceName.Enabled = enabled && canAdd;
 			buttonAddDevice.Enabled = enabled && canAdd;
 			buttonRemoveDevice.Enabled = enabled && CanRemoveSelected();
+			buttonMakePortable.Enabled = enabled && canAdd && SelectedIsClassic();
+			buttonMakeAllPortable.Enabled = enabled && canAdd;
 			buttonRecovery.Enabled = enabled;
 			buttonRemoveRecovery.Enabled = enabled && HasRecovery;
 		}
@@ -121,6 +126,13 @@ namespace KeePassPasskeyKeyProvider
 		{
 			int index = listBoxDevices.SelectedIndex;
 			return index >= 0 && index < set.Devices.Count && set.Devices.Count > 1;
+		}
+
+		/// <summary>Only a classic device can be made portable; creating its new passkey needs what adding a device needs</summary>
+		private bool SelectedIsClassic()
+		{
+			int index = listBoxDevices.SelectedIndex;
+			return index >= 0 && index < set.Devices.Count && set.Devices[index].Kind == DeviceKind.Classic;
 		}
 
 		private void ShowStatus(string message)
@@ -211,6 +223,25 @@ namespace KeePassPasskeyKeyProvider
 				FIDO2KeyProvider.RotateDatabaseKey(database, set);
 				return SaveDatabase();
 			});
+		}
+
+		/// <summary>Making the selected classic device portable: a new passkey on it replaces its record, K stays</summary>
+		private void MakePortableButtonClick(object sender, EventArgs e)
+		{
+			if (SelectedIsClassic())
+				MakePortable(new[] { set.Devices[listBoxDevices.SelectedIndex].CredentialId });
+		}
+
+		/// <summary>All classic devices one by one; Cancel stops, the devices made portable so far stay saved</summary>
+		private void MakeAllPortableButtonClick(object sender, EventArgs e)
+		{
+			MakePortable(set.Devices.FindAll(r => r.Kind == DeviceKind.Classic).ConvertAll(r => r.CredentialId));
+		}
+
+		private void MakePortable(IList<byte[]> credentialIds)
+		{
+			DeviceMigration.Run(FindForm(), database, credentialIds, true, SaveDatabase);
+			UpdateDeviceList();
 		}
 
 		private void HelloCleanupButtonClick(object sender, EventArgs e)
@@ -312,23 +343,11 @@ namespace KeePassPasskeyKeyProvider
 				ShowNotSavedWarning();
 		}
 
-		/// <summary>
-		/// Saves the file with the records written to the database immediately, and refreshes the list. A new database
-		/// has no file of its own yet (a file at its path, if any, is another database): KeePass does not save a new
-		/// database itself, the plugin saves it when its creation is finished (FileCreated).
-		/// </summary>
+		/// <summary>Saves the database (see <see cref="KeePassPasskeyKeyProviderExt.SaveDatabase"/>) and refreshes the list</summary>
 		/// <returns>false if the database has a file but still has unsaved changes (saving failed or was cancelled)</returns>
 		private bool SaveDatabase()
 		{
-			host.MainWindow.UpdateUI(false, null, false, null, false, null, true);
-
-			bool saved = true;
-			if (KeePassPasskeyKeyProviderExt.IsPersisted(database))
-			{
-				host.MainWindow.SaveDatabase(database, null);
-				saved = !database.Modified;
-			}
-
+			bool saved = KeePassPasskeyKeyProviderExt.SaveDatabase(host, database);
 			UpdateDeviceList();
 			return saved;
 		}
@@ -342,6 +361,7 @@ namespace KeePassPasskeyKeyProvider
 		private void DevicesSelectedIndexChanged(object sender, EventArgs e)
 		{
 			buttonRemoveDevice.Enabled = CanRemoveSelected();
+			buttonMakePortable.Enabled = canAdd && SelectedIsClassic();
 		}
 	}
 }

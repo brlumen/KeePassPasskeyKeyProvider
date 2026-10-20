@@ -269,6 +269,38 @@ namespace KeePassPasskeyKeyProvider
 			}
 		}
 
+		/// <summary>
+		/// Makes a classic device portable: its record keeps its position and label and gets the credential of a new
+		/// portable passkey on the same authenticator, with the database key wrapped for its secret; the records are
+		/// written to the database. K does not change: the owner is the same device (a lost device is removed instead,
+		/// which rotates K). The database must be saved afterwards.
+		/// </summary>
+		public static void ReplaceWithPortable(PwDatabase db, DeviceRecordSet set, int index, PrfResult created)
+		{
+			DeviceRecord old = set.Devices[index];
+			if (old.Kind != DeviceKind.Classic)
+				throw new InvalidOperationException("The device is not classic");
+
+			byte[] key = GetDatabaseKey(db);
+			if (key == null)
+				throw new InvalidOperationException(Strings.MasterKeyNotFido2);
+			try
+			{
+				set.Devices[index] = new DeviceRecord
+				{
+					Kind = DeviceKind.Portable,
+					CredentialId = created.CredentialId,
+					Wrap = KeyWrap.Create(key, created.PrfSecret, set.VerificationKey),
+					Label = old.Label
+				};
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(key);
+			}
+			DeviceKeyStore.Save(db, set);
+		}
+
 		/// <summary>Wraps the key for the device records and the recovery phrase (in place)</summary>
 		private static void Seal(DeviceRecordSet set, byte[] key)
 		{
@@ -420,9 +452,13 @@ namespace KeePassPasskeyKeyProvider
 				if (failed && !MessageService.AskYesNo(problem + "\n\n" + Strings.TryOtherDevicesQuestion, "KeePassPasskeyKeyProvider"))
 					break;
 
-				byte[] key = TryUnlock(set, way, kinds, databaseName, out string reason, out bool asked);
+				byte[] key = TryUnlock(set, way, kinds, databaseName, out string reason, out bool asked, out DeviceRecord device);
 				if (key != null)
+				{
+					if (device.Kind == DeviceKind.Classic)
+						PortableReminder.Expect(ctx.DatabaseIOInfo, device.CredentialId);
 					return key;
+				}
 				if (asked)
 				{
 					problem = reason;
@@ -460,11 +496,13 @@ namespace KeePassPasskeyKeyProvider
 		/// <param name="asked">
 		/// The user took part; false if no connected security key holds a device (the reason is then about classic devices, or null)
 		/// </param>
+		/// <param name="device">Record of the device that gave K</param>
 		private static byte[] TryUnlock(DeviceRecordSet set, Way way, DeviceKind[] kinds, string databaseName, out string problem,
-			out bool asked)
+			out bool asked, out DeviceRecord device)
 		{
 			problem = null;
 			asked = true;
+			device = null;
 			try
 			{
 				Form owner = GetActiveForm();
@@ -496,7 +534,7 @@ namespace KeePassPasskeyKeyProvider
 							}
 							break;
 					}
-					return UnlockWithCredential(set, devices, assertion);
+					return UnlockWithCredential(set, devices, assertion, out device);
 				}
 
 				asked = false;
@@ -561,12 +599,13 @@ namespace KeePassPasskeyKeyProvider
 
 		/// <summary>K from the PRF secret of a device: the wrap of its record, opened with the secret</summary>
 		/// <exception cref="CryptographicException">The records are not authentic</exception>
-		private static byte[] UnlockWithCredential(DeviceRecordSet set, List<DeviceRecord> devices, PrfResult assertion)
+		private static byte[] UnlockWithCredential(DeviceRecordSet set, List<DeviceRecord> devices, PrfResult assertion,
+			out DeviceRecord record)
 		{
 			byte[] key;
 			try
 			{
-				DeviceRecord record = DeviceKeyStore.Find(devices, assertion.CredentialId);
+				record = DeviceKeyStore.Find(devices, assertion.CredentialId);
 				if (record == null)
 					throw new WebAuthnException(Strings.UnknownCredential);
 

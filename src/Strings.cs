@@ -145,6 +145,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string DiagWaitingForHello => Get();
 		public static string DiagnosticsTitle => Get();
 		public static string Done => Get();
+		public static string DontAskAgain => Get();
 		public static string EnterDeviceName => Get();
 		public static string Fido2AccessHint => Get();
 		public static string Fido2DeviceError => Get();
@@ -166,6 +167,16 @@ namespace KeePassPasskeyKeyProvider
 		public static string HmacSecretNotReturned => Get();
 		public static string IWroteItDown => Get();
 		public static string KeepDevicesCheckBox => Get();
+		public static string Later => Get();
+		public static string MakeAllPortable => Get();
+		public static string MakePortable => Get();
+		public static string MakePortableConfirm => Get();
+		public static string MakePortableDone => Get();
+		public static string MakePortableDoneHello => Get();
+		public static string MakePortableFailed => Get();
+		public static string MakePortableSameDevice => Get();
+		public static string MakePortableSameDeviceBrowser => Get();
+		public static string MakePortableVersionWarning => Get();
 		public static string MasterKeyNotFido2 => Get();
 		public static string MasterKeyNotFido2Hint => Get();
 		public static string NewDeviceNameLabel => Get();
@@ -185,6 +196,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string PinRefusedEarlier => Get();
 		public static string PinTitle => Get();
 		public static string PinWrong => Get();
+		public static string PortableReminder => Get();
 		public static string PrfDiagnosticsButton => Get();
 		public static string PrfTest => Get();
 		public static string ReadDeviceRecordsFailed => Get();

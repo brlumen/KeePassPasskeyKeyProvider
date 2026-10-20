@@ -3,7 +3,9 @@ using System.IO;
 using System.Security.Cryptography;
 using KeePassLib;
 using KeePassLib.Collections;
+using KeePassLib.Keys;
 using KeePassLib.Serialization;
+using KeePassPasskeyKeyProvider.WebAuthn;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace KeePassPasskeyKeyProvider.Tests
@@ -163,6 +165,52 @@ namespace KeePassPasskeyKeyProvider.Tests
 		}
 
 		[TestMethod]
+		public void ClassicDeviceIsReplacedWithPortableKeepingTheKey()
+		{
+			PwDatabase db = CreateDatabase(DeviceKind.Classic);
+			db.MasterKey = new CompositeKey();
+			db.MasterKey.AddUserKey(new KcpCustomKey(FIDO2KeyProvider.ProviderName, key, false));
+			byte[] original = db.PublicCustomData.GetByteArray(RecordsKey);
+			DeviceRecordSet before = ReadFromFile(original);
+			byte[] newSecret = TestData.Random(KeyWrap.KeyLength);
+			var created = new PrfResult { CredentialId = TestData.Random(16), PrfSecret = (byte[])newSecret.Clone() };
+
+			FIDO2KeyProvider.ReplaceWithPortable(db, DeviceKeyStore.LoadAll(db), 0, created);
+
+			byte[] records = db.PublicCustomData.GetByteArray(RecordsKey);
+			DeviceRecordSet after = ReadFromFile(records);
+			Assert.AreEqual((byte)4, original[0]);
+			Assert.AreEqual((byte)5, records[0]);
+			Assert.IsTrue(after.VerifySignature());
+			Assert.AreEqual(2, after.Devices.Count);
+			// The new passkey takes the place and the label of the old one and opens the same key
+			DeviceRecord replaced = after.Devices[0];
+			Assert.AreEqual(DeviceKind.Portable, replaced.Kind);
+			Assert.AreEqual(before.Devices[0].Label, replaced.Label);
+			CollectionAssert.AreEqual(created.CredentialId, replaced.CredentialId);
+			Assert.IsNull(DeviceKeyStore.Find(after.Devices, before.Devices[0].CredentialId));
+			CollectionAssert.AreEqual(key, replaced.Wrap.Open(newSecret, after.VerificationKey));
+			Assert.ThrowsException<CryptographicException>(() => replaced.Wrap.Open(deviceSecret, after.VerificationKey));
+			// The other device and the recovery phrase are untouched
+			Assert.AreEqual(DeviceKind.Classic, after.Devices[1].Kind);
+			CollectionAssert.AreEqual(before.Devices[1].CredentialId, after.Devices[1].CredentialId);
+			CollectionAssert.AreEqual(Bytes(before.Devices[1].Wrap), Bytes(after.Devices[1].Wrap));
+			CollectionAssert.AreEqual(Bytes(before.Recovery), Bytes(after.Recovery));
+			CollectionAssert.AreEqual(key, after.Recovery.Open(phraseSecret, after.VerificationKey));
+		}
+
+		[TestMethod]
+		public void OnlyClassicDeviceIsReplacedWithPortable()
+		{
+			PwDatabase db = CreateDatabase(DeviceKind.Portable);
+			db.MasterKey = new CompositeKey();
+			db.MasterKey.AddUserKey(new KcpCustomKey(FIDO2KeyProvider.ProviderName, key, false));
+			var created = new PrfResult { CredentialId = TestData.Random(16), PrfSecret = TestData.Random(KeyWrap.KeyLength) };
+
+			Assert.ThrowsException<InvalidOperationException>(() => FIDO2KeyProvider.ReplaceWithPortable(db, DeviceKeyStore.LoadAll(db), 1, created));
+		}
+
+		[TestMethod]
 		public void UnknownDeviceKindIsRejected()
 		{
 			byte[] records = CreateDatabase(DeviceKind.Portable).PublicCustomData.GetByteArray(RecordsKey);
@@ -242,6 +290,17 @@ namespace KeePassPasskeyKeyProvider.Tests
 				DeviceKeyStore.Save(db, set);
 			}
 			return db;
+		}
+
+		private static byte[] Bytes(KeyWrap wrap)
+		{
+			using (var ms = new MemoryStream())
+			using (var bw = new BinaryWriter(ms))
+			{
+				wrap.Write(bw);
+				bw.Flush();
+				return ms.ToArray();
+			}
 		}
 
 		/// <summary>Records as the plugin reads them from a database file before unlocking</summary>

@@ -52,10 +52,26 @@ namespace KeePassPasskeyKeyProvider
 			if (db != null) persisted.GetValue(db, d => new object());
 		}
 
-		private static void OnFileOpened(object sender, FileOpenedEventArgs e)
+		/// <summary>
+		/// Saves the file with the records written to the database immediately. A new database has no file of its own
+		/// yet (a file at its path, if any, is another database): KeePass does not save a new database itself, the plugin
+		/// saves it when its creation is finished (FileCreated).
+		/// </summary>
+		/// <returns>false if the database has a file but still has unsaved changes (saving failed or was cancelled)</returns>
+		public static bool SaveDatabase(IPluginHost host, PwDatabase db)
+		{
+			host.MainWindow.UpdateUI(false, null, false, null, false, null, true);
+			if (!IsPersisted(db))
+				return true;
+			host.MainWindow.SaveDatabase(db, null);
+			return !db.Modified;
+		}
+
+		private void OnFileOpened(object sender, FileOpenedEventArgs e)
 		{
 			DeviceKeyStore.Remember(e?.Database);
 			MarkPersisted(e?.Database);
+			PortableReminder.OnOpened(PluginHost, e?.Database);
 		}
 
 		private static void OnFileSaved(object sender, FileSavedEventArgs e)
