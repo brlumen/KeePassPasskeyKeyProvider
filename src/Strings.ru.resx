@@ -455,7 +455,7 @@ Passkey на телефоне или ключе безопасности отк�
 		<value>Ключ безопасности не подключён.</value>
 	</data>
 	<data name="Fido2PinAuthBlocked" xml:space="preserve">
-		<value>Слишком много неверных PIN подряд: извлеките ключ безопасности, вставьте его снова и повторите.</value>
+		<value>Слишком много неверных PIN подряд: теперь ключ безопасности не принимает никакой PIN, даже правильный, пока его не извлекут и не вставят снова. Переподключите ключ и повторите.</value>
 	</data>
 	<data name="Fido2PinBlocked" xml:space="preserve">
 		<value>PIN ключа безопасности заблокирован после слишком многих неверных попыток.</value>
@@ -532,6 +532,18 @@ Passkey на телефоне или ключе безопасности отк�
 	</data>
 	<data name="PinAttemptsLeft" xml:space="preserve">
 		<value>Осталось попыток: {0}.</value>
+	</data>
+	<data name="PinFewAttempts" xml:space="preserve">
+		<value>Когда попытки закончатся, PIN заблокируется: поможет только сброс ключа, а сброс удаляет все passkey на нём.</value>
+	</data>
+	<data name="PinInRowRule" xml:space="preserve">
+		<value>После {0} неверных PIN подряд ключ перестаёт принимать PIN, пока его не извлекут и не вставят снова.</value>
+	</data>
+	<data name="PinLastInRow" xml:space="preserve">
+		<value>Ещё один неверный PIN — и ключ придётся извлечь и вставить снова.</value>
+	</data>
+	<data name="PinRefusedEarlier" xml:space="preserve">
+		<value>Ранее этот ключ перестал принимать PIN после неверных PIN подряд. Если с тех пор его не извлекали и не вставляли снова, сделайте это сейчас: до этого не принимается даже правильный PIN.</value>
 	</data>
 	<data name="PinTitle" xml:space="preserve">
 		<value>PIN ключа безопасности</value>

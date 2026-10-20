@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using KeePass.UI;
@@ -14,7 +15,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		private readonly SecureTextBoxEx pinBox;
 		private readonly Button ok;
 
-		private PinForm(string device, int? retriesLeft, bool wrongPin)
+		private PinForm(string device, IList<string> notes, bool warning)
 		{
 			Text = Strings.PinTitle;
 			FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -39,17 +40,14 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			pinBox.TextChanged += (s, e) => ok.Enabled = pinBox.TextLength >= Fido2Authenticator.MinPinLength;
 			layout.Controls.Add(pinBox);
 
-			string status = retriesLeft != null ? string.Format(Strings.PinAttemptsLeft, retriesLeft) : null;
-			if (wrongPin)
-				status = status == null ? Strings.PinWrong : Strings.PinWrong + " " + status;
-			if (status != null)
+			if (notes.Count > 0)
 			{
 				layout.Controls.Add(new Label
 				{
-					Text = status,
+					Text = string.Join(Environment.NewLine, notes),
 					AutoSize = true,
 					MaximumSize = new Size(360, 0),
-					ForeColor = wrongPin || retriesLeft <= 3 ? Color.Firebrick : SystemColors.GrayText,
+					ForeColor = warning ? Color.Firebrick : SystemColors.GrayText,
 					Margin = new Padding(3, 0, 3, 9)
 				});
 			}
@@ -73,10 +71,11 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		}
 
 		/// <summary>PIN in UTF-8, or null if the user cancelled; the caller zeroes the array</summary>
-		/// <param name="wrongPin">The previous PIN was wrong</param>
-		public static byte[] Ask(IWin32Window owner, string device, int? retriesLeft, bool wrongPin)
+		/// <param name="notes">Lines under the PIN box (see <see cref="PinNotes"/>)</param>
+		/// <param name="warning">The notes are a warning (red)</param>
+		public static byte[] Ask(IWin32Window owner, string device, IList<string> notes, bool warning)
 		{
-			using (var form = new PinForm(device, retriesLeft, wrongPin))
+			using (var form = new PinForm(device, notes, warning))
 			{
 				bool entered = form.ShowDialog(owner) == DialogResult.OK;
 				byte[] pin = entered ? form.pinBox.TextEx.ReadUtf8() : null;

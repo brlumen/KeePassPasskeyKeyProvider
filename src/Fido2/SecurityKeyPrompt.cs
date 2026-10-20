@@ -12,15 +12,21 @@ namespace KeePassPasskeyKeyProvider.Fido2
 	/// <summary>
 	/// <see cref="Fido2Authenticator"/> in KeePass's UI. The request runs on a worker thread; the UI thread shows the wait
 	/// dialog only when a key needs the user (PIN or touch), so nothing is shown when no connected key holds a credential.
-	/// The PIN dialog is shown over the wait dialog; after a wrong PIN it is shown again. Cancel in the wait dialog
-	/// cancels the request on the key.
+	/// The PIN dialog is shown over the wait dialog; after a wrong PIN it is shown again, with what further wrong PINs
+	/// lead to. Cancel in the wait dialog cancels the request on the key.
 	/// </summary>
 	internal sealed class SecurityKeyPrompt : IFido2Prompt
 	{
+		// Keys (by name) that refused the PIN after wrong PINs in a row, until a PIN is accepted. A reinserted key cannot
+		// be told from the same one (Linux reuses the device path), so this is only a warning in the PIN dialog
+		private static readonly HashSet<string> refusedPin = new HashSet<string>();
+
 		private readonly WaitForm form;
 		private readonly CancellationToken cancellation;
 		private readonly ManualResetEvent userNeeded;
-		private bool wrongPin;
+		private string pinDevice;
+		private int? pinRetries;
+		private int wrongPinsInRow;
 
 		private SecurityKeyPrompt(WaitForm form, CancellationToken cancellation, ManualResetEvent userNeeded)
 		{
@@ -86,11 +92,23 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			{
 				try
 				{
-					return Fido2Authenticator.GetPrfSecret(rpId, allowList, this, cancellation);
+					PrfResult result = Fido2Authenticator.GetPrfSecret(rpId, allowList, this, cancellation);
+					if (pinDevice != null)
+						lock (refusedPin)
+							refusedPin.Remove(pinDevice);
+					return result;
 				}
 				catch (Fido2Exception ex) when (ex.Error == Fido2Error.PinInvalid)
 				{
-					wrongPin = true;
+					// A PIN rejected before it reached the key (too long) is not an attempt
+					if (ex.RetriesLeft == null || pinRetries == null || ex.RetriesLeft < pinRetries)
+						wrongPinsInRow++;
+				}
+				catch (Fido2Exception ex) when (ex.Error == Fido2Error.PinAuthBlocked && pinDevice != null)
+				{
+					lock (refusedPin)
+						refusedPin.Add(pinDevice);
+					throw;
 				}
 			}
 		}
@@ -100,14 +118,21 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			form.SetMessage(string.Format(Strings.SecurityKeyPin, device));
 			userNeeded.Set();
 
-			bool retry = wrongPin;
+			pinDevice = device;
+			pinRetries = retriesLeft;
+			bool refused;
+			lock (refusedPin)
+				refused = refusedPin.Contains(device);
+			List<string> notes = PinNotes.For(retriesLeft, wrongPinsInRow, refused);
+			// Only "attempts left" with plenty of them is not a warning
+			bool warning = wrongPinsInRow > 0 || notes.Count > (retriesLeft != null ? 1 : 0);
 			var answer = new TaskCompletionSource<byte[]>();
 			using (cancellation.Register(() => answer.TrySetCanceled()))
 			{
 				// Runs once the wait dialog is shown: userNeeded makes the UI thread show it
 				form.Post(() =>
 				{
-					byte[] pin = cancellation.IsCancellationRequested ? null : PinForm.Ask(form, device, retriesLeft, retry);
+					byte[] pin = cancellation.IsCancellationRequested ? null : PinForm.Ask(form, device, notes, warning);
 					// A PIN nobody waits for any more is wiped
 					if (!answer.TrySetResult(pin) && pin != null)
 						MemUtil.ZeroByteArray(pin);
@@ -127,6 +152,40 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		{
 			form.SetMessage(string.Format(Strings.SecurityKeyTouch, device));
 			userNeeded.Set();
+		}
+	}
+
+	/// <summary>
+	/// Notes in the PIN dialog: attempts left and what further wrong PINs lead to, whichever limit comes first — wrong
+	/// PINs in a row (the key must be reinserted) or all attempts (the PIN is blocked, only a reset of the key helps)
+	/// </summary>
+	internal static class PinNotes
+	{
+		// CTAP: after this many wrong PINs in a row the key accepts no PIN until it is removed and inserted again
+		private const int MaxWrongPinsInRow = 3;
+		// Attempts left at which the user is warned that the PIN will be blocked for good
+		private const int FewRetries = 3;
+
+		/// <summary>Lines under the PIN box</summary>
+		/// <param name="wrongPinsInRow">Wrong PINs for this key in a row in this unlock</param>
+		/// <param name="refusedEarlier">The key refused the PIN after wrong PINs in a row earlier and may still refuse it</param>
+		public static List<string> For(int? retriesLeft, int wrongPinsInRow, bool refusedEarlier)
+		{
+			var notes = new List<string>();
+			string status = retriesLeft != null ? string.Format(Strings.PinAttemptsLeft, retriesLeft) : null;
+			if (wrongPinsInRow > 0)
+				status = status == null ? Strings.PinWrong : Strings.PinWrong + " " + status;
+			if (status != null)
+				notes.Add(status);
+			if (refusedEarlier)
+				notes.Add(Strings.PinRefusedEarlier);
+
+			int inRowLeft = MaxWrongPinsInRow - wrongPinsInRow;
+			if (wrongPinsInRow > 0 && !(retriesLeft <= inRowLeft))
+				notes.Add(inRowLeft <= 1 ? Strings.PinLastInRow : string.Format(Strings.PinInRowRule, MaxWrongPinsInRow));
+			if (retriesLeft <= FewRetries)
+				notes.Add(Strings.PinFewAttempts);
+			return notes;
 		}
 	}
 }

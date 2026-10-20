@@ -178,6 +178,10 @@ namespace KeePassPasskeyKeyProvider
 		public static string PhraseUnknownWord => Get();
 		public static string PhraseWordCount => Get();
 		public static string PinAttemptsLeft => Get();
+		public static string PinFewAttempts => Get();
+		public static string PinInRowRule => Get();
+		public static string PinLastInRow => Get();
+		public static string PinRefusedEarlier => Get();
 		public static string PinTitle => Get();
 		public static string PinWrong => Get();
 		public static string PrfDiagnosticsButton => Get();

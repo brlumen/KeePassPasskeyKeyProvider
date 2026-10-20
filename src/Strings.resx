@@ -455,7 +455,7 @@ Continue the test?</value>
 		<value>No security key is connected.</value>
 	</data>
 	<data name="Fido2PinAuthBlocked" xml:space="preserve">
-		<value>Too many wrong PINs in a row: remove the security key, insert it again and retry.</value>
+		<value>Too many wrong PINs in a row: the security key now accepts no PIN, not even the correct one, until it is removed and inserted again. Reinsert the key, then retry.</value>
 	</data>
 	<data name="Fido2PinBlocked" xml:space="preserve">
 		<value>The PIN of the security key is blocked after too many wrong attempts.</value>
@@ -532,6 +532,18 @@ File → Change Master Key → "{0}".</value>
 	</data>
 	<data name="PinAttemptsLeft" xml:space="preserve">
 		<value>Attempts left: {0}.</value>
+	</data>
+	<data name="PinFewAttempts" xml:space="preserve">
+		<value>When the attempts run out, the PIN is blocked: only a reset of the key helps, and a reset erases all passkeys on it.</value>
+	</data>
+	<data name="PinInRowRule" xml:space="preserve">
+		<value>After {0} wrong PINs in a row the key stops accepting the PIN until it is removed and inserted again.</value>
+	</data>
+	<data name="PinLastInRow" xml:space="preserve">
+		<value>One more wrong PIN and the key will have to be removed and inserted again.</value>
+	</data>
+	<data name="PinRefusedEarlier" xml:space="preserve">
+		<value>Earlier this key stopped accepting the PIN after wrong PINs in a row. If it has not been removed and inserted again since then, do it now: until then even the correct PIN is not accepted.</value>
 	</data>
 	<data name="PinTitle" xml:space="preserve">
 		<value>Security key PIN</value>
