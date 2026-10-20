@@ -154,6 +154,8 @@ namespace KeePassPasskeyKeyProvider
 				textBoxDeviceName.Focus();
 				return;
 			}
+			if (!DeviceMigration.ConfirmVersion5(FindForm(), set))
+				return;
 
 			byte[] key = FIDO2KeyProvider.GetDatabaseKey(database);
 			if (key == null)

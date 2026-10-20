@@ -28,8 +28,7 @@ namespace KeePassPasskeyKeyProvider
 			bool migrated = false;
 			try
 			{
-				// Plugin versions before portable devices cannot read the records afterwards
-				if (!DeviceKeyStore.UsesVersion5(DeviceKeyStore.LoadAll(db)) && !Confirm(owner, Strings.MakePortableVersionWarning))
+				if (!ConfirmVersion5(owner, DeviceKeyStore.LoadAll(db)))
 					return false;
 
 				foreach (byte[] credentialId in credentialIds)
@@ -79,6 +78,16 @@ namespace KeePassPasskeyKeyProvider
 
 		/// <summary>Which authenticator to confirm with, in the words of this system's dialog</summary>
 		public static string SameDevice => FIDO2KeyProvider.UsesBrowser ? Strings.MakePortableSameDeviceBrowser : Strings.MakePortableSameDevice;
+
+		/// <summary>
+		/// Before a portable device turns the records of an existing database into v5, which plugin versions before
+		/// portable devices cannot read: asks to update the plugin everywhere first. True if there is nothing to ask or
+		/// the user continues.
+		/// </summary>
+		public static bool ConfirmVersion5(IWin32Window owner, DeviceRecordSet set)
+		{
+			return DeviceKeyStore.UsesVersion5(set) || Confirm(owner, Strings.MakePortableVersionWarning);
+		}
 
 		private static bool Confirm(IWin32Window owner, string text)
 		{

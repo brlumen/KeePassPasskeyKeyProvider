@@ -211,6 +211,18 @@ namespace KeePassPasskeyKeyProvider.Tests
 		}
 
 		[TestMethod]
+		public void OnlyPortableDevicesNeedVersion5()
+		{
+			// Before adding a portable device to such records, the user is asked to update older plugins
+			var set = new DeviceRecordSet();
+			Assert.IsFalse(DeviceKeyStore.UsesVersion5(set));
+			set.Devices.Add(new DeviceRecord { Kind = DeviceKind.Classic });
+			Assert.IsFalse(DeviceKeyStore.UsesVersion5(set));
+			set.Devices.Add(new DeviceRecord { Kind = DeviceKind.Portable });
+			Assert.IsTrue(DeviceKeyStore.UsesVersion5(set));
+		}
+
+		[TestMethod]
 		public void UnknownDeviceKindIsRejected()
 		{
 			byte[] records = CreateDatabase(DeviceKind.Portable).PublicCustomData.GetByteArray(RecordsKey);
