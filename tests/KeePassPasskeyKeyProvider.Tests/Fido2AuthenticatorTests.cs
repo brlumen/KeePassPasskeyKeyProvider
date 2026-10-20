@@ -58,6 +58,20 @@ namespace KeePassPasskeyKeyProvider.Tests
 			Assert.AreEqual(expected, Fido2Authenticator.Classify(code));
 		}
 
+		[DataTestMethod]
+		[DataRow(0x34, 5, 5, false, true)] // PIN_AUTH_BLOCKED from the key
+		[DataRow(0x34, null, null, false, true)]
+		[DataRow(-9, 5, 5, false, true)] // FIDO_ERR_INTERNAL, no attempt spent: the key refused the PIN key agreement
+		[DataRow(-9, 5, 4, true, false)] // an attempt was spent: something else failed
+		[DataRow(-9, null, null, true, true)] // attempts unknown: as the key did before
+		[DataRow(-9, 5, null, false, false)]
+		[DataRow(0x31, 5, 5, true, false)] // PIN_INVALID
+		[DataRow(-2, 5, 5, true, false)] // FIDO_ERR_RX
+		public void RecognizesKeyThatMustBeReinserted(int result, int? retriesBefore, int? retriesAfter, bool refusedEarlier, bool expected)
+		{
+			Assert.AreEqual(expected, Fido2Authenticator.IsPinAuthBlocked(result, retriesBefore, retriesAfter, refusedEarlier));
+		}
+
 		[TestMethod]
 		public void SkipsOnlyKeysThatCannotHoldTheCredential()
 		{

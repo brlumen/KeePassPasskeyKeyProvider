@@ -51,6 +51,10 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		// Loaded on first use: a missing library must not break the type initialization
 		private static readonly Lazy<LibFido2> library = new Lazy<LibFido2>(Load);
 
+		// Keys (by name) that refused the PIN after wrong PINs in a row, until a PIN is accepted. A reinserted key cannot
+		// be told from the same one (Linux reuses the device path): the PIN dialog only warns
+		private static readonly HashSet<string> refusedPin = new HashSet<string>();
+
 		/// <summary>libfido2 is installed (loads it on first use)</summary>
 		public static bool IsAvailable
 		{
@@ -219,6 +223,31 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			}
 		}
 
+		/// <summary>
+		/// The key refused the PIN after wrong PINs in a row (PIN_AUTH_BLOCKED) in this process and has not accepted one since:
+		/// it may still need to be reinserted
+		/// </summary>
+		internal static bool PinRefusedEarlier(string device)
+		{
+			lock (refusedPin)
+				return refusedPin.Contains(device);
+		}
+
+		/// <summary>
+		/// The PIN step failed because the key must be reinserted. A key in that state may refuse already the key agreement
+		/// of the PIN protocol with PIN_AUTH_BLOCKED, and libfido2 (1.17) then returns FIDO_ERR_INTERNAL instead of the
+		/// key's status: taken as PIN_AUTH_BLOCKED if no attempt was spent or, when the attempts are unknown, if the key
+		/// refused the PIN earlier.
+		/// </summary>
+		internal static bool IsPinAuthBlocked(int result, int? retriesBefore, int? retriesAfter, bool refusedEarlier)
+		{
+			if (result == LibFido2.FIDO_ERR_PIN_AUTH_BLOCKED)
+				return true;
+			if (result != LibFido2.FIDO_ERR_INTERNAL)
+				return false;
+			return retriesBefore != null && retriesAfter != null ? retriesAfter >= retriesBefore : refusedEarlier;
+		}
+
 		/// <summary>Errors after which the next connected key is tried: this key cannot hold the credential or does not answer</summary>
 		internal static bool IsSkipped(Fido2Error error) =>
 			error == Fido2Error.NoCredential || error == Fido2Error.NoAnswer || error == Fido2Error.Unsupported ||
@@ -362,12 +391,31 @@ namespace KeePassPasskeyKeyProvider.Fido2
 					Array.Copy(pin, terminated, pin.Length);
 					result = Request(rpId, request, salt, terminated, prompt, cancellation, out PrfResult secret);
 					if (result == LibFido2.FIDO_OK)
+					{
+						lock (refusedPin)
+							refusedPin.Remove(info.Name);
 						return secret;
+					}
 				}
 				finally
 				{
 					MemUtil.ZeroByteArray(pin);
 					MemUtil.ZeroByteArray(terminated);
+				}
+
+				if (!cancellation.IsCancellationRequested)
+				{
+					// Read again only for FIDO_ERR_INTERNAL: whether the PIN reached the key
+					int? retriesAfter = result == LibFido2.FIDO_ERR_INTERNAL ? PinRetries() : null;
+					if (IsPinAuthBlocked(result, retries, retriesAfter, PinRefusedEarlier(info.Name)))
+					{
+						if (result != LibFido2.FIDO_ERR_PIN_AUTH_BLOCKED)
+							Log($"{info.Name}: FIDO_ERR_INTERNAL in the PIN step, attempts {retries} → {retriesAfter}: taken as " +
+								"PIN_AUTH_BLOCKED (libfido2 drops the key's status of the PIN key agreement)");
+						lock (refusedPin)
+							refusedPin.Add(info.Name);
+						result = LibFido2.FIDO_ERR_PIN_AUTH_BLOCKED;
+					}
 				}
 				throw Error(result, cancellation);
 			}

@@ -17,14 +17,9 @@ namespace KeePassPasskeyKeyProvider.Fido2
 	/// </summary>
 	internal sealed class SecurityKeyPrompt : IFido2Prompt
 	{
-		// Keys (by name) that refused the PIN after wrong PINs in a row, until a PIN is accepted. A reinserted key cannot
-		// be told from the same one (Linux reuses the device path), so this is only a warning in the PIN dialog
-		private static readonly HashSet<string> refusedPin = new HashSet<string>();
-
 		private readonly WaitForm form;
 		private readonly CancellationToken cancellation;
 		private readonly ManualResetEvent userNeeded;
-		private string pinDevice;
 		private int? pinRetries;
 		private int wrongPinsInRow;
 
@@ -92,23 +87,13 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			{
 				try
 				{
-					PrfResult result = Fido2Authenticator.GetPrfSecret(rpId, allowList, this, cancellation);
-					if (pinDevice != null)
-						lock (refusedPin)
-							refusedPin.Remove(pinDevice);
-					return result;
+					return Fido2Authenticator.GetPrfSecret(rpId, allowList, this, cancellation);
 				}
 				catch (Fido2Exception ex) when (ex.Error == Fido2Error.PinInvalid)
 				{
 					// A PIN rejected before it reached the key (too long) is not an attempt
 					if (ex.RetriesLeft == null || pinRetries == null || ex.RetriesLeft < pinRetries)
 						wrongPinsInRow++;
-				}
-				catch (Fido2Exception ex) when (ex.Error == Fido2Error.PinAuthBlocked && pinDevice != null)
-				{
-					lock (refusedPin)
-						refusedPin.Add(pinDevice);
-					throw;
 				}
 			}
 		}
@@ -118,12 +103,8 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			form.SetMessage(string.Format(Strings.SecurityKeyPin, device));
 			userNeeded.Set();
 
-			pinDevice = device;
 			pinRetries = retriesLeft;
-			bool refused;
-			lock (refusedPin)
-				refused = refusedPin.Contains(device);
-			List<string> notes = PinNotes.For(retriesLeft, wrongPinsInRow, refused);
+			List<string> notes = PinNotes.For(retriesLeft, wrongPinsInRow, Fido2Authenticator.PinRefusedEarlier(device));
 			// Only "attempts left" with plenty of them is not a warning
 			bool warning = wrongPinsInRow > 0 || notes.Count > (retriesLeft != null ? 1 : 0);
 			var answer = new TaskCompletionSource<byte[]>();
