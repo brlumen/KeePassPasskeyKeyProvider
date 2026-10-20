@@ -34,6 +34,12 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		/// <summary>Too many wrong PINs in a row: the key must be reinserted</summary>
 		PinAuthBlocked,
 
+		/// <summary>
+		/// The key does not accept a PIN now, most likely because of wrong PINs in a row (inferred from a libfido2 error,
+		/// see <see cref="Fido2Authenticator.PinRefusal"/>)
+		/// </summary>
+		PinNotAccepted,
+
 		/// <summary>Built-in user verification (fingerprint) failed</summary>
 		UserVerificationFailed,
 
@@ -83,6 +89,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 					return retriesLeft == null ? Strings.PinWrong : Strings.PinWrong + " " + string.Format(Strings.PinAttemptsLeft, retriesLeft);
 				case Fido2Error.PinBlocked: return Strings.Fido2PinBlocked;
 				case Fido2Error.PinAuthBlocked: return Strings.Fido2PinAuthBlocked;
+				case Fido2Error.PinNotAccepted: return Strings.Fido2PinNotAccepted;
 				case Fido2Error.UserVerificationFailed: return Strings.Fido2UserVerificationFailed;
 				case Fido2Error.Timeout: return Strings.Fido2Timeout;
 				case Fido2Error.Cancelled: return Strings.OperationCancelled;

@@ -224,8 +224,8 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		}
 
 		/// <summary>
-		/// The key refused the PIN after wrong PINs in a row (PIN_AUTH_BLOCKED) in this process and has not accepted one since:
-		/// it may still need to be reinserted
+		/// The key refused the PIN after wrong PINs in a row (PIN_AUTH_BLOCKED, or most likely so) in this process and has not
+		/// accepted one since: it may still need to be reinserted
 		/// </summary>
 		internal static bool PinRefusedEarlier(string device)
 		{
@@ -234,19 +234,27 @@ namespace KeePassPasskeyKeyProvider.Fido2
 		}
 
 		/// <summary>
-		/// The PIN step failed because the key must be reinserted. A key in that state may refuse already the key agreement
-		/// of the PIN protocol with PIN_AUTH_BLOCKED, and libfido2 (1.17) then returns FIDO_ERR_INTERNAL instead of the
-		/// key's status: taken as PIN_AUTH_BLOCKED if no attempt was spent or, when the attempts are unknown, if the key
-		/// refused the PIN earlier.
+		/// Why the PIN step failed if the key must (most likely) be reinserted; null otherwise. A key in that state may refuse
+		/// already the key agreement of the PIN protocol with PIN_AUTH_BLOCKED, and libfido2 (1.17) then returns
+		/// FIDO_ERR_INTERNAL instead of the key's status. That is undocumented and a genuine internal error looks the same,
+		/// so it is only taken as "the key does not accept a PIN now" (<see cref="Fido2Error.PinNotAccepted"/>): if no
+		/// attempt was spent or, when the attempts are unknown, if the key refused the PIN earlier.
 		/// </summary>
-		internal static bool IsPinAuthBlocked(int result, int? retriesBefore, int? retriesAfter, bool refusedEarlier)
+		internal static Fido2Error? PinRefusal(int result, int? retriesBefore, int? retriesAfter, bool refusedEarlier)
 		{
 			if (result == LibFido2.FIDO_ERR_PIN_AUTH_BLOCKED)
-				return true;
+				return Fido2Error.PinAuthBlocked;
 			if (result != LibFido2.FIDO_ERR_INTERNAL)
-				return false;
-			return retriesBefore != null && retriesAfter != null ? retriesAfter >= retriesBefore : refusedEarlier;
+				return null;
+			bool notSpent = retriesBefore != null && retriesAfter != null ? retriesAfter >= retriesBefore : refusedEarlier;
+			return notSpent ? Fido2Error.PinNotAccepted : (Fido2Error?)null;
 		}
+
+		/// <summary>
+		/// Result of the silent request with hmac-secret before the PIN prompt (see <see cref="Device"/>): only
+		/// FIDO_ERR_INTERNAL, a refused key agreement of the PIN protocol, means the key does not accept a PIN now
+		/// </summary>
+		internal static bool RefusesPinKeyAgreement(int result) => result == LibFido2.FIDO_ERR_INTERNAL;
 
 		/// <summary>Errors after which the next connected key is tried: this key cannot hold the credential or does not answer</summary>
 		internal static bool IsSkipped(Fido2Error error) =>
@@ -277,6 +285,14 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			{
 				lib.fido_dev_info_free(ref list, (UIntPtr)MaxDevices);
 			}
+		}
+
+		private static byte[] RandomBytes(int length)
+		{
+			byte[] data = new byte[length];
+			using (var rng = new RNGCryptoServiceProvider())
+				rng.GetBytes(data);
+			return data;
 		}
 
 		/// <summary>Name and code of a libfido2 result for messages</summary>
@@ -370,6 +386,8 @@ namespace KeePassPasskeyKeyProvider.Fido2
 						throw Error(result, cancellation);
 					Log($"{info.Name}: built-in user verification unavailable, asking for the PIN");
 				}
+				if (found != null)
+					CheckPinKeyAgreement(rpId, found);
 				return RequestWithPin(rpId, request, salt, prompt, cancellation);
 			}
 
@@ -407,17 +425,44 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				{
 					// Read again only for FIDO_ERR_INTERNAL: whether the PIN reached the key
 					int? retriesAfter = result == LibFido2.FIDO_ERR_INTERNAL ? PinRetries() : null;
-					if (IsPinAuthBlocked(result, retries, retriesAfter, PinRefusedEarlier(info.Name)))
+					Fido2Error? refusal = PinRefusal(result, retries, retriesAfter, PinRefusedEarlier(info.Name));
+					if (refusal != null)
 					{
-						if (result != LibFido2.FIDO_ERR_PIN_AUTH_BLOCKED)
-							Log($"{info.Name}: FIDO_ERR_INTERNAL in the PIN step, attempts {retries} → {retriesAfter}: taken as " +
-								"PIN_AUTH_BLOCKED (libfido2 drops the key's status of the PIN key agreement)");
+						if (refusal == Fido2Error.PinNotAccepted)
+							Log($"{info.Name}: {Describe(lib, result)} in the PIN step, attempts {retries} → {retriesAfter}: most " +
+								"likely PIN_AUTH_BLOCKED (libfido2 drops the key's status of the PIN key agreement)");
 						lock (refusedPin)
 							refusedPin.Add(info.Name);
-						result = LibFido2.FIDO_ERR_PIN_AUTH_BLOCKED;
+						throw new Fido2Exception(refusal.Value);
 					}
 				}
 				throw Error(result, cancellation);
+			}
+
+			/// <summary>
+			/// Before the PIN prompt: a silent request with hmac-secret (no PIN, no user presence, a random salt; the output is
+			/// not read and libfido2 wipes it), for which libfido2 first agrees on a key with the key for the PIN protocol. A key
+			/// that must be reinserted refuses that, so the user is told before spending a PIN. Nothing is spent, and any other
+			/// answer is ignored.
+			/// </summary>
+			private void CheckPinKeyAgreement(string rpId, byte[] credentialId)
+			{
+				using (var assert = new Assertion(lib, rpId, new List<byte[]> { credentialId }))
+				{
+					byte[] salt = RandomBytes(HashLength);
+					assert.Check(lib.fido_assert_set_extensions(assert.Handle, LibFido2.FIDO_EXT_HMAC_SECRET));
+					assert.Check(lib.fido_assert_set_hmac_salt(assert.Handle, salt, (UIntPtr)salt.Length));
+					assert.Check(lib.fido_assert_set_up(assert.Handle, LibFido2.FIDO_OPT_FALSE));
+					int result = lib.fido_dev_get_assert(handle, assert.Handle, null);
+					if (IsNoAnswer(result))
+						throw NoUserError(result);
+					if (RefusesPinKeyAgreement(result))
+					{
+						Log($"{info.Name}: {Describe(lib, result)} in a silent request with hmac-secret: the key most likely refuses " +
+							"the PIN key agreement (PIN_AUTH_BLOCKED), not asking for the PIN");
+						throw new Fido2Exception(Fido2Error.PinNotAccepted);
+					}
+				}
 			}
 
 			/// <summary>
@@ -562,9 +607,7 @@ namespace KeePassPasskeyKeyProvider.Fido2
 					throw new OutOfMemoryException();
 				try
 				{
-					byte[] clientDataHash = new byte[HashLength];
-					using (var rng = new RNGCryptoServiceProvider())
-						rng.GetBytes(clientDataHash);
+					byte[] clientDataHash = RandomBytes(HashLength);
 					Check(lib.fido_assert_set_rp(handle, rpId));
 					Check(lib.fido_assert_set_clientdata_hash(handle, clientDataHash, (UIntPtr)clientDataHash.Length));
 					foreach (byte[] id in allowList)

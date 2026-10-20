@@ -460,6 +460,9 @@ Passkey на телефоне или ключе безопасности отк�
 	<data name="Fido2PinBlocked" xml:space="preserve">
 		<value>PIN ключа безопасности заблокирован после слишком многих неверных попыток.</value>
 	</data>
+	<data name="Fido2PinNotAccepted" xml:space="preserve">
+		<value>Ключ безопасности сейчас не принимает PIN. Обычно так бывает после 3 неверных PIN подряд: извлеките ключ, вставьте его снова и повторите.</value>
+	</data>
 	<data name="Fido2PinNotSet" xml:space="preserve">
 		<value>У ключа безопасности не задан PIN, а для базы нужна проверка пользователя.</value>
 	</data>

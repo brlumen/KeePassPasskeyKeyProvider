@@ -154,6 +154,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string Fido2NoDevice => Get();
 		public static string Fido2PinAuthBlocked => Get();
 		public static string Fido2PinBlocked => Get();
+		public static string Fido2PinNotAccepted => Get();
 		public static string Fido2PinNotSet => Get();
 		public static string Fido2Timeout => Get();
 		public static string Fido2Unsupported => Get();

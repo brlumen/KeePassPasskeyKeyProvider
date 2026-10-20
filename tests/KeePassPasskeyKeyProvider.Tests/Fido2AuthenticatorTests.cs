@@ -59,17 +59,31 @@ namespace KeePassPasskeyKeyProvider.Tests
 		}
 
 		[DataTestMethod]
-		[DataRow(0x34, 5, 5, false, true)] // PIN_AUTH_BLOCKED from the key
-		[DataRow(0x34, null, null, false, true)]
-		[DataRow(-9, 5, 5, false, true)] // FIDO_ERR_INTERNAL, no attempt spent: the key refused the PIN key agreement
-		[DataRow(-9, 5, 4, true, false)] // an attempt was spent: something else failed
-		[DataRow(-9, null, null, true, true)] // attempts unknown: as the key did before
-		[DataRow(-9, 5, null, false, false)]
-		[DataRow(0x31, 5, 5, true, false)] // PIN_INVALID
-		[DataRow(-2, 5, 5, true, false)] // FIDO_ERR_RX
-		public void RecognizesKeyThatMustBeReinserted(int result, int? retriesBefore, int? retriesAfter, bool refusedEarlier, bool expected)
+		[DataRow(0x34, 5, 5, false, Fido2Error.PinAuthBlocked)] // PIN_AUTH_BLOCKED from the key
+		[DataRow(0x34, null, null, false, Fido2Error.PinAuthBlocked)]
+		[DataRow(-9, 5, 5, false, Fido2Error.PinNotAccepted)] // FIDO_ERR_INTERNAL, no attempt spent: key agreement refused
+		[DataRow(-9, 5, 4, true, null)] // an attempt was spent: something else failed
+		[DataRow(-9, null, null, true, Fido2Error.PinNotAccepted)] // attempts unknown: as the key did before
+		[DataRow(-9, 5, null, false, null)]
+		[DataRow(0x31, 5, 5, true, null)] // PIN_INVALID
+		[DataRow(-2, 5, 5, true, null)] // FIDO_ERR_RX
+		public void RecognizesKeyThatMustBeReinserted(int result, int? retriesBefore, int? retriesAfter, bool refusedEarlier,
+			Fido2Error? expected)
 		{
-			Assert.AreEqual(expected, Fido2Authenticator.IsPinAuthBlocked(result, retriesBefore, retriesAfter, refusedEarlier));
+			Assert.AreEqual(expected, Fido2Authenticator.PinRefusal(result, retriesBefore, retriesAfter, refusedEarlier));
+		}
+
+		[DataTestMethod]
+		[DataRow(-9, true)] // FIDO_ERR_INTERNAL: the key agreement of the PIN protocol was refused
+		[DataRow(0x00, false)]
+		[DataRow(0x2e, false)] // NO_CREDENTIALS
+		[DataRow(0x2b, false)] // UNSUPPORTED_OPTION: hmac-secret without user presence
+		[DataRow(0x36, false)] // PIN_REQUIRED
+		[DataRow(0x34, false)]
+		[DataRow(-2, false)] // FIDO_ERR_RX: handled as a key that does not answer
+		public void OnlyInternalErrorOfSilentHmacRequestStopsThePinPrompt(int result, bool expected)
+		{
+			Assert.AreEqual(expected, Fido2Authenticator.RefusesPinKeyAgreement(result));
 		}
 
 		[TestMethod]

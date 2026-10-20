@@ -460,6 +460,9 @@ Continue the test?</value>
 	<data name="Fido2PinBlocked" xml:space="preserve">
 		<value>The PIN of the security key is blocked after too many wrong attempts.</value>
 	</data>
+	<data name="Fido2PinNotAccepted" xml:space="preserve">
+		<value>The security key does not accept a PIN right now. This usually happens after 3 wrong PINs in a row: remove the key, insert it again and retry.</value>
+	</data>
 	<data name="Fido2PinNotSet" xml:space="preserve">
 		<value>The security key has no PIN, and the database needs user verification.</value>
 	</data>
