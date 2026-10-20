@@ -92,16 +92,21 @@ namespace KeePassPasskeyKeyProvider
 			try
 			{
 				// Devices can be kept only together with the signing key their owner tags are bound to
+				DeviceRecordSet set = new DeviceRecordSet();
 				List<DeviceRecord> existing = new List<DeviceRecord>();
 				if (UsesFido2Key(current))
 				{
-					DeviceRecordSet set = LoadRecordsSafe(current);
+					set = LoadRecordsSafe(current);
 					currentSigningKey = DeviceKeyStore.LoadSigningKey(current, set.VerificationKey);
 					if (currentSigningKey != null) existing = set.Devices;
 				}
 
 				var form = new DeviceNameForm(existing.ConvertAll(r => r.Label), UsesBrowser);
 				if (UIUtil.ShowDialogAndDestroy(form) != DialogResult.OK)
+					return null;
+				// The new device of an existing database is portable: unless its records are v5 already, plugin versions
+				// before portable devices cannot open the database afterwards (a new database has no such readers)
+				if (current != null && !DeviceMigration.ConfirmVersion5(GetActiveForm(), set))
 					return null;
 				string label = form.DeviceName;
 				bool keepDevices = form.KeepDevices && currentSigningKey != null && existing.Count > 0;
