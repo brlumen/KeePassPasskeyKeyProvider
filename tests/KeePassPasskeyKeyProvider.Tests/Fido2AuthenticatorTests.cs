@@ -74,16 +74,17 @@ namespace KeePassPasskeyKeyProvider.Tests
 		}
 
 		[DataTestMethod]
-		[DataRow(-9, true)] // FIDO_ERR_INTERNAL: the key agreement of the PIN protocol was refused
-		[DataRow(0x00, false)]
-		[DataRow(0x2e, false)] // NO_CREDENTIALS
-		[DataRow(0x2b, false)] // UNSUPPORTED_OPTION: hmac-secret without user presence
-		[DataRow(0x36, false)] // PIN_REQUIRED
-		[DataRow(0x34, false)]
-		[DataRow(-2, false)] // FIDO_ERR_RX: handled as a key that does not answer
-		public void OnlyInternalErrorOfSilentHmacRequestStopsThePinPrompt(int result, bool expected)
+		[DataRow(-9, Fido2Authenticator.PinCheck.PinNotAccepted)] // FIDO_ERR_INTERNAL: the PIN key agreement was refused
+		[DataRow(0x00, Fido2Authenticator.PinCheck.Continue)]
+		[DataRow(0x2e, Fido2Authenticator.PinCheck.Continue)] // NO_CREDENTIALS
+		[DataRow(0x2b, Fido2Authenticator.PinCheck.Continue)] // UNSUPPORTED_OPTION: hmac-secret without user presence
+		[DataRow(0x36, Fido2Authenticator.PinCheck.Continue)] // PIN_REQUIRED
+		[DataRow(0x34, Fido2Authenticator.PinCheck.Continue)]
+		[DataRow(-2, Fido2Authenticator.PinCheck.Reopen)] // FIDO_ERR_RX, also a timeout: the key is not given up
+		[DataRow(-1, Fido2Authenticator.PinCheck.Reopen)] // FIDO_ERR_TX
+		public void OnlyInternalErrorOfSilentHmacRequestStopsThePinPrompt(int result, object expected) // PinCheck is internal
 		{
-			Assert.AreEqual(expected, Fido2Authenticator.RefusesPinKeyAgreement(result));
+			Assert.AreEqual(expected, (object)Fido2Authenticator.PinKeyAgreementCheck(result));
 		}
 
 		[TestMethod]

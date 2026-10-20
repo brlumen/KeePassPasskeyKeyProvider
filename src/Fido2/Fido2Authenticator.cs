@@ -250,11 +250,25 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			return notSpent ? Fido2Error.PinNotAccepted : (Fido2Error?)null;
 		}
 
-		/// <summary>
-		/// Result of the silent request with hmac-secret before the PIN prompt (see <see cref="Device"/>): only
-		/// FIDO_ERR_INTERNAL, a refused key agreement of the PIN protocol, means the key does not accept a PIN now
-		/// </summary>
-		internal static bool RefusesPinKeyAgreement(int result) => result == LibFido2.FIDO_ERR_INTERNAL;
+		/// <summary>What the silent request with hmac-secret before the PIN prompt leads to (see <see cref="Device"/>)</summary>
+		internal enum PinCheck
+		{
+			/// <summary>To the PIN prompt, whatever the answer was</summary>
+			Continue,
+
+			/// <summary>Timed out: the key gets a fresh descriptor, then the PIN prompt follows</summary>
+			Reopen,
+
+			/// <summary>FIDO_ERR_INTERNAL, a refused key agreement of the PIN protocol: the key does not accept a PIN now</summary>
+			PinNotAccepted
+		}
+
+		/// <summary>The check is only a convenience: it never makes a key that works unusable</summary>
+		internal static PinCheck PinKeyAgreementCheck(int result) =>
+			result == LibFido2.FIDO_ERR_INTERNAL ? PinCheck.PinNotAccepted : IsNoAnswer(result) ? PinCheck.Reopen : PinCheck.Continue;
+
+		/// <summary>Transfer error, also when the timeout of the device expires: the descriptor is out of step with the key</summary>
+		private static bool IsNoAnswer(int result) => result == LibFido2.FIDO_ERR_RX || result == LibFido2.FIDO_ERR_TX;
 
 		/// <summary>Errors after which the next connected key is tried: this key cannot hold the credential or does not answer</summary>
 		internal static bool IsSkipped(Fido2Error error) =>
@@ -336,12 +350,35 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				handle = lib.fido_dev_new();
 				if (handle == IntPtr.Zero)
 					throw new OutOfMemoryException();
+				try
+				{
+					Open();
+				}
+				catch
+				{
+					lib.fido_dev_free(ref handle);
+					throw;
+				}
+			}
+
+			private void Open()
+			{
 				SetTimeout(QuickTimeoutMs);
 				int result = lib.fido_dev_open(handle, info.Path);
 				if (result != LibFido2.FIDO_OK)
-				{
-					lib.fido_dev_free(ref handle);
 					throw NoUserError(result);
+			}
+
+			/// <summary>Fresh descriptor after a command that timed out; a key that does not answer now is skipped</summary>
+			private void Reopen()
+			{
+				lib.fido_dev_close(handle);
+				Open();
+				// A key that does not answer the CTAP2 greeting is opened as U2F
+				if (!lib.fido_dev_is_fido2(handle))
+				{
+					Log($"{info.Name}: answers only U2F after reopening, skipped");
+					throw new Fido2Exception(Fido2Error.NoAnswer);
 				}
 			}
 
@@ -442,8 +479,8 @@ namespace KeePassPasskeyKeyProvider.Fido2
 			/// <summary>
 			/// Before the PIN prompt: a silent request with hmac-secret (no PIN, no user presence, a random salt; the output is
 			/// not read and libfido2 wipes it), for which libfido2 first agrees on a key with the key for the PIN protocol. A key
-			/// that must be reinserted refuses that, so the user is told before spending a PIN. Nothing is spent, and any other
-			/// answer is ignored.
+			/// that must be reinserted refuses that, so the user is told before spending a PIN. Nothing is spent; any other
+			/// answer is ignored, and after a timeout the key is reopened (see <see cref="PinKeyAgreementCheck"/>).
 			/// </summary>
 			private void CheckPinKeyAgreement(string rpId, byte[] credentialId)
 			{
@@ -454,13 +491,16 @@ namespace KeePassPasskeyKeyProvider.Fido2
 					assert.Check(lib.fido_assert_set_hmac_salt(assert.Handle, salt, (UIntPtr)salt.Length));
 					assert.Check(lib.fido_assert_set_up(assert.Handle, LibFido2.FIDO_OPT_FALSE));
 					int result = lib.fido_dev_get_assert(handle, assert.Handle, null);
-					if (IsNoAnswer(result))
-						throw NoUserError(result);
-					if (RefusesPinKeyAgreement(result))
+					switch (PinKeyAgreementCheck(result))
 					{
-						Log($"{info.Name}: {Describe(lib, result)} in a silent request with hmac-secret: the key most likely refuses " +
-							"the PIN key agreement (PIN_AUTH_BLOCKED), not asking for the PIN");
-						throw new Fido2Exception(Fido2Error.PinNotAccepted);
+						case PinCheck.PinNotAccepted:
+							Log($"{info.Name}: {Describe(lib, result)} in a silent request with hmac-secret: the key most likely " +
+								"refuses the PIN key agreement (PIN_AUTH_BLOCKED), not asking for the PIN");
+							throw new Fido2Exception(Fido2Error.PinNotAccepted);
+						case PinCheck.Reopen:
+							Log($"{info.Name}: {Describe(lib, result)} in a silent request with hmac-secret, reopening the key");
+							Reopen();
+							break;
 					}
 				}
 			}
@@ -581,8 +621,6 @@ namespace KeePassPasskeyKeyProvider.Fido2
 				Log($"{info.Name}: does not answer ({Describe(lib, result)}), skipped");
 				return new Fido2Exception(Fido2Error.NoAnswer);
 			}
-
-			private static bool IsNoAnswer(int result) => result == LibFido2.FIDO_ERR_RX || result == LibFido2.FIDO_ERR_TX;
 
 			private Fido2Exception Error(int result, CancellationToken cancellation = default(CancellationToken))
 			{
