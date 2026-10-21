@@ -20,7 +20,9 @@ namespace KeePassPasskeyKeyProvider
 		/// Makes the classic devices with the credential IDs portable one by one, saving the database after each.
 		/// Stops when the user cancels or a step fails; the replacements made so far stay.
 		/// </summary>
-		/// <param name="confirmEach">Ask before each device; false when the user has just chosen to migrate this device</param>
+		/// <param name="confirmEach">
+		/// Ask before the records turn v5 and before each device; false when the user has just agreed to both for this device
+		/// </param>
 		/// <param name="save">Saves the database; false if it still has unsaved changes</param>
 		/// <returns>Whether a device was made portable</returns>
 		public static bool Run(Form owner, PwDatabase db, IList<byte[]> credentialIds, bool confirmEach, Func<bool> save)
@@ -28,7 +30,7 @@ namespace KeePassPasskeyKeyProvider
 			bool migrated = false;
 			try
 			{
-				if (!ConfirmVersion5(owner, DeviceKeyStore.LoadAll(db)))
+				if (confirmEach && !ConfirmVersion5(owner, DeviceKeyStore.LoadAll(db)))
 					return false;
 
 				foreach (byte[] credentialId in credentialIds)

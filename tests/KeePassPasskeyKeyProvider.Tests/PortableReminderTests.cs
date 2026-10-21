@@ -8,17 +8,16 @@ namespace KeePassPasskeyKeyProvider.Tests
 		private static readonly DeviceRecord Classic = new DeviceRecord { Kind = DeviceKind.Classic };
 
 		[TestMethod]
-		public void OffersOnlyForClassicDeviceOnce()
+		public void OffersOnlyForClassicDevice()
 		{
-			Assert.IsTrue(PortableReminder.ShouldOffer(Classic, true, false, false));
+			Assert.IsTrue(PortableReminder.ShouldOffer(Classic, true, false));
 
-			Assert.IsFalse(PortableReminder.ShouldOffer(new DeviceRecord { Kind = DeviceKind.Portable }, true, false, false));
-			Assert.IsFalse(PortableReminder.ShouldOffer(null, true, false, false));
+			Assert.IsFalse(PortableReminder.ShouldOffer(new DeviceRecord { Kind = DeviceKind.Portable }, true, false));
+			Assert.IsFalse(PortableReminder.ShouldOffer(null, true, false));
 			// A passkey cannot be created or the database saved here
-			Assert.IsFalse(PortableReminder.ShouldOffer(Classic, false, false, false));
-			// Asked in this session ("Later") or turned off for the database ("Don't ask again")
-			Assert.IsFalse(PortableReminder.ShouldOffer(Classic, true, true, false));
-			Assert.IsFalse(PortableReminder.ShouldOffer(Classic, true, false, true));
+			Assert.IsFalse(PortableReminder.ShouldOffer(Classic, false, false));
+			// Turned off for the database ("Don't ask again")
+			Assert.IsFalse(PortableReminder.ShouldOffer(Classic, true, true));
 		}
 
 		[TestMethod]

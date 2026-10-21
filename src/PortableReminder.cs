@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Security.Cryptography;
@@ -16,14 +15,13 @@ namespace KeePassPasskeyKeyProvider
 {
 	/// <summary>
 	/// After a database was opened with a classic device, offers to make that device portable (see
-	/// <see cref="DeviceMigration"/>). Asked at most once per KeePass session and database; "Don't ask again" is
-	/// remembered per database (by its verification key, which its copies share).
+	/// <see cref="DeviceMigration"/>). Asked each time until the device is portable; "Don't ask again" is remembered
+	/// per database (by its verification key, which its copies share).
 	/// </summary>
 	internal static class PortableReminder
 	{
 		private const string ConfigPrefix = "KeePassPasskeyKeyProvider.NoPortableReminder.";
 
-		private static readonly HashSet<string> askedThisSession = new HashSet<string>(StringComparer.Ordinal);
 		private static string expectedPath;
 		private static byte[] expectedCredentialId;
 
@@ -52,9 +50,9 @@ namespace KeePassPasskeyKeyProvider
 		/// <summary>Whether to offer making the device portable</summary>
 		/// <param name="device">Device that opened the database; null if it is no longer in the records</param>
 		/// <param name="canMigrate">A portable passkey can be created and the database saved here</param>
-		internal static bool ShouldOffer(DeviceRecord device, bool canMigrate, bool askedBefore, bool turnedOff)
+		internal static bool ShouldOffer(DeviceRecord device, bool canMigrate, bool turnedOff)
 		{
-			return device != null && device.Kind == DeviceKind.Classic && canMigrate && !askedBefore && !turnedOff;
+			return device != null && device.Kind == DeviceKind.Classic && canMigrate && !turnedOff;
 		}
 
 		/// <summary>Identifier of the database for remembering the answer: a hash of its verification key</summary>
@@ -85,16 +83,19 @@ namespace KeePassPasskeyKeyProvider
 				return;
 
 			DeviceRecord device = DeviceKeyStore.Find(set.Devices, credentialId);
-			string id = DatabaseId(set.VerificationKey);
-			string configKey = ConfigPrefix + id;
+			string configKey = ConfigPrefix + DatabaseId(set.VerificationKey);
 			bool canMigrate = FIDO2KeyProvider.CanUse(DeviceKind.Portable) && CanSave(db);
-			if (!ShouldOffer(device, canMigrate, askedThisSession.Contains(id), Program.Config.CustomConfig.GetBool(configKey, false)))
+			if (!ShouldOffer(device, canMigrate, Program.Config.CustomConfig.GetBool(configKey, false)))
 				return;
-			askedThisSession.Add(id);
 
 			Form owner = host.MainWindow;
 			string label = string.IsNullOrEmpty(device.Label) ? Strings.Unnamed : device.Label;
-			switch (UIUtil.ShowDialogAndDestroy(new ReminderForm(string.Format(Strings.PortableReminder, label, DeviceMigration.SameDevice))))
+			// The offer also carries the v5 warning, so the migration does not ask it again
+			string message = string.Format(Strings.PortableReminder, label);
+			if (!DeviceKeyStore.UsesVersion5(set))
+				message += "\n" + Strings.MakePortableVersionWarning;
+			message += "\n\n" + DeviceMigration.SameDevice;
+			switch (UIUtil.ShowDialogAndDestroy(new ReminderForm(message)))
 			{
 				case DialogResult.OK:
 					DeviceMigration.Run(owner, db, new[] { credentialId }, false,
@@ -122,7 +123,7 @@ namespace KeePassPasskeyKeyProvider
 			}
 		}
 
-		/// <summary>The offer: OK makes the device portable, Cancel asks again later, Ignore never asks for this database</summary>
+		/// <summary>The offer: OK makes the device portable, Cancel asks again next time, Ignore never asks for this database</summary>
 		private sealed class ReminderForm : Form
 		{
 			public ReminderForm(string message)

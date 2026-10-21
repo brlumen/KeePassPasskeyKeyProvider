@@ -146,6 +146,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string DiagnosticsTitle => Get();
 		public static string Done => Get();
 		public static string DontAskAgain => Get();
+		public static string EarlierVersionDeviceSuffix => Get();
 		public static string EnterDeviceName => Get();
 		public static string Fido2AccessHint => Get();
 		public static string Fido2DeviceError => Get();
@@ -251,7 +252,6 @@ namespace KeePassPasskeyKeyProvider
 		public static string WebAuthnUnavailable => Get();
 		public static string WebAuthnUnavailableRequires => Get();
 		public static string WebAuthnUnavailableShort => Get();
-		public static string WindowsDeviceSuffix => Get();
 		public static string WordMismatch => Get();
 		public static string WordNumber => Get();
 	}

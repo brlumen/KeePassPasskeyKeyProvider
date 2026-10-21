@@ -436,6 +436,9 @@ Continue the test?</value>
 	<data name="DontAskAgain" xml:space="preserve">
 		<value>Don't ask again</value>
 	</data>
+	<data name="EarlierVersionDeviceSuffix" xml:space="preserve">
+		<value>(added by an earlier version of the plugin)</value>
+	</data>
 	<data name="EnterDeviceName" xml:space="preserve">
 		<value>Enter a device name.</value>
 	</data>
@@ -503,13 +506,13 @@ Continue the test?</value>
 		<value>Later</value>
 	</data>
 	<data name="MakeAllPortable" xml:space="preserve">
-		<value>Make all portable</value>
+		<value>Register all again</value>
 	</data>
 	<data name="MakePortable" xml:space="preserve">
-		<value>Make portable</value>
+		<value>Register again</value>
 	</data>
 	<data name="MakePortableConfirm" xml:space="preserve">
-		<value>Make "{0}" portable, so that it opens this database on other systems too?
+		<value>Register the key "{0}" again, so that it works on other platforms too?
 
 {1}
 
@@ -522,18 +525,17 @@ If this device is lost, remove it instead: that replaces the database key.</valu
 		<value>Windows Hello: delete it under Tools → KeePassPasskeyKeyProvider.</value>
 	</data>
 	<data name="MakePortableFailed" xml:space="preserve">
-		<value>Could not make the device portable: {0}</value>
+		<value>Could not register the key again: {0}</value>
 	</data>
 	<data name="MakePortableSameDevice" xml:space="preserve">
-		<value>In the next window, confirm with the same phone, security key or Windows Hello.</value>
+		<value>In the next window, confirm adding the key with the same device.</value>
 	</data>
 	<data name="MakePortableSameDeviceBrowser" xml:space="preserve">
-		<value>On the page in the browser, confirm with the same phone or security key.</value>
+		<value>On the page in the browser, confirm adding the key with the same device.</value>
 	</data>
 	<data name="MakePortableVersionWarning" xml:space="preserve">
-		<value>After this, the database opens only with this version of the plugin or a later one.
-
-First update the plugin on every computer where you open this database.</value>
+		<value>After this, the database cannot be opened with an earlier version of the plugin.
+First update the plugin on every device where you open this database.</value>
 	</data>
 	<data name="MasterKeyNotFido2" xml:space="preserve">
 		<value>The database master key does not use FIDO2</value>
@@ -594,9 +596,9 @@ File → Change Master Key → "{0}".</value>
 		<value>Wrong PIN.</value>
 	</data>
 	<data name="PortableReminder" xml:space="preserve">
-		<value>"{0}" opens this database only on Windows (a security key also on other systems). Make it portable, so that it opens the database on other systems too?
+		<value>Attention! New version of the plugin:
 
-{1}</value>
+The key "{0}" was added by an earlier version of the plugin. To make it work on other platforms, it has to be registered again.</value>
 	</data>
 	<data name="PrfDiagnosticsButton" xml:space="preserve">
 		<value>🔍 PRF diagnostics</value>
@@ -785,9 +787,6 @@ Requires WebAuthn API v4 or later (Windows 11 22H2 or later).</value>
 	</data>
 	<data name="WebAuthnUnavailableShort" xml:space="preserve">
 		<value>Windows WebAuthn API is not available (requires API v4+, Windows 11 22H2 or later).</value>
-	</data>
-	<data name="WindowsDeviceSuffix" xml:space="preserve">
-		<value>(Windows only, except security keys)</value>
 	</data>
 	<data name="WordMismatch" xml:space="preserve">
 		<value>Word #{0} does not match. Click "Back" to view the phrase again.</value>

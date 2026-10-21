@@ -436,6 +436,9 @@ Passkey на телефоне или ключе безопасности отк�
 	<data name="DontAskAgain" xml:space="preserve">
 		<value>Больше не спрашивать</value>
 	</data>
+	<data name="EarlierVersionDeviceSuffix" xml:space="preserve">
+		<value>(добавлен предыдущей версией плагина)</value>
+	</data>
 	<data name="EnterDeviceName" xml:space="preserve">
 		<value>Укажите название устройства.</value>
 	</data>
@@ -503,13 +506,13 @@ Passkey на телефоне или ключе безопасности отк�
 		<value>Позже</value>
 	</data>
 	<data name="MakeAllPortable" xml:space="preserve">
-		<value>Сделать все переносимыми</value>
+		<value>Зарегистрировать все заново</value>
 	</data>
 	<data name="MakePortable" xml:space="preserve">
-		<value>Сделать переносимым</value>
+		<value>Зарегистрировать заново</value>
 	</data>
 	<data name="MakePortableConfirm" xml:space="preserve">
-		<value>Сделать «{0}» переносимым, чтобы оно открывало эту базу и в других системах?
+		<value>Зарегистрировать ключ «{0}» заново, чтобы он работал и на других платформах?
 
 {1}
 
@@ -522,18 +525,17 @@ Passkey на телефоне или ключе безопасности отк�
 		<value>Windows Hello: удалите его в меню Сервис → KeePassPasskeyKeyProvider.</value>
 	</data>
 	<data name="MakePortableFailed" xml:space="preserve">
-		<value>Не удалось сделать устройство переносимым: {0}</value>
+		<value>Не удалось зарегистрировать ключ заново: {0}</value>
 	</data>
 	<data name="MakePortableSameDevice" xml:space="preserve">
-		<value>В следующем окне подтвердите тем же телефоном, ключом безопасности или Windows Hello.</value>
+		<value>В следующем окне подтвердите добавление ключа этим же устройством.</value>
 	</data>
 	<data name="MakePortableSameDeviceBrowser" xml:space="preserve">
-		<value>На странице в браузере подтвердите тем же телефоном или ключом безопасности.</value>
+		<value>На странице в браузере подтвердите добавление ключа этим же устройством.</value>
 	</data>
 	<data name="MakePortableVersionWarning" xml:space="preserve">
-		<value>После этого базу откроет только эта или более новая версия плагина.
-
-Сначала обновите плагин на всех компьютерах, где открываете эту базу.</value>
+		<value>После этого базу не получится открыть старой версией плагина.
+Сначала обновите плагин на всех устройствах, где открываете эту базу.</value>
 	</data>
 	<data name="MasterKeyNotFido2" xml:space="preserve">
 		<value>Мастер‑ключ базы не использует FIDO2</value>
@@ -594,9 +596,9 @@ Passkey на телефоне или ключе безопасности отк�
 		<value>Неверный PIN.</value>
 	</data>
 	<data name="PortableReminder" xml:space="preserve">
-		<value>«{0}» открывает эту базу только в Windows (ключ безопасности — и в других системах). Сделать его переносимым, чтобы оно открывало базу и в других системах?
+		<value>Внимание! Новая версия плагина:
 
-{1}</value>
+Ключ «{0}» добавлен предыдущей версией плагина. Чтобы он работал на других платформах, его необходимо зарегистрировать заново.</value>
 	</data>
 	<data name="PrfDiagnosticsButton" xml:space="preserve">
 		<value>🔍 Диагностика PRF</value>
@@ -785,9 +787,6 @@ Passkey на телефоне или ключе безопасности отк�
 	</data>
 	<data name="WebAuthnUnavailableShort" xml:space="preserve">
 		<value>Windows WebAuthn API недоступен (требуется API v4+, Windows 11 22H2 и новее).</value>
-	</data>
-	<data name="WindowsDeviceSuffix" xml:space="preserve">
-		<value>(только Windows, кроме ключей безопасности)</value>
 	</data>
 	<data name="WordMismatch" xml:space="preserve">
 		<value>Слово №{0} не совпадает. Нажмите «Назад», чтобы посмотреть фразу ещё раз.</value>
