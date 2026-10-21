@@ -177,6 +177,9 @@
 	<data name="CheckApi" xml:space="preserve">
 		<value>Проверить API</value>
 	</data>
+	<data name="ChooseKeyKind" xml:space="preserve">
+		<value>Каким ключом открыть базу?</value>
+	</data>
 	<data name="ClassicDevicesElsewhere" xml:space="preserve">
 		<value>Устройства этой базы добавлены предыдущей версией плагина. Вне Windows из них работает только USB‑ключ безопасности; телефон и Windows Hello работают только в Windows.
 
@@ -501,6 +504,12 @@ Passkey на телефоне или ключе безопасности отк�
 	</data>
 	<data name="KeepDevicesCheckBox" xml:space="preserve">
 		<value>Сохранить доступ устройствам, уже зарегистрированным в базе</value>
+	</data>
+	<data name="KeysOfEarlierVersion" xml:space="preserve">
+		<value>Ключ, добавленный предыдущей версией плагина</value>
+	</data>
+	<data name="KeysOfThisVersion" xml:space="preserve">
+		<value>Ключ, добавленный этой версией плагина</value>
 	</data>
 	<data name="Later" xml:space="preserve">
 		<value>Позже</value>

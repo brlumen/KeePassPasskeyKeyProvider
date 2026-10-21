@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Windows.Forms;
@@ -432,7 +433,43 @@ namespace KeePassPasskeyKeyProvider
 			: new[] { (Way.WebAuthn, new[] { DeviceKind.Portable }), (Way.WebAuthn, new[] { DeviceKind.Classic }) };
 
 		/// <summary>
-		/// Unlocks the database with a device in the order of <see cref="UnlockWays"/>; a way without devices is skipped.
+		/// <see cref="UnlockWays"/>, starting with the kind the user chooses when the Windows WebAuthn API would show a
+		/// dialog for each kind (the database has devices of both); null if the user cancels
+		/// </summary>
+		private static (Way Way, DeviceKind[] Kinds)[] ChooseUnlockWays(DeviceRecordSet set)
+		{
+			if (UsesBrowser || !WebAuthnHelper.IsWebAuthnAvailable() ||
+			    !set.Devices.Exists(r => r.Kind == DeviceKind.Classic) || !set.Devices.Exists(r => r.Kind == DeviceKind.Portable))
+				return UnlockWays;
+
+			const int portableButton = 100, classicButton = 101;
+			var dialog = new VistaTaskDialog
+			{
+				WindowTitle = "KeePassPasskeyKeyProvider",
+				MainInstruction = Strings.ChooseKeyKind,
+				CommandLinks = true
+			};
+			dialog.AddButton(portableButton, Strings.KeysOfThisVersion, DeviceLabels(set, DeviceKind.Portable));
+			dialog.AddButton(classicButton, Strings.KeysOfEarlierVersion, DeviceLabels(set, DeviceKind.Classic));
+			dialog.AddButton((int)DialogResult.Cancel, Strings.Cancel, null);
+			// Task dialogs unavailable: the usual order
+			if (!dialog.ShowDialog(GetActiveForm()))
+				return UnlockWays;
+			if (dialog.Result != portableButton && dialog.Result != classicButton)
+				return null;
+
+			DeviceKind first = dialog.Result == classicButton ? DeviceKind.Classic : DeviceKind.Portable;
+			return UnlockWays.OrderBy(w => Array.IndexOf(w.Kinds, first) >= 0 ? 0 : 1).ToArray();
+		}
+
+		private static string DeviceLabels(DeviceRecordSet set, DeviceKind kind)
+		{
+			return string.Join("\n", set.Devices.FindAll(r => r.Kind == kind)
+				.ConvertAll(r => string.IsNullOrEmpty(r.Label) ? Strings.Unnamed : r.Label));
+		}
+
+		/// <summary>
+		/// Unlocks the database with a device in the order of <see cref="ChooseUnlockWays"/>; a way without devices is skipped.
 		/// If authentication fails or the records are not authentic, offers the next way, then the recovery phrase
 		/// (if there is one).
 		/// </summary>
@@ -441,11 +478,14 @@ namespace KeePassPasskeyKeyProvider
 			DeviceRecordSet set = LoadRecords(ctx);
 			if (set == null)
 				return null;
+			(Way Way, DeviceKind[] Kinds)[] ways = ChooseUnlockWays(set);
+			if (ways == null)
+				return null;
 
 			string databaseName = DatabaseName(ctx.DatabasePath);
 			string problem = null;
 			bool failed = false;
-			foreach ((Way way, DeviceKind[] kinds) in UnlockWays)
+			foreach ((Way way, DeviceKind[] kinds) in ways)
 			{
 				if (!set.Devices.Exists(r => Array.IndexOf(kinds, r.Kind) >= 0))
 					continue;

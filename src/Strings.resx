@@ -177,6 +177,9 @@ This window closes by itself.</value>
 	<data name="CheckApi" xml:space="preserve">
 		<value>Check API</value>
 	</data>
+	<data name="ChooseKeyKind" xml:space="preserve">
+		<value>Which key do you open the database with?</value>
+	</data>
 	<data name="ClassicDevicesElsewhere" xml:space="preserve">
 		<value>The devices of this database were added by an earlier version of the plugin. Outside Windows only a USB security key among them works; a phone or Windows Hello works only on Windows.
 
@@ -501,6 +504,12 @@ Continue the test?</value>
 	</data>
 	<data name="KeepDevicesCheckBox" xml:space="preserve">
 		<value>Keep access for devices already registered in the database</value>
+	</data>
+	<data name="KeysOfEarlierVersion" xml:space="preserve">
+		<value>A key added by an earlier version of the plugin</value>
+	</data>
+	<data name="KeysOfThisVersion" xml:space="preserve">
+		<value>A key added by this version of the plugin</value>
 	</data>
 	<data name="Later" xml:space="preserve">
 		<value>Later</value>

@@ -74,6 +74,7 @@ namespace KeePassPasskeyKeyProvider
 		public static string CannotOpenDatabase => Get();
 		public static string ChangeNotSaved => Get();
 		public static string CheckApi => Get();
+		public static string ChooseKeyKind => Get();
 		public static string ClassicDevicesElsewhere => Get();
 		public static string Close => Get();
 		public static string Continue => Get();
@@ -168,6 +169,8 @@ namespace KeePassPasskeyKeyProvider
 		public static string HmacSecretNotReturned => Get();
 		public static string IWroteItDown => Get();
 		public static string KeepDevicesCheckBox => Get();
+		public static string KeysOfEarlierVersion => Get();
+		public static string KeysOfThisVersion => Get();
 		public static string Later => Get();
 		public static string MakeAllPortable => Get();
 		public static string MakePortable => Get();
