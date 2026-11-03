@@ -547,4 +547,25 @@
 	<data name="WordNumber" xml:space="preserve">
 		<value>Слово №{0}:</value>
 	</data>
+	<data name="DiagLocalSession" xml:space="preserve">
+		<value>✓ Локальный сеанс</value>
+	</data>
+	<data name="DiagRemoteSession" xml:space="preserve">
+		<value>✓ Сеанс удалённого рабочего стола: запросы WebAuthn перенаправляются на клиентский компьютер</value>
+	</data>
+	<data name="DiagRepeatCheck" xml:space="preserve">
+		<value>Шаг 3: повторный запрос — проверка, что секрет стабилен (подтвердите ещё раз)...</value>
+	</data>
+	<data name="DiagRepeatMatches" xml:space="preserve">
+		<value>  ✓ Повторный запрос вернул тот же секрет (PRF детерминирован)</value>
+	</data>
+	<data name="DiagRepeatMismatch" xml:space="preserve">
+		<value>  ❌ Повторный запрос вернул ДРУГОЙ секрет: этот аутентификатор использовать нельзя!</value>
+	</data>
+	<data name="HelloRegisteringPasskey" xml:space="preserve">
+		<value>Windows Hello регистрирует новый ключ доступа ({0} с). Затем подтвердите ещё раз.</value>
+	</data>
+	<data name="SecretNotRepeatable" xml:space="preserve">
+		<value>Аутентификатор вернул другой секрет при повторном запросе: открывать им базу нельзя.</value>
+	</data>
 </root>

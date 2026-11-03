@@ -123,6 +123,7 @@ namespace KeePassPasskeyKeyProvider
 
 				uint version = WebAuthnHelper.GetApiVersion();
 				Log(string.Format(Strings.DiagApiVersion, version));
+				Log(WebAuthnHelper.IsRemoteSession ? Strings.DiagRemoteSession : Strings.DiagLocalSession);
 
 				bool isPlatformAuthAvailable = false;
 				int hr = WebAuthnApi.WebAuthNIsUserVerifyingPlatformAuthenticatorAvailable(out isPlatformAuthAvailable);
@@ -239,6 +240,17 @@ namespace KeePassPasskeyKeyProvider
 								? Strings.DiagSecretMatches
 								: Strings.DiagSecretMismatch);
 							Array.Clear(creationSecret, 0, creationSecret.Length);
+						}
+						else
+						{
+							// No secret at creation (API < 8, Remote Desktop): a repeated request checks that the secret is stable
+							Log("");
+							Log(Strings.DiagRepeatCheck);
+							byte[] repeat = WebAuthnHelper.GetPrfSecret(this.Handle, new[] { credentialId }).PrfSecret;
+							bool same = repeat != null && repeat.Length == prfSecret.Length
+								&& System.Linq.Enumerable.SequenceEqual(repeat, prfSecret);
+							Log(same ? Strings.DiagRepeatMatches : Strings.DiagRepeatMismatch);
+							if (repeat != null) Array.Clear(repeat, 0, repeat.Length);
 						}
 						Log("");
 						Log("╔════════════════════════════════════════════════════════════╗");

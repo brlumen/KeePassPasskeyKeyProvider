@@ -547,4 +547,25 @@ Requires WebAuthn API v4 or later (Windows 11 22H2 or later).</value>
 	<data name="WordNumber" xml:space="preserve">
 		<value>Word #{0}:</value>
 	</data>
+	<data name="DiagLocalSession" xml:space="preserve">
+		<value>✓ Local session</value>
+	</data>
+	<data name="DiagRemoteSession" xml:space="preserve">
+		<value>✓ Remote Desktop session: WebAuthn requests are redirected to the client computer</value>
+	</data>
+	<data name="DiagRepeatCheck" xml:space="preserve">
+		<value>Step 3: Repeated request to check that the secret is stable (confirm once more)...</value>
+	</data>
+	<data name="DiagRepeatMatches" xml:space="preserve">
+		<value>  ✓ The repeated request returned the same secret (PRF is deterministic)</value>
+	</data>
+	<data name="DiagRepeatMismatch" xml:space="preserve">
+		<value>  ❌ The repeated request returned a DIFFERENT secret: this authenticator cannot be used!</value>
+	</data>
+	<data name="HelloRegisteringPasskey" xml:space="preserve">
+		<value>Windows Hello is registering the new passkey ({0} s). Then confirm once more.</value>
+	</data>
+	<data name="SecretNotRepeatable" xml:space="preserve">
+		<value>The authenticator returned a different secret on a repeated request: it cannot be used to open the database.</value>
+	</data>
 </root>
