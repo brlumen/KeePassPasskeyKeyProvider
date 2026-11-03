@@ -186,5 +186,14 @@ namespace KeePassPasskeyKeyProvider
 		public static string WebAuthnUnavailableShort => Get();
 		public static string WordMismatch => Get();
 		public static string WordNumber => Get();
+
+		// Remote Desktop / Windows Hello without PRF at creation
+		public static string DiagLocalSession => Get();
+		public static string DiagRemoteSession => Get();
+		public static string DiagRepeatCheck => Get();
+		public static string DiagRepeatMatches => Get();
+		public static string DiagRepeatMismatch => Get();
+		public static string HelloRegisteringPasskey => Get();
+		public static string SecretNotRepeatable => Get();
 	}
 }

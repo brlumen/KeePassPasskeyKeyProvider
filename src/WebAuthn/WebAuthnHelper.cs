@@ -108,7 +108,8 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				throw new ArgumentException("User name cannot be empty", nameof(userName));
 
 			uint apiVersion = GetApiVersion();
-			Log($"Creating credential: RP ID=\"{RP_ID}\", user=\"{userName}\", API v{apiVersion}, userId {userId.Length} bytes");
+			Log($"Creating credential: RP ID=\"{RP_ID}\", user=\"{userName}\", API v{apiVersion}, userId {userId.Length} bytes, " +
+			    $"remote session: {IsRemoteSession}");
 
 			IntPtr pUserId = IntPtr.Zero;
 			IntPtr pClientDataJson = IntPtr.Zero;
@@ -204,8 +205,8 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				Log($"MakeCredential: options v{options.dwVersion}, hmac-secret ext=true, bEnablePrf={usePrfFlag}, pPRFGlobalEval={usePrfEval}");
 				IntPtr hWnd = PrepareOwnerWindow(windowHandle);
 				IntPtr pResult = IntPtr.Zero;
-				int hr = RunNativeCall(hWnd, () => WebAuthnApi.WebAuthNAuthenticatorMakeCredential(
-					hWnd, ref rpInfo, ref userInfo, ref credParams, ref clientData, ref options, out pResult));
+				int hr = RunWithBusyRetry("MakeCredential", () => RunNativeCall(hWnd, () => WebAuthnApi.WebAuthNAuthenticatorMakeCredential(
+					hWnd, ref rpInfo, ref userInfo, ref credParams, ref clientData, ref options, out pResult)));
 				pAttestation = pResult;
 
 				if (hr != 0)
@@ -232,11 +233,11 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				Log($"  hmac-secret ext output: {hmacSecretEnabled}, bPrfEnabled: {prfEnabled}, " +
 				    $"PRF secret at creation: {(prfSecret == null ? "none" : prfSecret.Length + " bytes")}");
 
+				// Not fatal: over Remote Desktop (MS-RDPEWA) the creation output does not carry PRF, and Windows Hello reports
+				// PRF only when evaluated at creation (API 8+). Whether the authenticator returns a secret is decided by
+				// the GetAssertion that follows (GetPrfSecret throws HmacSecretNotReturnedException if it does not).
 				if (!hmacSecretEnabled && !prfEnabled && prfSecret == null)
-				{
-					Log("❌ Authenticator did NOT enable hmac-secret/PRF for the credential");
-					throw new WebAuthnException(Strings.AuthenticatorNoPrf);
-				}
+					Log("⚠ Authenticator did not report hmac-secret/PRF at creation; GetAssertion will check whether it returns a secret");
 
 				return new PrfResult
 				{
@@ -375,8 +376,8 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				Log($"GetAssertion: options v{options.dwVersion}, pHmacSecretSaltValues (global salt {PRF_SALT.Length} bytes)");
 				IntPtr hWnd = PrepareOwnerWindow(windowHandle);
 				IntPtr pResult = IntPtr.Zero;
-				int hr = RunNativeCall(hWnd, () => WebAuthnApi.WebAuthNAuthenticatorGetAssertion(
-					hWnd, RP_ID, ref clientData, ref options, out pResult));
+				int hr = RunWithBusyRetry("GetAssertion", () => RunNativeCall(hWnd, () => WebAuthnApi.WebAuthNAuthenticatorGetAssertion(
+					hWnd, RP_ID, ref clientData, ref options, out pResult)));
 				pAssertion = pResult;
 
 				if (hr != 0)
@@ -398,7 +399,7 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				if (prfSecret == null)
 				{
 					Log("❌ Authenticator did not return hmac-secret");
-					throw new WebAuthnException(Strings.HmacSecretNotReturned);
+					throw new HmacSecretNotReturnedException(Strings.HmacSecretNotReturned);
 				}
 
 				if (assertion.Credential.cbId == 0 || assertion.Credential.pbId == IntPtr.Zero)
@@ -426,6 +427,52 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 				}
 				foreach (IntPtr pId in pCredentialIds) Marshal.FreeHGlobal(pId);
 				if (pClientDataJson != IntPtr.Zero) Marshal.FreeHGlobal(pClientDataJson);
+			}
+		}
+
+		/// <summary>
+		/// Remote Desktop session: webauthn.dll redirects the calls to the client computer (MS-RDPEWA)
+		/// </summary>
+		public static bool IsRemoteSession => User32.GetSystemMetrics(User32.SM_REMOTESESSION) != 0;
+
+		/// <summary>
+		/// Windows Hello does not offer a passkey right after creating it; waits while the UI keeps pumping messages
+		/// </summary>
+		public static void WaitForNewPlatformCredential(int seconds)
+		{
+			Log($"Waiting {seconds} s for Windows Hello to offer the new passkey");
+			Pause(seconds * 1000);
+		}
+
+		/// <summary>Waits keeping the UI responsive when called on a thread with a message loop</summary>
+		public static void Pause(int milliseconds)
+		{
+			var timer = System.Diagnostics.Stopwatch.StartNew();
+			while (timer.ElapsedMilliseconds < milliseconds)
+			{
+				Thread.Sleep(100);
+				if (Application.MessageLoop) Application.DoEvents();
+			}
+		}
+
+		/// <summary>
+		/// HRESULT_FROM_WIN32(RPC_S_CALL_IN_PROGRESS). Seen over Remote Desktop when another WebAuthn request (e.g. a sign-in
+		/// in a browser) is in progress at the same time: the call is refused instead of waiting.
+		/// </summary>
+		private const int RPC_S_CALL_IN_PROGRESS = unchecked((int)0x800706FF);
+		private const int BusyRetries = 5;
+		private const int BusyRetryDelayMs = 2000;
+
+		/// <summary>Repeats the call while WebAuthn reports that the previous call is still in progress</summary>
+		private static int RunWithBusyRetry(string name, Func<int> call)
+		{
+			for (int attempt = 1; ; attempt++)
+			{
+				int hr = call();
+				if (hr != RPC_S_CALL_IN_PROGRESS || attempt >= BusyRetries)
+					return hr;
+				Log($"{name}: previous WebAuthn call still in progress (0x{hr:X8}), retry {attempt}/{BusyRetries - 1} in {BusyRetryDelayMs} ms");
+				Pause(BusyRetryDelayMs);
 			}
 		}
 
@@ -686,6 +733,12 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 			[DllImport("kernel32.dll")]
 			public static extern uint GetCurrentProcessId();
+
+			public const int SM_REMOTESESSION = 0x1000;
+
+			[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+			[DllImport("user32.dll")]
+			public static extern int GetSystemMetrics(int nIndex);
 		}
 	}
 
@@ -724,6 +777,17 @@ namespace KeePassPasskeyKeyProvider.WebAuthn
 		}
 
 		public WebAuthnException(string message, Exception innerException) : base(message, innerException)
+		{
+		}
+	}
+
+	/// <summary>
+	/// GetAssertion succeeded but returned no hmac-secret: right after creation this means the authenticator
+	/// does not support hmac-secret/PRF
+	/// </summary>
+	public class HmacSecretNotReturnedException : WebAuthnException
+	{
+		public HmacSecretNotReturnedException(string message) : base(message)
 		{
 		}
 	}

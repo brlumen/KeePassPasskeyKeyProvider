@@ -329,8 +329,26 @@ namespace KeePassPasskeyKeyProvider
 				// PRF secret: on API 8+ already obtained at creation, otherwise via a separate GetAssertion
 				if (created.PrfSecret == null)
 				{
-					System.Threading.Thread.Sleep(500);
-					created.PrfSecret = WebAuthnHelper.GetPrfSecret(windowHandle, new[] { created.CredentialId }).PrfSecret;
+					if ((created.Transport & WebAuthnApi.WEBAUTHN_CTAP_TRANSPORT_INTERNAL) != 0)
+					{
+						using (BusyIndicator.Show(Control.FromHandle(windowHandle),
+							       string.Format(Strings.HelloRegisteringPasskey, HelloRegistrationDelay)))
+							WebAuthnHelper.WaitForNewPlatformCredential(HelloRegistrationDelay);
+					}
+					else
+						System.Threading.Thread.Sleep(500);
+
+					try
+					{
+						created.PrfSecret = WebAuthnHelper.GetPrfSecret(windowHandle, new[] { created.CredentialId }).PrfSecret;
+					}
+					catch (HmacSecretNotReturnedException ex)
+					{
+						// The creation output is not checked (see CreateCredential): this is where an authenticator without PRF shows up
+						throw new WebAuthnException(Strings.AuthenticatorNoPrf, ex);
+					}
+					if (WebAuthnHelper.IsRemoteSession)
+						CheckSecretRepeatable(windowHandle, created);
 				}
 				return created;
 			}
@@ -338,6 +356,31 @@ namespace KeePassPasskeyKeyProvider
 			{
 				MemUtil.ZeroByteArray(userId);
 			}
+		}
+
+		/// <summary>Windows Hello offers a just-created passkey only after a delay (see FIDO2DiagnosticsForm)</summary>
+		private const int HelloRegistrationDelay = 30;
+
+		/// <summary>
+		/// Over Remote Desktop the secret comes through the WebAuthn redirection: before the database depends on it,
+		/// a repeated request must return the same secret. Otherwise the secret is wiped and the device is rejected.
+		/// </summary>
+		private static void CheckSecretRepeatable(IntPtr windowHandle, PrfResult created)
+		{
+			byte[] repeat = WebAuthnHelper.GetPrfSecret(windowHandle, new[] { created.CredentialId }).PrfSecret;
+			try
+			{
+				if (KeyWrap.FixedTimeEquals(repeat, created.PrfSecret))
+					return;
+			}
+			finally
+			{
+				MemUtil.ZeroByteArray(repeat);
+			}
+
+			MemUtil.ZeroByteArray(created.PrfSecret);
+			created.PrfSecret = null;
+			throw new WebAuthnException(Strings.SecretNotRepeatable);
 		}
 
 		/// <summary>

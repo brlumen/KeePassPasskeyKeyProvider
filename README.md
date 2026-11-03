@@ -34,6 +34,7 @@ You can still keep a password as a second factor.
   - **hardware FIDO2 security key** — YubiKey 5, SoloKey, Nitrokey 3, Google Titan, etc.;
   - **phone or tablet** via QR code (the computer needs Bluetooth). Tested with Google Password Manager on Android; other passkey providers must support PRF;
   - **Windows Hello** — Windows 11 24H2/25H2 with update KB5077181 (build ≥ 26100.7840 / 26200.7840).
+- **Remote Desktop:** in an RDP session Windows redirects WebAuthn to the client computer, so the passkey is on the client (its Windows Hello, or a security key plugged into it). The redirection carries the hmac-secret result but not PRF at creation, so the plugin gets the secret with a separate request (two more confirmations when a device is added) and checks that it is stable. Tested with Windows Hello fingerprint of the client and a Windows Server 2025 session host (WebAuthn API v7).
 
 ## Installation
 
@@ -118,6 +119,7 @@ Protected: the database key K, the device secrets and the recovery phrase. Trust
 - **Windows Hello** is protected the same way as your Windows account (PIN, TPM).
 - **A passkey on a phone is synced** via the provider account (Google, Apple, etc.): its security equals the security of that account. The database path stored in the credential is synced too.
 - **Attestation is not verified:** any authenticator with PRF support is accepted.
+- **Remote Desktop:** the passkey is on the client computer, and its secret comes to the session host through the RDP WebAuthn channel. From another client computer the database opens only with another device or the recovery phrase.
 
 Report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
 
@@ -125,7 +127,7 @@ Report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
 
 **"Windows WebAuthn API is not available"** — requires WebAuthn API v4+ (Windows 11 22H2 or later) and the file `C:\Windows\System32\webauthn.dll`.
 
-**"The authenticator does not support hmac-secret/PRF" on creation**
+**"The authenticator does not support hmac-secret/PRF" when a device is added** (the check is the first request of the secret after the credential is created)
 - an old U2F key without hmac-secret — a FIDO2 key is required (YubiKey 5 and newer);
 - Windows Hello without KB5077181 — update Windows 11 to build ≥ 26100.7840 / 26200.7840;
 - a phone password manager without PRF (Samsung Pass, etc.) — use one with PRF support (e.g. Google Password Manager).
@@ -139,6 +141,10 @@ Report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
 **The plugin is not in the key provider list** — disable `Tools → Options → Security → Enter master key on secure desktop`: WebAuthn dialogs can't be shown there.
 
 **The "Windows Security" window does not appear** — check whether it is hidden behind other windows; for a phone the computer needs Bluetooth.
+
+**"UnknownError (HRESULT: 0x800706FF)"** — `RPC_S_CALL_IN_PROGRESS`: another WebAuthn request (for example, a sign-in in a browser) is in progress at the same time. The plugin retries for a few seconds; finish the other request and try again.
+
+**"The authenticator returned a different secret on a repeated request"** (Remote Desktop) — the secret that came through the RDP redirection is not stable, and the device is not added: a database locked with it could not be opened again.
 
 **Windows Hello does not offer a just-created passkey** — after creating a passkey Windows Hello may need from several seconds to a few minutes to load its passkey list (the "Windows Security" window is slow to appear then too); until then "Windows Security" offers only a security key or a phone. Wait a few minutes and try again. PRF diagnostics waits for this automatically.
 
